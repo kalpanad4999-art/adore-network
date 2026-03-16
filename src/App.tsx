@@ -13,6 +13,8 @@ import Expenses from "./pages/Expenses";
 import Instructors from "./pages/Instructors";
 import Students from "./pages/Students";
 import Locations from "./pages/Locations";
+import Reports from "./pages/Reports";
+import CashFlow from "./pages/CashFlow";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
