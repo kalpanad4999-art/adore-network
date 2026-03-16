@@ -19,6 +19,8 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/classes", label: "Classes", icon: Calendar },
   { to: "/expenses", label: "Expenses", icon: Receipt },
+  { to: "/reports", label: "Reports", icon: FileText },
+  { to: "/cash-flow", label: "Cash Flow", icon: TrendingUp },
   { to: "/instructors", label: "Instructors", icon: Users },
   { to: "/students", label: "Students", icon: GraduationCap },
   { to: "/locations", label: "Locations", icon: MapPin },
