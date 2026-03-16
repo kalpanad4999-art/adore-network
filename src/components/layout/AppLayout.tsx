@@ -11,9 +11,10 @@ import {
   LogOut,
   Menu,
   X,
+  FileText,
+  TrendingUp,
 } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
