@@ -8,8 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, Phone, PhoneCall } from "lucide-react";
+import { Plus, Pencil, Trash2, Phone, PhoneCall, MessageCircle, MessageSquare, Copy } from "lucide-react";
 import { toast } from "sonner";
+
+const REGISTER_PHONE = "+91 80808 08080";
+const REGISTER_PHONE_RAW = "+918080808080";
+const REGISTER_MESSAGE = "Hi! I'd like to register for yoga classes. My name is ";
 
 interface Student {
   id: string;
@@ -169,6 +173,34 @@ const Students = () => {
           </Dialog>
         </div>
       </div>
+
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+        <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wider text-primary">Call to Register</p>
+            <h2 className="font-display text-xl font-semibold mt-1">{REGISTER_PHONE}</h2>
+            <p className="text-sm text-muted-foreground mt-1">Share this number — new students can reach you 3 ways.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button asChild size="sm" variant="default">
+              <a href={`tel:${REGISTER_PHONE_RAW}`}><Phone className="h-4 w-4 mr-2" />Call</a>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <a href={`https://wa.me/${REGISTER_PHONE_RAW.replace("+", "")}?text=${encodeURIComponent(REGISTER_MESSAGE)}`} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="h-4 w-4 mr-2" />WhatsApp
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <a href={`sms:${REGISTER_PHONE_RAW}?body=${encodeURIComponent(REGISTER_MESSAGE)}`}>
+                <MessageSquare className="h-4 w-4 mr-2" />SMS
+              </a>
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(REGISTER_PHONE); toast.success("Number copied"); }} aria-label="Copy number">
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {students.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">No students yet. Tap <span className="font-medium">Quick Add</span> to capture a caller in seconds.</CardContent></Card>
