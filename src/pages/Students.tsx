@@ -8,8 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, Phone, PhoneCall, MessageCircle, MessageSquare, Copy } from "lucide-react";
+import { Plus, Pencil, Trash2, Phone, PhoneCall, MessageCircle, MessageSquare, Copy, QrCode, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
 
 const REGISTER_PHONE = "+91 80884 74277";
 const REGISTER_PHONE_RAW = "+918088474277";
