@@ -11,8 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2, Phone, PhoneCall, MessageCircle, MessageSquare, Copy } from "lucide-react";
 import { toast } from "sonner";
 
-const REGISTER_PHONE = "+91 80808 08080";
-const REGISTER_PHONE_RAW = "+918080808080";
+const REGISTER_PHONE = "+91 80884 74277";
+const REGISTER_PHONE_RAW = "+918088474277";
 const REGISTER_MESSAGE = "Hi! I'd like to register for yoga classes. My name is ";
 
 interface Student {
