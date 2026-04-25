@@ -205,6 +205,43 @@ const Students = () => {
         </CardContent>
       </Card>
 
+      <Card className="border-accent/30 bg-gradient-to-br from-accent/10 to-transparent">
+        <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium uppercase tracking-wider text-accent-foreground/80">Self-Serve Sign-Up</p>
+            <h2 className="font-display text-xl font-semibold mt-1">Share your join link</h2>
+            <p className="text-sm text-muted-foreground mt-1">New students fill in their own details — straight into your list.</p>
+            <code className="block mt-2 text-xs bg-muted/60 rounded px-2 py-1 truncate">{joinUrl}</code>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button size="sm" variant="default" onClick={() => setQrOpen(true)}>
+              <QrCode className="h-4 w-4 mr-2" />Show QR
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(joinUrl); toast.success("Link copied"); }}>
+              <Copy className="h-4 w-4 mr-2" />Copy link
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <a href={`https://wa.me/?text=${encodeURIComponent(`Join our yoga studio: ${joinUrl}`)}`} target="_blank" rel="noopener noreferrer">
+                <Share2 className="h-4 w-4 mr-2" />Share
+              </a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">Scan to join</DialogTitle>
+            <DialogDescription>Show this QR — students scan and register themselves.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center bg-white p-6 rounded-lg">
+            {joinUrl && <QRCodeSVG value={joinUrl} size={220} level="M" />}
+          </div>
+          <p className="text-xs text-center text-muted-foreground break-all">{joinUrl}</p>
+        </DialogContent>
+      </Dialog>
+
       {students.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">No students yet. Tap <span className="font-medium">Quick Add</span> to capture a caller in seconds.</CardContent></Card>
       ) : (
