@@ -8,8 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, Phone, PhoneCall } from "lucide-react";
+import { Plus, Pencil, Trash2, Phone, PhoneCall, MessageCircle, MessageSquare, Copy } from "lucide-react";
 import { toast } from "sonner";
+
+const REGISTER_PHONE = "+91 80808 08080";
+const REGISTER_PHONE_RAW = "+918080808080";
+const REGISTER_MESSAGE = "Hi! I'd like to register for yoga classes. My name is ";
 
 interface Student {
   id: string;
