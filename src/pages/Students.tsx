@@ -40,6 +40,8 @@ const Students = () => {
   const [quickName, setQuickName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", phone: "", membership_type: "drop-in", membership_status: "active", notes: "" });
+  const [qrOpen, setQrOpen] = useState(false);
+  const joinUrl = user ? `${window.location.origin}/join/${user.id}` : "";
 
   const fetch = async () => {
     if (!user) return;
