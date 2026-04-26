@@ -41,8 +41,10 @@ const Join = () => {
       : { mode: "owner", ownerId, ...form };
     const { data, error } = await supabase.functions.invoke("public-register-student", { body: payload });
     setSubmitting(false);
+    console.log("[Join] register response", { data, error, payload });
     if (error || (data as any)?.error) {
-      toast.error((data as any)?.error || "Registration failed. Try again.");
+      const msg = (data as any)?.error || error?.message || "Registration failed. Try again.";
+      toast.error(msg);
       return;
     }
     setDone(true);
