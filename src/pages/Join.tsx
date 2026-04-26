@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,32 +12,63 @@ import { toast } from "sonner";
 const phoneRegex = /^[+\d][\d\s\-()]{6,19}$/;
 
 const Join = () => {
-  const { ownerId } = useParams<{ ownerId: string }>();
-  const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
+  const { ownerId, token } = useParams<{ ownerId?: string; token?: string }>();
+  const isBatch = !!token;
+  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [batchInfo, setBatchInfo] = useState<{ name: string; is_open: boolean } | null>(null);
+  const [batchError, setBatchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isBatch) return;
+    (async () => {
+      const { data } = await supabase.functions.invoke("public-register-student", {
+        body: { mode: "lookup", token },
+      });
+      if ((data as any)?.error) { setBatchError((data as any).error); return; }
+      setBatchInfo(data as any);
+    })();
+  }, [isBatch, token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ownerId) return;
     if (!form.name.trim()) { toast.error("Please enter your name"); return; }
     if (!phoneRegex.test(form.phone.trim())) { toast.error("Enter a valid phone number"); return; }
     setSubmitting(true);
-    const { data, error } = await supabase.functions.invoke("public-register-student", {
-      body: { ownerId, ...form },
-    });
+    const payload = isBatch
+      ? { mode: "batch", token, ...form }
+      : { mode: "owner", ownerId, ...form };
+    const { data, error } = await supabase.functions.invoke("public-register-student", { body: payload });
     setSubmitting(false);
     if (error || (data as any)?.error) {
       toast.error((data as any)?.error || "Registration failed. Try again.");
       return;
     }
     setDone(true);
+    setForm({ name: "", phone: "", email: "", address: "" });
   };
 
-  if (!ownerId) {
+  if (!ownerId && !token) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <Card className="max-w-md w-full"><CardContent className="py-10 text-center text-muted-foreground">Invalid registration link.</CardContent></Card>
+      </div>
+    );
+  }
+
+  if (isBatch && batchError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <Card className="max-w-md w-full"><CardContent className="py-10 text-center text-muted-foreground">{batchError}</CardContent></Card>
+      </div>
+    );
+  }
+
+  if (isBatch && batchInfo && !batchInfo.is_open) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <Card className="max-w-md w-full"><CardContent className="py-10 text-center text-muted-foreground">This registration batch is closed.</CardContent></Card>
       </div>
     );
   }
@@ -51,6 +82,9 @@ const Join = () => {
               <CheckCircle2 className="h-14 w-14 text-success mx-auto" />
               <h1 className="font-display text-2xl font-bold">You're registered!</h1>
               <p className="text-muted-foreground">The studio will reach out to you shortly. Namaste 🙏</p>
+              {isBatch && (
+                <Button variant="outline" onClick={() => setDone(false)}>Register another student</Button>
+              )}
             </div>
           ) : (
             <>
@@ -58,11 +92,15 @@ const Join = () => {
                 <Sparkles className="h-4 w-4" />
                 <span className="text-xs font-medium uppercase tracking-wider">TRINETRA Yoga</span>
               </div>
-              <h1 className="font-display text-2xl font-bold">Join the studio</h1>
-              <p className="text-muted-foreground text-sm mt-1 mb-6">Fill in your details and we'll be in touch about classes.</p>
+              <h1 className="font-display text-2xl font-bold">
+                {isBatch && batchInfo ? batchInfo.name : "Join the studio"}
+              </h1>
+              <p className="text-muted-foreground text-sm mt-1 mb-6">
+                {isBatch ? "Quick sign-up — just the basics." : "Fill in your details and we'll be in touch about classes."}
+              </p>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Your name *</Label>
+                  <Label>Name *</Label>
                   <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={100} required autoFocus />
                 </div>
                 <div className="space-y-2">
@@ -74,8 +112,8 @@ const Join = () => {
                   <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} maxLength={255} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Anything we should know? <span className="text-muted-foreground text-xs">(optional)</span></Label>
-                  <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={500} placeholder="Experience, preferred class times, injuries…" />
+                  <Label>Address <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                  <Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} maxLength={300} placeholder="House / street / city" rows={2} />
                 </div>
                 <Button type="submit" className="w-full" disabled={submitting}>
                   {submitting ? "Registering…" : "Register"}
