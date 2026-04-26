@@ -105,7 +105,13 @@ const Students = () => {
       toast.error("Enter a valid phone number");
       return;
     }
-    const name = (quickName.trim() || `Caller ${normalizePhone(phone).slice(-4)}`).slice(0, 100);
+    const normalized = normalizePhone(phone);
+    const dupe = students.find((s) => s.phone && normalizePhone(s.phone) === normalized);
+    if (dupe) {
+      toast.error(`${dupe.name} already exists with this phone`);
+      return;
+    }
+    const name = (quickName.trim() || `Caller ${normalized.slice(-4)}`).slice(0, 100);
     const { error } = await supabase.from("students").insert({
       user_id: user.id, name, phone, membership_type: "drop-in", membership_status: "active",
     });
