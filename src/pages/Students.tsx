@@ -190,6 +190,47 @@ const Students = () => {
 
   const batchUrl = (token: string) => `${window.location.origin}/b/${token}`;
 
+  // Payments
+  const openPayments = async (s: Student) => {
+    setPayStudent(s);
+    setPayForm({ amount: "", paid_on: new Date().toISOString().slice(0, 10), method: "cash", plan: s.membership_type || "monthly", valid_until: "", notes: "" });
+    const { data } = await supabase
+      .from("student_payments")
+      .select("*")
+      .eq("student_id", s.id)
+      .order("paid_on", { ascending: false });
+    setPayments((data as Payment[]) || []);
+  };
+
+  const addPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !payStudent) return;
+    const amount = parseFloat(payForm.amount);
+    if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    const { error } = await supabase.from("student_payments").insert({
+      student_id: payStudent.id,
+      user_id: user.id,
+      amount,
+      paid_on: payForm.paid_on,
+      method: payForm.method,
+      plan: payForm.plan,
+      valid_until: payForm.valid_until || null,
+      notes: payForm.notes.trim() || null,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Payment recorded");
+    setPayForm({ ...payForm, amount: "", notes: "" });
+    openPayments(payStudent);
+  };
+
+  const deletePayment = async (id: string) => {
+    await supabase.from("student_payments").delete().eq("id", id);
+    toast.success("Payment removed");
+    if (payStudent) openPayments(payStudent);
+  };
+
+  const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+
   const statusColor = (s: string | null) => {
     if (s === "active") return "bg-success/10 text-success";
     if (s === "expired") return "bg-destructive/10 text-destructive";
