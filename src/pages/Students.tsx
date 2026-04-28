@@ -491,6 +491,66 @@ const Students = () => {
           ))}
         </div>
       )}
+
+      {/* Payments dialog (owner only) */}
+      <Dialog open={!!payStudent} onOpenChange={(v) => !v && setPayStudent(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2"><IndianRupee className="h-5 w-5" />{payStudent?.name}</DialogTitle>
+            <DialogDescription>Total paid: <span className="font-semibold text-foreground">₹{totalPaid.toLocaleString("en-IN")}</span> · {payments.length} payment{payments.length === 1 ? "" : "s"}</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={addPayment} className="space-y-3 border border-border rounded-lg p-4 bg-muted/30">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Record payment</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label className="text-xs">Amount (₹)</Label><Input type="number" inputMode="decimal" min="0" step="0.01" value={payForm.amount} onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })} required /></div>
+              <div className="space-y-1.5"><Label className="text-xs">Date</Label><Input type="date" value={payForm.paid_on} onChange={(e) => setPayForm({ ...payForm, paid_on: e.target.value })} required /></div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Method</Label>
+                <Select value={payForm.method} onValueChange={(v) => setPayForm({ ...payForm, method: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{paymentMethods.map((m) => <SelectItem key={m} value={m}>{m.charAt(0).toUpperCase() + m.slice(1)}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Plan</Label>
+                <Select value={payForm.plan} onValueChange={(v) => setPayForm({ ...payForm, plan: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{paymentPlans.map((p) => <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 col-span-2"><Label className="text-xs">Valid until <span className="text-muted-foreground">(optional)</span></Label><Input type="date" value={payForm.valid_until} onChange={(e) => setPayForm({ ...payForm, valid_until: e.target.value })} /></div>
+              <div className="space-y-1.5 col-span-2"><Label className="text-xs">Notes</Label><Input value={payForm.notes} onChange={(e) => setPayForm({ ...payForm, notes: e.target.value })} maxLength={500} /></div>
+            </div>
+            <Button type="submit" className="w-full"><Plus className="h-4 w-4 mr-2" />Add payment</Button>
+          </form>
+
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">History</p>
+            {payments.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic py-4 text-center">No payments yet.</p>
+            ) : (
+              payments.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-2 p-3 rounded-lg border border-border bg-background">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold">₹{Number(p.amount).toLocaleString("en-IN")}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{p.plan}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{p.method}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {new Date(p.paid_on).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      {p.valid_until && ` · valid till ${new Date(p.valid_until).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`}
+                    </p>
+                    {p.notes && <p className="text-xs text-muted-foreground truncate mt-0.5">{p.notes}</p>}
+                  </div>
+                  <button onClick={() => deletePayment(p.id)} aria-label="Delete payment" className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
