@@ -38,8 +38,21 @@ interface Batch {
 
 const membershipTypes = ["drop-in", "monthly", "quarterly", "annual", "package"];
 const membershipStatuses = ["active", "inactive", "expired"];
+const paymentMethods = ["cash", "upi", "card", "bank-transfer", "other"];
+const paymentPlans = ["drop-in", "monthly", "quarterly", "annual", "package"];
 const phoneRegex = /^[+\d][\d\s\-()]{6,19}$/;
 const normalizePhone = (p: string) => p.replace(/[^\d+]/g, "");
+
+interface Payment {
+  id: string;
+  student_id: string;
+  amount: number;
+  paid_on: string;
+  method: string;
+  plan: string;
+  valid_until: string | null;
+  notes: string | null;
+}
 
 const Students = () => {
   const { user } = useAuth();
