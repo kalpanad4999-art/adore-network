@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      batches: {
+        Row: {
+          created_at: string
+          description: string | null
+          fee: number
+          id: string
+          name: string
+          start_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          fee?: number
+          id?: string
+          name: string
+          start_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          fee?: number
+          id?: string
+          name?: string
+          start_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -175,39 +208,6 @@ export type Database = {
         }
         Relationships: []
       }
-      registration_batches: {
-        Row: {
-          closed_at: string | null
-          created_at: string
-          id: string
-          is_open: boolean
-          name: string
-          owner_id: string
-          registrations_count: number
-          token: string
-        }
-        Insert: {
-          closed_at?: string | null
-          created_at?: string
-          id?: string
-          is_open?: boolean
-          name: string
-          owner_id: string
-          registrations_count?: number
-          token?: string
-        }
-        Update: {
-          closed_at?: string | null
-          created_at?: string
-          id?: string
-          is_open?: boolean
-          name?: string
-          owner_id?: string
-          registrations_count?: number
-          token?: string
-        }
-        Relationships: []
-      }
       staff_invitations: {
         Row: {
           accepted_at: string | null
@@ -277,6 +277,7 @@ export type Database = {
       students: {
         Row: {
           address: string | null
+          batch_id: string | null
           created_at: string
           email: string | null
           id: string
@@ -290,6 +291,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          batch_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -303,6 +305,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          batch_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -314,7 +317,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "students_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       studio_settings: {
         Row: {
