@@ -35,8 +35,6 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/join/:ownerId" element={<Join />} />
-            <Route path="/b/:token" element={<Join />} />
             <Route path="/" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
             <Route path="/students" element={<Navigate to="/" replace />} />
