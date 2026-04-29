@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Layers, Users } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Plus, Pencil, Trash2, Layers, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -37,15 +37,16 @@ const Customers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
 
-  // Customer form
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "", batch_id: "" });
-
-  // Batch form
+  // Batch dialog
   const [batchOpen, setBatchOpen] = useState(false);
   const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
   const [batchForm, setBatchForm] = useState({ name: "", description: "", start_date: "", fee: "" });
+
+  // Customer dialog
+  const [custOpen, setCustOpen] = useState(false);
+  const [editingCustId, setEditingCustId] = useState<string | null>(null);
+  const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
+  const [custForm, setCustForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
 
   const fetchCustomers = async () => {
     if (!user) return;
@@ -59,52 +60,15 @@ const Customers = () => {
   };
   useEffect(() => { fetchCustomers(); fetchBatches(); }, [user]);
 
-  const batchById = useMemo(() => {
-    const m = new Map<string, Batch>();
-    batches.forEach((b) => m.set(b.id, b));
-    return m;
-  }, [batches]);
-
-  // ---------- Customer CRUD ----------
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    if (form.phone && !phoneRegex.test(form.phone.trim())) { toast.error("Enter a valid phone"); return; }
-    const payload = {
-      user_id: user.id,
-      name: form.name.trim(),
-      email: form.email.trim() || null,
-      phone: form.phone.trim() || null,
-      address: form.address.trim() || null,
-      notes: form.notes.trim() || null,
-      batch_id: form.batch_id || null,
-    };
-    const { error } = editingId
-      ? await supabase.from("students").update(payload).eq("id", editingId)
-      : await supabase.from("students").insert(payload);
-    if (error) { toast.error(error.message); return; }
-    toast.success(editingId ? "Customer updated" : "Customer added");
-    resetForm(); fetchCustomers();
-  };
-
-  const handleDelete = async (id: string) => {
-    await supabase.from("students").delete().eq("id", id);
-    toast.success("Customer removed"); fetchCustomers();
-  };
-
-  const handleEdit = (c: Customer) => {
-    setEditingId(c.id);
-    setForm({
-      name: c.name, email: c.email || "", phone: c.phone || "",
-      address: c.address || "", notes: c.notes || "", batch_id: c.batch_id || "",
+  const customersByBatch = useMemo(() => {
+    const m = new Map<string, Customer[]>();
+    customers.forEach((c) => {
+      if (!c.batch_id) return;
+      if (!m.has(c.batch_id)) m.set(c.batch_id, []);
+      m.get(c.batch_id)!.push(c);
     });
-    setOpen(true);
-  };
-
-  const resetForm = () => {
-    setForm({ name: "", email: "", phone: "", address: "", notes: "", batch_id: "" });
-    setEditingId(null); setOpen(false);
-  };
+    return m;
+  }, [customers]);
 
   // ---------- Batch CRUD ----------
   const submitBatch = async (e: React.FormEvent) => {
@@ -129,16 +93,12 @@ const Customers = () => {
 
   const editBatch = (b: Batch) => {
     setEditingBatchId(b.id);
-    setBatchForm({
-      name: b.name,
-      description: b.description || "",
-      start_date: b.start_date || "",
-      fee: b.fee?.toString() || "",
-    });
+    setBatchForm({ name: b.name, description: b.description || "", start_date: b.start_date || "", fee: b.fee?.toString() || "" });
     setBatchOpen(true);
   };
 
   const deleteBatch = async (id: string) => {
+    if (!confirm("Delete this batch? Members will be unassigned.")) return;
     await supabase.from("batches").delete().eq("id", id);
     toast.success("Batch removed"); fetchBatches(); fetchCustomers();
   };
@@ -148,143 +108,160 @@ const Customers = () => {
     setEditingBatchId(null); setBatchOpen(false);
   };
 
+  // ---------- Customer CRUD ----------
+  const openAddCustomer = (batchId: string) => {
+    setEditingCustId(null);
+    setActiveBatchId(batchId);
+    setCustForm({ name: "", email: "", phone: "", address: "", notes: "" });
+    setCustOpen(true);
+  };
+
+  const editCustomer = (c: Customer) => {
+    setEditingCustId(c.id);
+    setActiveBatchId(c.batch_id);
+    setCustForm({ name: c.name, email: c.email || "", phone: c.phone || "", address: c.address || "", notes: c.notes || "" });
+    setCustOpen(true);
+  };
+
+  const submitCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !activeBatchId) return;
+    if (custForm.phone && !phoneRegex.test(custForm.phone.trim())) { toast.error("Enter a valid phone"); return; }
+    const payload = {
+      user_id: user.id,
+      batch_id: activeBatchId,
+      name: custForm.name.trim(),
+      email: custForm.email.trim() || null,
+      phone: custForm.phone.trim() || null,
+      address: custForm.address.trim() || null,
+      notes: custForm.notes.trim() || null,
+    };
+    const { error } = editingCustId
+      ? await supabase.from("students").update(payload).eq("id", editingCustId)
+      : await supabase.from("students").insert(payload);
+    if (error) { toast.error(error.message); return; }
+    toast.success(editingCustId ? "Customer updated" : "Customer added");
+    setCustOpen(false); setEditingCustId(null); setActiveBatchId(null);
+    fetchCustomers();
+  };
+
+  const deleteCustomer = async (id: string) => {
+    await supabase.from("students").delete().eq("id", id);
+    toast.success("Customer removed"); fetchCustomers();
+  };
+
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div>
-        <h1 className="font-display text-3xl font-bold">Customers</h1>
-        <p className="text-muted-foreground mt-1">Manage students and batches in one place</p>
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="font-display text-3xl font-bold">Customers</h1>
+          <p className="text-muted-foreground mt-1">Organized by batch — owner only</p>
+        </div>
+        <Dialog open={batchOpen} onOpenChange={(v) => { if (!v) resetBatchForm(); else setBatchOpen(true); }}>
+          <DialogTrigger asChild>
+            <Button><Plus className="h-4 w-4 mr-2" />Add Batch</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="font-display">{editingBatchId ? "Edit" : "Add"} Batch</DialogTitle>
+              <DialogDescription>Batch details (owner-only).</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={submitBatch} className="space-y-4">
+              <div className="space-y-2"><Label>Name</Label><Input value={batchForm.name} onChange={(e) => setBatchForm({ ...batchForm, name: e.target.value })} maxLength={80} required /></div>
+              <div className="space-y-2"><Label>Description</Label><Textarea value={batchForm.description} onChange={(e) => setBatchForm({ ...batchForm, description: e.target.value })} maxLength={500} rows={2} /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>Start date</Label><Input type="date" value={batchForm.start_date} onChange={(e) => setBatchForm({ ...batchForm, start_date: e.target.value })} /></div>
+                <div className="space-y-2"><Label>Fee (₹)</Label><Input type="number" min="0" step="0.01" value={batchForm.fee} onChange={(e) => setBatchForm({ ...batchForm, fee: e.target.value })} /></div>
+              </div>
+              <Button type="submit" className="w-full">{editingBatchId ? "Update" : "Add"} Batch</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* ============ BATCHES SECTION ============ */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Layers className="h-5 w-5 text-primary" />
-            <h2 className="font-display text-2xl font-semibold">Batches</h2>
-            <span className="text-sm text-muted-foreground">({batches.length})</span>
-          </div>
-          <Dialog open={batchOpen} onOpenChange={(v) => { if (!v) resetBatchForm(); else setBatchOpen(true); }}>
-            <DialogTrigger asChild>
-              <Button variant="outline"><Plus className="h-4 w-4 mr-2" />Add Batch</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="font-display">{editingBatchId ? "Edit" : "Add"} Batch</DialogTitle>
-                <DialogDescription>Owner-only batch details.</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={submitBatch} className="space-y-4">
-                <div className="space-y-2"><Label>Name</Label><Input value={batchForm.name} onChange={(e) => setBatchForm({ ...batchForm, name: e.target.value })} maxLength={80} required /></div>
-                <div className="space-y-2"><Label>Description</Label><Textarea value={batchForm.description} onChange={(e) => setBatchForm({ ...batchForm, description: e.target.value })} maxLength={500} rows={2} /></div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Start date</Label><Input type="date" value={batchForm.start_date} onChange={(e) => setBatchForm({ ...batchForm, start_date: e.target.value })} /></div>
-                  <div className="space-y-2"><Label>Fee (₹)</Label><Input type="number" min="0" step="0.01" value={batchForm.fee} onChange={(e) => setBatchForm({ ...batchForm, fee: e.target.value })} /></div>
-                </div>
-                <Button type="submit" className="w-full">{editingBatchId ? "Update" : "Add"} Batch</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {batches.length === 0 ? (
-          <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">No batches yet. Add one to organize customers.</CardContent></Card>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {batches.map((b) => {
-              const count = customers.filter((c) => c.batch_id === b.id).length;
-              return (
-                <Card key={b.id}>
-                  <CardContent className="p-4 flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold truncate">{b.name}</h3>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{count} {count === 1 ? "member" : "members"}</span>
-                      </div>
-                      {b.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{b.description}</p>}
-                      <div className="text-xs text-muted-foreground mt-2 flex gap-3 flex-wrap">
-                        {b.start_date && <span>Starts {format(new Date(b.start_date), "PP")}</span>}
-                        <span>Fee ₹{Number(b.fee).toLocaleString()}</span>
+      {batches.length === 0 ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">No batches yet. Add one to start adding customers.</CardContent></Card>
+      ) : (
+        <Accordion type="multiple" className="space-y-3">
+          {batches.map((b) => {
+            const members = customersByBatch.get(b.id) || [];
+            return (
+              <AccordionItem key={b.id} value={b.id} className="border rounded-lg bg-card px-4">
+                <div className="flex items-center gap-2">
+                  <AccordionTrigger className="flex-1 hover:no-underline py-4">
+                    <div className="flex items-center gap-3 text-left flex-1 min-w-0">
+                      <Layers className="h-4 w-4 text-primary shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold truncate">{b.name}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{members.length} {members.length === 1 ? "member" : "members"}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5 flex gap-3 flex-wrap font-normal">
+                          {b.start_date && <span>Starts {format(new Date(b.start_date), "PP")}</span>}
+                          <span>Fee ₹{Number(b.fee).toLocaleString()}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => editBatch(b)} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => deleteBatch(b.id)} className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* ============ CUSTOMERS SECTION ============ */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            <h2 className="font-display text-2xl font-semibold">All Customers</h2>
-            <span className="text-sm text-muted-foreground">({customers.length})</span>
-          </div>
-          <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); else setOpen(true); }}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />Add Customer</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle className="font-display">{editingId ? "Edit" : "Add"} Customer</DialogTitle></DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={100} required /></div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} maxLength={255} /></div>
-                  <div className="space-y-2"><Label>Phone</Label><Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} maxLength={20} /></div>
+                  </AccordionTrigger>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={(e) => { e.stopPropagation(); editBatch(b); }} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); deleteBatch(b.id); }} className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Batch</Label>
-                  <Select value={form.batch_id || "none"} onValueChange={(v) => setForm({ ...form, batch_id: v === "none" ? "" : v })}>
-                    <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No batch</SelectItem>
-                      {batches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2"><Label>Address</Label><Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} maxLength={300} rows={2} /></div>
-                <div className="space-y-2"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={1000} /></div>
-                <Button type="submit" className="w-full">{editingId ? "Update" : "Add"} Customer</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+                <AccordionContent className="pb-4 space-y-3">
+                  {b.description && <p className="text-sm text-muted-foreground">{b.description}</p>}
+                  <div className="flex justify-end">
+                    <Button size="sm" variant="outline" onClick={() => openAddCustomer(b.id)}>
+                      <UserPlus className="h-4 w-4 mr-2" />Add Customer
+                    </Button>
+                  </div>
+                  {members.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic text-center py-4">No customers in this batch yet.</p>
+                  ) : (
+                    <div className="grid gap-2">
+                      {members.map((c) => (
+                        <div key={c.id} className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/40 border border-border">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium truncate">{c.name}</h4>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {c.phone || "—"}{c.email ? ` · ${c.email}` : ""}
+                            </p>
+                            {c.address && <p className="text-xs text-muted-foreground truncate mt-0.5">{c.address}</p>}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button onClick={() => editCustomer(c)} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
+                            <button onClick={() => deleteCustomer(c.id)} className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      )}
 
-        {customers.length === 0 ? (
-          <Card><CardContent className="py-12 text-center text-muted-foreground">No customers yet.</CardContent></Card>
-        ) : (
-          <div className="grid gap-3">
-            {customers.map((c) => {
-              const b = c.batch_id ? batchById.get(c.batch_id) : null;
-              return (
-                <Card key={c.id}>
-                  <CardContent className="flex items-center justify-between p-4 gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold truncate">{c.name}</h3>
-                        {b && <span className="text-xs px-2 py-0.5 rounded-full bg-accent/40 text-accent-foreground">{b.name}</span>}
-                      </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {c.phone || "—"}{c.email ? ` · ${c.email}` : ""}
-                      </p>
-                      {c.address && <p className="text-xs text-muted-foreground truncate mt-0.5">{c.address}</p>}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => handleEdit(c)} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => handleDelete(c.id)} className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      {/* Customer dialog */}
+      <Dialog open={custOpen} onOpenChange={(v) => { if (!v) { setCustOpen(false); setEditingCustId(null); setActiveBatchId(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display">{editingCustId ? "Edit" : "Add"} Customer</DialogTitle>
+            <DialogDescription>{batches.find((b) => b.id === activeBatchId)?.name}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={submitCustomer} className="space-y-4">
+            <div className="space-y-2"><Label>Name</Label><Input value={custForm.name} onChange={(e) => setCustForm({ ...custForm, name: e.target.value })} maxLength={100} required /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Email</Label><Input type="email" value={custForm.email} onChange={(e) => setCustForm({ ...custForm, email: e.target.value })} maxLength={255} /></div>
+              <div className="space-y-2"><Label>Phone</Label><Input type="tel" value={custForm.phone} onChange={(e) => setCustForm({ ...custForm, phone: e.target.value })} maxLength={20} /></div>
+            </div>
+            <div className="space-y-2"><Label>Address</Label><Textarea value={custForm.address} onChange={(e) => setCustForm({ ...custForm, address: e.target.value })} maxLength={300} rows={2} /></div>
+            <div className="space-y-2"><Label>Notes</Label><Textarea value={custForm.notes} onChange={(e) => setCustForm({ ...custForm, notes: e.target.value })} maxLength={1000} /></div>
+            <Button type="submit" className="w-full">{editingCustId ? "Update" : "Add"} Customer</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
