@@ -271,6 +271,32 @@ const Customers = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* QR dialog */}
+      <Dialog open={!!qrBatch} onOpenChange={(v) => { if (!v) setQrBatch(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">{qrBatch?.name} — Registration QR</DialogTitle>
+            <DialogDescription>Customers scan this to fill in their details.</DialogDescription>
+          </DialogHeader>
+          {qrBatch && (() => {
+            const url = `${window.location.origin}/join/${qrBatch.public_token}`;
+            return (
+              <div className="space-y-4">
+                <div className="flex justify-center bg-white p-4 rounded-md">
+                  <QRCodeSVG value={url} size={220} level="M" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input value={url} readOnly className="text-xs" />
+                  <Button type="button" size="icon" variant="outline" onClick={() => { navigator.clipboard.writeText(url); toast.success("Link copied"); }}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
