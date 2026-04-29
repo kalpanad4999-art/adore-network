@@ -209,13 +209,17 @@ const Customers = () => {
                     </div>
                   </AccordionTrigger>
                   <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={(e) => { e.stopPropagation(); setQrBatch(b); }} className="p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10" title="QR scanner"><QrCode className="h-4 w-4" /></button>
                     <button onClick={(e) => { e.stopPropagation(); editBatch(b); }} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
                     <button onClick={(e) => { e.stopPropagation(); deleteBatch(b.id); }} className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
                 <AccordionContent className="pb-4 space-y-3">
                   {b.description && <p className="text-sm text-muted-foreground">{b.description}</p>}
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setQrBatch(b)}>
+                      <QrCode className="h-4 w-4 mr-2" />Show QR
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => openAddCustomer(b.id)}>
                       <UserPlus className="h-4 w-4 mr-2" />Add Customer
                     </Button>
