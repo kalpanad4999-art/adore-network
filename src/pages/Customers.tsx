@@ -8,7 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, Pencil, Trash2, Layers, UserPlus } from "lucide-react";
+import { Plus, Pencil, Trash2, Layers, UserPlus, QrCode, Copy } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -28,6 +29,7 @@ interface Batch {
   description: string | null;
   start_date: string | null;
   fee: number;
+  public_token: string;
 }
 
 const phoneRegex = /^[+\d][\d\s\-()]{6,19}$/;
@@ -47,6 +49,9 @@ const Customers = () => {
   const [editingCustId, setEditingCustId] = useState<string | null>(null);
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
   const [custForm, setCustForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
+
+  // QR dialog
+  const [qrBatch, setQrBatch] = useState<Batch | null>(null);
 
   const fetchCustomers = async () => {
     if (!user) return;
@@ -204,13 +209,17 @@ const Customers = () => {
                     </div>
                   </AccordionTrigger>
                   <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={(e) => { e.stopPropagation(); setQrBatch(b); }} className="p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10" title="QR scanner"><QrCode className="h-4 w-4" /></button>
                     <button onClick={(e) => { e.stopPropagation(); editBatch(b); }} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
                     <button onClick={(e) => { e.stopPropagation(); deleteBatch(b.id); }} className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
                 <AccordionContent className="pb-4 space-y-3">
                   {b.description && <p className="text-sm text-muted-foreground">{b.description}</p>}
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setQrBatch(b)}>
+                      <QrCode className="h-4 w-4 mr-2" />Show QR
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => openAddCustomer(b.id)}>
                       <UserPlus className="h-4 w-4 mr-2" />Add Customer
                     </Button>
@@ -260,6 +269,32 @@ const Customers = () => {
             <div className="space-y-2"><Label>Notes</Label><Textarea value={custForm.notes} onChange={(e) => setCustForm({ ...custForm, notes: e.target.value })} maxLength={1000} /></div>
             <Button type="submit" className="w-full">{editingCustId ? "Update" : "Add"} Customer</Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR dialog */}
+      <Dialog open={!!qrBatch} onOpenChange={(v) => { if (!v) setQrBatch(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">{qrBatch?.name} — Registration QR</DialogTitle>
+            <DialogDescription>Customers scan this to fill in their details.</DialogDescription>
+          </DialogHeader>
+          {qrBatch && (() => {
+            const url = `${window.location.origin}/join/${qrBatch.public_token}`;
+            return (
+              <div className="space-y-4">
+                <div className="flex justify-center bg-white p-4 rounded-md">
+                  <QRCodeSVG value={url} size={220} level="M" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input value={url} readOnly className="text-xs" />
+                  <Button type="button" size="icon" variant="outline" onClick={() => { navigator.clipboard.writeText(url); toast.success("Link copied"); }}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

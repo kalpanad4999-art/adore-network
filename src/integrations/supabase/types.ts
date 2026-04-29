@@ -21,6 +21,7 @@ export type Database = {
           fee: number
           id: string
           name: string
+          public_token: string
           start_date: string | null
           updated_at: string
           user_id: string
@@ -31,6 +32,7 @@ export type Database = {
           fee?: number
           id?: string
           name: string
+          public_token?: string
           start_date?: string | null
           updated_at?: string
           user_id: string
@@ -41,6 +43,7 @@ export type Database = {
           fee?: number
           id?: string
           name?: string
+          public_token?: string
           start_date?: string | null
           updated_at?: string
           user_id?: string
@@ -377,6 +380,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_batch_by_token: {
+        Args: { _token: string }
+        Returns: {
+          description: string
+          fee: number
+          id: string
+          name: string
+          start_date: string
+          user_id: string
+        }[]
+      }
       get_owner_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -384,6 +398,17 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      register_student_via_token: {
+        Args: {
+          _address: string
+          _email: string
+          _name: string
+          _notes: string
+          _phone: string
+          _token: string
+        }
+        Returns: string
       }
     }
     Enums: {
