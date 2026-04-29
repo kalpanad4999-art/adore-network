@@ -50,6 +50,9 @@ const Customers = () => {
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
   const [custForm, setCustForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
 
+  // QR dialog
+  const [qrBatch, setQrBatch] = useState<Batch | null>(null);
+
   const fetchCustomers = async () => {
     if (!user) return;
     const { data } = await supabase.from("students").select("id,name,email,phone,address,notes,batch_id").eq("user_id", user.id).order("name");
