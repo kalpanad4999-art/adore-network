@@ -332,20 +332,26 @@ export type Database = {
       }
       studio_settings: {
         Row: {
+          background_url: string | null
           logo_url: string | null
           owner_id: string
+          payments_pin_hash: string | null
           studio_name: string
           updated_at: string
         }
         Insert: {
+          background_url?: string | null
           logo_url?: string | null
           owner_id: string
+          payments_pin_hash?: string | null
           studio_name?: string
           updated_at?: string
         }
         Update: {
+          background_url?: string | null
           logo_url?: string | null
           owner_id?: string
+          payments_pin_hash?: string | null
           studio_name?: string
           updated_at?: string
         }

@@ -10,8 +10,10 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Customers from "./pages/Customers";
 import Payments from "./pages/Payments";
+import Settings from "./pages/Settings";
 import Join from "./pages/Join";
 import NotFound from "./pages/NotFound";
+import PaymentsGuard from "./components/PaymentsGuard";
 
 const queryClient = new QueryClient();
 
@@ -38,7 +40,8 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/join/:token" element={<Join />} />
             <Route path="/" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
-            <Route path="/payments" element={<ProtectedRoute><Payments /></ProtectedRoute>} />
+            <Route path="/payments" element={<ProtectedRoute><PaymentsGuard><Payments /></PaymentsGuard></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/students" element={<Navigate to="/" replace />} />
             <Route path="/classes" element={<Navigate to="/" replace />} />
             <Route path="*" element={<NotFound />} />
