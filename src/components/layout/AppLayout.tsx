@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, IndianRupee, LogOut, Menu, X, UserPlus, Mail, Trash2 } from "lucide-react";
+import { Users, IndianRupee, LogOut, Menu, X, UserPlus, Mail, Trash2, Settings as SettingsIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 const navItems = [
   { to: "/", label: "Customers", icon: Users },
   { to: "/payments", label: "Payments", icon: IndianRupee },
+  { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 
 const InviteStaffDialog = () => {
