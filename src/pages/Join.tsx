@@ -84,10 +84,9 @@ const Join = () => {
       <Card className="max-w-2xl w-full border-none md:border md:shadow-sm">
         <CardHeader className="px-2 md:px-6">
           <CardTitle className="font-display text-3xl">Join {batch.name}</CardTitle>
-          <CardDescription className="text-base">
-            {batch.description || "Fill in your details to register."}
-            <div className="mt-2 text-foreground font-medium">Fee: ₹{Number(batch.fee).toLocaleString()}</div>
-          </CardDescription>
+          {batch.description && (
+            <CardDescription className="text-base">{batch.description}</CardDescription>
+          )}
         </CardHeader>
         <CardContent className="px-2 md:px-6">
           <form onSubmit={submit} className="space-y-7">
@@ -122,13 +121,13 @@ const Join = () => {
               />
             </div>
             <div className="space-y-3">
-              <Label className="text-lg font-semibold text-foreground">Inquiry Message</Label>
+              <Label className="text-lg font-semibold text-foreground">Address</Label>
               <Textarea
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
                 maxLength={500}
-                rows={5}
-                className="rounded-xl border-2 text-base px-4 py-3 min-h-[140px]"
+                rows={4}
+                className="rounded-xl border-2 text-base px-4 py-3 min-h-[120px]"
               />
             </div>
             <div className="flex justify-end pt-2">
