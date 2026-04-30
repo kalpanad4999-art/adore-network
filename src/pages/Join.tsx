@@ -80,23 +80,66 @@ const Join = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <CardHeader>
-          <CardTitle className="font-display text-2xl">Join {batch.name}</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen bg-background flex items-start md:items-center justify-center p-4 md:p-8">
+      <Card className="max-w-2xl w-full border-none md:border md:shadow-sm">
+        <CardHeader className="px-2 md:px-6">
+          <CardTitle className="font-display text-3xl">Join {batch.name}</CardTitle>
+          <CardDescription className="text-base">
             {batch.description || "Fill in your details to register."}
             <div className="mt-2 text-foreground font-medium">Fee: ₹{Number(batch.fee).toLocaleString()}</div>
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="space-y-4">
-            <div className="space-y-2"><Label>Full name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={100} required /></div>
-            <div className="space-y-2"><Label>Phone</Label><Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} maxLength={20} /></div>
-            <div className="space-y-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} maxLength={255} /></div>
-            <div className="space-y-2"><Label>Address</Label><Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} maxLength={300} rows={2} /></div>
-            <div className="space-y-2"><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={500} rows={2} /></div>
-            <Button type="submit" className="w-full" disabled={submitting}>{submitting ? "Submitting..." : "Register"}</Button>
+        <CardContent className="px-2 md:px-6">
+          <form onSubmit={submit} className="space-y-7">
+            <div className="space-y-3">
+              <Label className="text-lg font-semibold text-foreground">Name</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                maxLength={100}
+                required
+                className="h-14 rounded-xl border-2 text-base px-4"
+              />
+            </div>
+            <div className="space-y-3">
+              <Label className="text-lg font-semibold text-foreground">Email Address</Label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                maxLength={255}
+                className="h-14 rounded-xl border-2 text-base px-4"
+              />
+            </div>
+            <div className="space-y-3">
+              <Label className="text-lg font-semibold text-foreground">Phone Number</Label>
+              <Input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                maxLength={20}
+                className="h-14 rounded-xl border-2 text-base px-4"
+              />
+            </div>
+            <div className="space-y-3">
+              <Label className="text-lg font-semibold text-foreground">Inquiry Message</Label>
+              <Textarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                maxLength={500}
+                rows={5}
+                className="rounded-xl border-2 text-base px-4 py-3 min-h-[140px]"
+              />
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="h-14 px-12 text-base font-semibold rounded-xl"
+              >
+                {submitting ? "Submitting..." : "Submit"}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
