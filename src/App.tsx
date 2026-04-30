@@ -10,8 +10,10 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Customers from "./pages/Customers";
 import Payments from "./pages/Payments";
+import Settings from "./pages/Settings";
 import Join from "./pages/Join";
 import NotFound from "./pages/NotFound";
+import PaymentsGuard from "./components/PaymentsGuard";
 
 const queryClient = new QueryClient();
 
