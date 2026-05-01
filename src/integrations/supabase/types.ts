@@ -394,7 +394,6 @@ export type Database = {
           id: string
           name: string
           start_date: string
-          user_id: string
         }[]
       }
       get_owner_id: { Args: { _user_id: string }; Returns: string }
