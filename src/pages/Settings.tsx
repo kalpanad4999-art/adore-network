@@ -160,6 +160,37 @@ const Settings = () => {
               </div>
             )}
           </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm">Wallpaper presets</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {PRESET_WALLPAPERS.map((wp) => {
+                const active = backgroundUrl === wp.url;
+                return (
+                  <button
+                    key={wp.url}
+                    type="button"
+                    onClick={async () => {
+                      try { await setBackgroundFromUrl(wp.url); toast.success(`${wp.name} applied`); }
+                      catch { toast.error("Failed to apply wallpaper"); }
+                    }}
+                    className={`group relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40"}`}
+                  >
+                    <img src={wp.url} alt={wp.name} className="h-full w-full object-cover" loading="lazy" />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
+                      <span className="text-xs text-white font-medium">{wp.name}</span>
+                    </div>
+                    {active && (
+                      <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-3.5 w-3.5 text-primary-foreground" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <input ref={bgRef} type="file" accept="image/*" hidden onChange={handleBackground} />
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => bgRef.current?.click()} variant="outline" className="gap-2">
