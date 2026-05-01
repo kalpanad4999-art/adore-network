@@ -14,6 +14,7 @@ interface StudioContextValue {
   updateName: (name: string) => Promise<void>;
   uploadLogo: (file: File) => Promise<void>;
   uploadBackground: (file: File) => Promise<void>;
+  setBackgroundFromUrl: (url: string) => Promise<void>;
   removeBackground: () => Promise<void>;
   setPaymentsPin: (pin: string | null) => Promise<void>;
   verifyPaymentsPin: (pin: string) => Promise<boolean>;
@@ -115,6 +116,12 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     setBackgroundUrl(url);
   };
 
+  const setBackgroundFromUrl = async (url: string) => {
+    if (!ownerId || !isOwner) return;
+    await supabase.from("studio_settings").upsert({ owner_id: ownerId, background_url: url, updated_at: new Date().toISOString() });
+    setBackgroundUrl(url);
+  };
+
   const removeBackground = async () => {
     if (!ownerId || !isOwner) return;
     await supabase.from("studio_settings").upsert({ owner_id: ownerId, background_url: null, updated_at: new Date().toISOString() });
@@ -139,7 +146,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
       studioName, logoUrl, backgroundUrl,
       paymentsPinSet: !!paymentsPinHash,
       ownerId, isOwner, loading, refresh,
-      updateName, uploadLogo, uploadBackground, removeBackground,
+      updateName, uploadLogo, uploadBackground, setBackgroundFromUrl, removeBackground,
       setPaymentsPin, verifyPaymentsPin,
     }}>
       {children}
