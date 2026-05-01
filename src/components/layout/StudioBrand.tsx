@@ -75,7 +75,7 @@ const StudioBrand = ({ compact = false }: { compact?: boolean }) => {
             )}
           </div>
         )}
-        {!compact && <p className="text-xs text-muted-foreground">Studio Finance</p>}
+        
       </div>
     </div>
   );
