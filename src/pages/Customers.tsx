@@ -216,6 +216,22 @@ const Customers = () => {
                 <div className="space-y-2"><Label>Start date</Label><Input type="date" value={batchForm.start_date} onChange={(e) => setBatchForm({ ...batchForm, start_date: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Fee (₹)</Label><Input type="number" min="0" step="0.01" value={batchForm.fee} onChange={(e) => setBatchForm({ ...batchForm, fee: e.target.value })} /></div>
               </div>
+              <div className="space-y-2 rounded-md border p-3">
+                <Label className="text-sm font-medium">Required fields on registration form</Label>
+                <p className="text-xs text-muted-foreground">Choose which details students must fill before joining via the QR scanner.</p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {FIELD_OPTIONS.map((f) => {
+                    const checked = batchForm.required_fields.includes(f.key);
+                    const locked = f.key === "name";
+                    return (
+                      <label key={f.key} className={`flex items-center gap-2 text-sm ${locked ? "opacity-70" : "cursor-pointer"}`}>
+                        <Checkbox checked={checked} disabled={locked} onCheckedChange={() => toggleRequiredField(f.key)} />
+                        <span>{f.label}{locked ? " (always)" : ""}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
               <Button type="submit" className="w-full">{editingBatchId ? "Update" : "Add"} Batch</Button>
             </form>
           </DialogContent>
