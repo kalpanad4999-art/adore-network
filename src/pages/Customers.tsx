@@ -164,6 +164,13 @@ const Customers = () => {
     toast.success("Customer removed"); fetchCustomers();
   };
 
+  const moveCustomer = async (customerId: string, targetBatchId: string) => {
+    const { error } = await supabase.from("students").update({ batch_id: targetBatchId }).eq("id", customerId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Customer moved");
+    fetchCustomers();
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-3 flex-wrap">
