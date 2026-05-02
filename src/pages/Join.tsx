@@ -126,6 +126,34 @@ const Join = () => {
                 className="h-14 rounded-xl border-2 text-base px-4"
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <Label className="text-lg font-semibold text-foreground">Height (cm)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min={30}
+                  max={272}
+                  step="0.1"
+                  value={form.height}
+                  onChange={(e) => setForm({ ...form, height: e.target.value })}
+                  className="h-14 rounded-xl border-2 text-base px-4"
+                />
+              </div>
+              <div className="space-y-3">
+                <Label className="text-lg font-semibold text-foreground">Weight (kg)</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min={2}
+                  max={500}
+                  step="0.1"
+                  value={form.weight}
+                  onChange={(e) => setForm({ ...form, weight: e.target.value })}
+                  className="h-14 rounded-xl border-2 text-base px-4"
+                />
+              </div>
+            </div>
             <div className="space-y-3">
               <Label className="text-lg font-semibold text-foreground">Address</Label>
               <Textarea
