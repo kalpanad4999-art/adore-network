@@ -39,10 +39,6 @@ const Join = () => {
     if (!token) return;
     if (!form.name.trim()) { toast.error("Name is required"); return; }
     if (form.phone && !phoneRegex.test(form.phone.trim())) { toast.error("Enter a valid phone"); return; }
-    const heightNum = form.height ? Number(form.height) : null;
-    const weightNum = form.weight ? Number(form.weight) : null;
-    if (heightNum !== null && (Number.isNaN(heightNum) || heightNum < 30 || heightNum > 272)) { toast.error("Enter a valid height in cm"); return; }
-    if (weightNum !== null && (Number.isNaN(weightNum) || weightNum < 2 || weightNum > 500)) { toast.error("Enter a valid weight in kg"); return; }
     setSubmitting(true);
     const { error } = await supabase.rpc("register_student_via_token", {
       _token: token,
@@ -51,8 +47,6 @@ const Join = () => {
       _phone: form.phone,
       _address: form.address,
       _notes: form.notes,
-      _height_cm: heightNum,
-      _weight_kg: weightNum,
     });
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
