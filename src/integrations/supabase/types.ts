@@ -283,6 +283,7 @@ export type Database = {
           batch_id: string | null
           created_at: string
           email: string | null
+          height_cm: number | null
           id: string
           membership_status: string | null
           membership_type: string | null
@@ -291,12 +292,14 @@ export type Database = {
           phone: string | null
           updated_at: string
           user_id: string
+          weight_kg: number | null
         }
         Insert: {
           address?: string | null
           batch_id?: string | null
           created_at?: string
           email?: string | null
+          height_cm?: number | null
           id?: string
           membership_status?: string | null
           membership_type?: string | null
@@ -305,12 +308,14 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id: string
+          weight_kg?: number | null
         }
         Update: {
           address?: string | null
           batch_id?: string | null
           created_at?: string
           email?: string | null
+          height_cm?: number | null
           id?: string
           membership_status?: string | null
           membership_type?: string | null
@@ -319,6 +324,7 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+          weight_kg?: number | null
         }
         Relationships: [
           {
@@ -404,17 +410,31 @@ export type Database = {
         }
         Returns: boolean
       }
-      register_student_via_token: {
-        Args: {
-          _address: string
-          _email: string
-          _name: string
-          _notes: string
-          _phone: string
-          _token: string
-        }
-        Returns: string
-      }
+      register_student_via_token:
+        | {
+            Args: {
+              _address: string
+              _email: string
+              _name: string
+              _notes: string
+              _phone: string
+              _token: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _address: string
+              _email: string
+              _height_cm?: number
+              _name: string
+              _notes: string
+              _phone: string
+              _token: string
+              _weight_kg?: number
+            }
+            Returns: string
+          }
     }
     Enums: {
       app_role: "owner" | "staff"
