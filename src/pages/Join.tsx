@@ -19,7 +19,7 @@ const Join = () => {
   const [batch, setBatch] = useState<BatchInfo | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "", height: "", weight: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
 
   useEffect(() => {
     (async () => {
@@ -39,10 +39,6 @@ const Join = () => {
     if (!token) return;
     if (!form.name.trim()) { toast.error("Name is required"); return; }
     if (form.phone && !phoneRegex.test(form.phone.trim())) { toast.error("Enter a valid phone"); return; }
-    const heightNum = form.height ? Number(form.height) : null;
-    const weightNum = form.weight ? Number(form.weight) : null;
-    if (heightNum !== null && (Number.isNaN(heightNum) || heightNum < 30 || heightNum > 272)) { toast.error("Enter a valid height in cm"); return; }
-    if (weightNum !== null && (Number.isNaN(weightNum) || weightNum < 2 || weightNum > 500)) { toast.error("Enter a valid weight in kg"); return; }
     setSubmitting(true);
     const { error } = await supabase.rpc("register_student_via_token", {
       _token: token,
@@ -51,8 +47,6 @@ const Join = () => {
       _phone: form.phone,
       _address: form.address,
       _notes: form.notes,
-      _height_cm: heightNum,
-      _weight_kg: weightNum,
     });
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
@@ -125,34 +119,6 @@ const Join = () => {
                 maxLength={20}
                 className="h-14 rounded-xl border-2 text-base px-4"
               />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <Label className="text-lg font-semibold text-foreground">Height (cm)</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  min={30}
-                  max={272}
-                  step="0.1"
-                  value={form.height}
-                  onChange={(e) => setForm({ ...form, height: e.target.value })}
-                  className="h-14 rounded-xl border-2 text-base px-4"
-                />
-              </div>
-              <div className="space-y-3">
-                <Label className="text-lg font-semibold text-foreground">Weight (kg)</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  min={2}
-                  max={500}
-                  step="0.1"
-                  value={form.weight}
-                  onChange={(e) => setForm({ ...form, weight: e.target.value })}
-                  className="h-14 rounded-xl border-2 text-base px-4"
-                />
-              </div>
             </div>
             <div className="space-y-3">
               <Label className="text-lg font-semibold text-foreground">Address</Label>

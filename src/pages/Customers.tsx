@@ -8,7 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, Pencil, Trash2, Layers, UserPlus, QrCode, Copy } from "lucide-react";
+import { Plus, Pencil, Trash2, Layers, UserPlus, QrCode, Copy, ArrowRightLeft } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -163,6 +164,13 @@ const Customers = () => {
     toast.success("Customer removed"); fetchCustomers();
   };
 
+  const moveCustomer = async (customerId: string, targetBatchId: string) => {
+    const { error } = await supabase.from("students").update({ batch_id: targetBatchId }).eq("id", customerId);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Customer moved");
+    fetchCustomers();
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -251,6 +259,22 @@ const Customers = () => {
                             {c.address && <p className="text-xs text-muted-foreground truncate mt-0.5">{c.address}</p>}
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button title="Move to another batch" className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><ArrowRightLeft className="h-4 w-4" /></button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Move to batch</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {batches.filter((tb) => tb.id !== c.batch_id).length === 0 ? (
+                                  <DropdownMenuItem disabled>No other batches</DropdownMenuItem>
+                                ) : (
+                                  batches.filter((tb) => tb.id !== c.batch_id).map((tb) => (
+                                    <DropdownMenuItem key={tb.id} onClick={() => moveCustomer(c.id, tb.id)}>{tb.name}</DropdownMenuItem>
+                                  ))
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                             <button onClick={() => editCustomer(c)} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
                             <button onClick={() => deleteCustomer(c.id)} className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
                           </div>
