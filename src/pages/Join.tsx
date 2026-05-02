@@ -105,45 +105,61 @@ const Join = () => {
         <CardContent className="px-2 md:px-6">
           <form onSubmit={submit} className="space-y-7">
             <div className="space-y-3">
-              <Label className="text-lg font-semibold text-foreground">Name</Label>
+              <Label className="text-lg font-semibold text-foreground">Name {isReq("name") && <span className="text-destructive">*</span>}</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 maxLength={100}
-                required
+                required={isReq("name")}
                 className="h-14 rounded-xl border-2 text-base px-4"
               />
             </div>
             <div className="space-y-3">
-              <Label className="text-lg font-semibold text-foreground">Email Address</Label>
+              <Label className="text-lg font-semibold text-foreground">Email Address {isReq("email") && <span className="text-destructive">*</span>}</Label>
               <Input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 maxLength={255}
+                required={isReq("email")}
                 className="h-14 rounded-xl border-2 text-base px-4"
               />
             </div>
             <div className="space-y-3">
-              <Label className="text-lg font-semibold text-foreground">Phone Number</Label>
+              <Label className="text-lg font-semibold text-foreground">Phone Number {isReq("phone") && <span className="text-destructive">*</span>}</Label>
               <Input
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 maxLength={20}
+                required={isReq("phone")}
                 className="h-14 rounded-xl border-2 text-base px-4"
               />
             </div>
             <div className="space-y-3">
-              <Label className="text-lg font-semibold text-foreground">Address</Label>
+              <Label className="text-lg font-semibold text-foreground">Address {isReq("address") && <span className="text-destructive">*</span>}</Label>
               <Textarea
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
                 maxLength={500}
                 rows={4}
+                required={isReq("address")}
                 className="rounded-xl border-2 text-base px-4 py-3 min-h-[120px]"
               />
             </div>
+            {isReq("notes") && (
+              <div className="space-y-3">
+                <Label className="text-lg font-semibold text-foreground">Notes <span className="text-destructive">*</span></Label>
+                <Textarea
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  maxLength={500}
+                  rows={3}
+                  required
+                  className="rounded-xl border-2 text-base px-4 py-3 min-h-[100px]"
+                />
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
               <a
                 href="https://youtube.com/@clearpictures8918?si=NEN__ftlagnEfnpV"
