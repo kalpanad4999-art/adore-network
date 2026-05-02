@@ -134,6 +134,10 @@ const Customers = () => {
     e.preventDefault();
     if (!user || !activeBatchId) return;
     if (custForm.phone && !phoneRegex.test(custForm.phone.trim())) { toast.error("Enter a valid phone"); return; }
+    const heightNum = custForm.height ? Number(custForm.height) : null;
+    const weightNum = custForm.weight ? Number(custForm.weight) : null;
+    if (heightNum !== null && (Number.isNaN(heightNum) || heightNum < 30 || heightNum > 272)) { toast.error("Enter a valid height in cm"); return; }
+    if (weightNum !== null && (Number.isNaN(weightNum) || weightNum < 2 || weightNum > 500)) { toast.error("Enter a valid weight in kg"); return; }
     const payload = {
       user_id: user.id,
       batch_id: activeBatchId,
@@ -142,6 +146,8 @@ const Customers = () => {
       phone: custForm.phone.trim() || null,
       address: custForm.address.trim() || null,
       notes: custForm.notes.trim() || null,
+      height_cm: heightNum,
+      weight_kg: weightNum,
     };
     const { error } = editingCustId
       ? await supabase.from("students").update(payload).eq("id", editingCustId)
