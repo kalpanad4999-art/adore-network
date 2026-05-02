@@ -20,6 +20,8 @@ interface Customer {
   phone: string | null;
   address: string | null;
   notes: string | null;
+  height_cm: number | null;
+  weight_kg: number | null;
   batch_id: string | null;
 }
 
