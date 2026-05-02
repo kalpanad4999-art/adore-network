@@ -57,7 +57,7 @@ const Customers = () => {
 
   const fetchCustomers = async () => {
     if (!user) return;
-    const { data } = await supabase.from("students").select("id,name,email,phone,address,notes,batch_id").eq("user_id", user.id).order("name");
+    const { data } = await supabase.from("students").select("id,name,email,phone,address,notes,height_cm,weight_kg,batch_id").eq("user_id", user.id).order("name");
     setCustomers((data as Customer[]) || []);
   };
   const fetchBatches = async () => {
