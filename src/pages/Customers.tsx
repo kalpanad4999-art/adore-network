@@ -243,6 +243,11 @@ const Customers = () => {
                             <p className="text-sm text-muted-foreground truncate">
                               {c.phone || "—"}{c.email ? ` · ${c.email}` : ""}
                             </p>
+                            {(c.height_cm || c.weight_kg) && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {c.height_cm ? `${c.height_cm} cm` : ""}{c.height_cm && c.weight_kg ? " · " : ""}{c.weight_kg ? `${c.weight_kg} kg` : ""}
+                              </p>
+                            )}
                             {c.address && <p className="text-xs text-muted-foreground truncate mt-0.5">{c.address}</p>}
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
