@@ -94,12 +94,14 @@ const Customers = () => {
     if (!user) return;
     const name = batchForm.name.trim();
     if (!name) { toast.error("Name required"); return; }
+    const required_fields = Array.from(new Set(["name", ...batchForm.required_fields]));
     const payload = {
       user_id: user.id,
       name,
       description: batchForm.description.trim() || null,
       start_date: batchForm.start_date || null,
       fee: batchForm.fee ? Number(batchForm.fee) : 0,
+      required_fields,
     };
     const { error } = editingBatchId
       ? await supabase.from("batches").update(payload).eq("id", editingBatchId)
@@ -111,7 +113,7 @@ const Customers = () => {
 
   const editBatch = (b: Batch) => {
     setEditingBatchId(b.id);
-    setBatchForm({ name: b.name, description: b.description || "", start_date: b.start_date || "", fee: b.fee?.toString() || "" });
+    setBatchForm({ name: b.name, description: b.description || "", start_date: b.start_date || "", fee: b.fee?.toString() || "", required_fields: b.required_fields?.length ? b.required_fields : ["name"] });
     setBatchOpen(true);
   };
 
@@ -122,8 +124,18 @@ const Customers = () => {
   };
 
   const resetBatchForm = () => {
-    setBatchForm({ name: "", description: "", start_date: "", fee: "" });
+    setBatchForm({ name: "", description: "", start_date: "", fee: "", required_fields: ["name"] });
     setEditingBatchId(null); setBatchOpen(false);
+  };
+
+  const toggleRequiredField = (key: string) => {
+    if (key === "name") return;
+    setBatchForm((prev) => ({
+      ...prev,
+      required_fields: prev.required_fields.includes(key)
+        ? prev.required_fields.filter((k) => k !== key)
+        : [...prev.required_fields, key],
+    }));
   };
 
   // ---------- Customer CRUD ----------
