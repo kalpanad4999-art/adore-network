@@ -259,6 +259,22 @@ const Customers = () => {
                             {c.address && <p className="text-xs text-muted-foreground truncate mt-0.5">{c.address}</p>}
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button title="Move to another batch" className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><ArrowRightLeft className="h-4 w-4" /></button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Move to batch</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {batches.filter((tb) => tb.id !== c.batch_id).length === 0 ? (
+                                  <DropdownMenuItem disabled>No other batches</DropdownMenuItem>
+                                ) : (
+                                  batches.filter((tb) => tb.id !== c.batch_id).map((tb) => (
+                                    <DropdownMenuItem key={tb.id} onClick={() => moveCustomer(c.id, tb.id)}>{tb.name}</DropdownMenuItem>
+                                  ))
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                             <button onClick={() => editCustomer(c)} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
                             <button onClick={() => deleteCustomer(c.id)} className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
                           </div>
