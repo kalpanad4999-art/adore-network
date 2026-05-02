@@ -35,10 +35,23 @@ const Join = () => {
     })();
   }, [token]);
 
+  const required = new Set(batch?.required_fields ?? ["name"]);
+  const isReq = (key: string) => required.has(key);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
-    if (!form.name.trim()) { toast.error("Name is required"); return; }
+    const checks: { key: string; label: string; value: string }[] = [
+      { key: "name", label: "Name", value: form.name.trim() },
+      { key: "email", label: "Email", value: form.email.trim() },
+      { key: "phone", label: "Phone", value: form.phone.trim() },
+      { key: "address", label: "Address", value: form.address.trim() },
+      { key: "notes", label: "Notes", value: form.notes.trim() },
+    ];
+    for (const c of checks) {
+      if (isReq(c.key) && !c.value) { toast.error(`${c.label} is required`); return; }
+    }
+    if (form.email && !emailRegex.test(form.email.trim())) { toast.error("Enter a valid email"); return; }
     if (form.phone && !phoneRegex.test(form.phone.trim())) { toast.error("Enter a valid phone"); return; }
     setSubmitting(true);
     const { error } = await supabase.rpc("register_student_via_token", {
