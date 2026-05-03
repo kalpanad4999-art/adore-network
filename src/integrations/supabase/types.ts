@@ -106,6 +106,45 @@ export type Database = {
           },
         ]
       }
+      gallery_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_public: boolean
+          media_type: string
+          storage_path: string
+          thumbnail_path: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          media_type: string
+          storage_path: string
+          thumbnail_path?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          media_type?: string
+          storage_path?: string
+          thumbnail_path?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       instructors: {
         Row: {
           compensation_type: string
@@ -143,6 +182,48 @@ export type Database = {
           name?: string
           phone?: string | null
           specialization?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      live_classes: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          is_public: boolean
+          meeting_url: string
+          platform: string | null
+          scheduled_at: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_public?: boolean
+          meeting_url: string
+          platform?: string | null
+          scheduled_at: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_public?: boolean
+          meeting_url?: string
+          platform?: string | null
+          scheduled_at?: string
+          title?: string
           updated_at?: string
           user_id?: string
         }
@@ -211,6 +292,48 @@ export type Database = {
           id?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      recordings: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          external_url: string | null
+          id: string
+          is_public: boolean
+          recorded_on: string | null
+          storage_path: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          external_url?: string | null
+          id?: string
+          is_public?: boolean
+          recorded_on?: string | null
+          storage_path?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          external_url?: string | null
+          id?: string
+          is_public?: boolean
+          recorded_on?: string | null
+          storage_path?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -407,6 +530,43 @@ export type Database = {
         }[]
       }
       get_owner_id: { Args: { _user_id: string }; Returns: string }
+      get_public_gallery: {
+        Args: { _owner: string }
+        Returns: {
+          created_at: string
+          description: string
+          id: string
+          media_type: string
+          storage_path: string
+          thumbnail_path: string
+          title: string
+        }[]
+      }
+      get_public_live_classes: {
+        Args: { _owner: string }
+        Returns: {
+          description: string
+          duration_minutes: number
+          id: string
+          meeting_url: string
+          platform: string
+          scheduled_at: string
+          title: string
+        }[]
+      }
+      get_public_recordings: {
+        Args: { _owner: string }
+        Returns: {
+          created_at: string
+          description: string
+          duration_minutes: number
+          external_url: string
+          id: string
+          recorded_on: string
+          storage_path: string
+          title: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
