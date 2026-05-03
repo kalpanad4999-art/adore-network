@@ -13,6 +13,8 @@ import Customers from "./pages/Customers";
 import Payments from "./pages/Payments";
 import Settings from "./pages/Settings";
 import Join from "./pages/Join";
+import Media from "./pages/Media";
+import PublicStudio from "./pages/PublicStudio";
 import NotFound from "./pages/NotFound";
 import PaymentsGuard from "./components/PaymentsGuard";
 
@@ -41,11 +43,13 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/join/:token" element={<Join />} />
+            <Route path="/studio/:ownerId" element={<PublicStudio />} />
             <Route path="/" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+            <Route path="/media" element={<ProtectedRoute><Media /></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute><PaymentsGuard><Payments /></PaymentsGuard></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/students" element={<Navigate to="/" replace />} />
-            <Route path="/classes" element={<Navigate to="/" replace />} />
+            <Route path="/classes" element={<Navigate to="/media" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
