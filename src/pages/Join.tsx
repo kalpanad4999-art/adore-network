@@ -47,12 +47,18 @@ const Join = () => {
       { key: "phone", label: "Phone", value: form.phone.trim() },
       { key: "address", label: "Address", value: form.address.trim() },
       { key: "notes", label: "Notes", value: form.notes.trim() },
+      { key: "height", label: "Height", value: form.height.trim() },
+      { key: "weight", label: "Weight", value: form.weight.trim() },
     ];
     for (const c of checks) {
       if (isReq(c.key) && !c.value) { toast.error(`${c.label} is required`); return; }
     }
     if (form.email && !emailRegex.test(form.email.trim())) { toast.error("Enter a valid email"); return; }
     if (form.phone && !phoneRegex.test(form.phone.trim())) { toast.error("Enter a valid phone"); return; }
+    const heightNum = form.height ? Number(form.height) : null;
+    const weightNum = form.weight ? Number(form.weight) : null;
+    if (heightNum !== null && (Number.isNaN(heightNum) || heightNum < 30 || heightNum > 272)) { toast.error("Enter a valid height in cm"); return; }
+    if (weightNum !== null && (Number.isNaN(weightNum) || weightNum < 2 || weightNum > 500)) { toast.error("Enter a valid weight in kg"); return; }
     setSubmitting(true);
     const { error } = await supabase.rpc("register_student_via_token", {
       _token: token,
@@ -61,6 +67,8 @@ const Join = () => {
       _phone: form.phone,
       _address: form.address,
       _notes: form.notes,
+      _height_cm: heightNum,
+      _weight_kg: weightNum,
     });
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
