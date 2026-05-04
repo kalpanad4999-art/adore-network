@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { StudioProvider } from "@/contexts/StudioContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import AppLayout from "@/components/layout/AppLayout";
+import AppLockGuard from "@/components/AppLockGuard";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Customers from "./pages/Customers";
@@ -14,6 +15,7 @@ import Payments from "./pages/Payments";
 import Settings from "./pages/Settings";
 import Join from "./pages/Join";
 import Media from "./pages/Media";
+import Gallery from "./pages/Gallery";
 import PublicStudio from "./pages/PublicStudio";
 import NotFound from "./pages/NotFound";
 import PaymentsGuard from "./components/PaymentsGuard";
@@ -26,7 +28,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!user) return <Navigate to="/auth" replace />;
   return (
     <StudioProvider>
-      <AppLayout>{children}</AppLayout>
+      <AppLockGuard>
+        <AppLayout>{children}</AppLayout>
+      </AppLockGuard>
     </StudioProvider>
   );
 };
@@ -45,6 +49,7 @@ const App = () => (
             <Route path="/join/:token" element={<Join />} />
             <Route path="/studio/:ownerId" element={<PublicStudio />} />
             <Route path="/" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+            <Route path="/gallery" element={<ProtectedRoute><Gallery /></ProtectedRoute>} />
             <Route path="/media" element={<ProtectedRoute><Media /></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute><PaymentsGuard><Payments /></PaymentsGuard></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

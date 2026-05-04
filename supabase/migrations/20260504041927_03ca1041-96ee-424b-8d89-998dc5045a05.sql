@@ -1,0 +1,1 @@
+ALTER TABLE public.studio_settings ADD COLUMN IF NOT EXISTS app_lock_pin_hash text;

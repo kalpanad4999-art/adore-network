@@ -7,6 +7,7 @@ interface StudioContextValue {
   logoUrl: string | null;
   backgroundUrl: string | null;
   paymentsPinSet: boolean;
+  appLockPinSet: boolean;
   ownerId: string | null;
   isOwner: boolean;
   loading: boolean;
@@ -18,6 +19,8 @@ interface StudioContextValue {
   removeBackground: () => Promise<void>;
   setPaymentsPin: (pin: string | null) => Promise<void>;
   verifyPaymentsPin: (pin: string) => Promise<boolean>;
+  setAppLockPin: (pin: string | null) => Promise<void>;
+  verifyAppLockPin: (pin: string) => Promise<boolean>;
 }
 
 const StudioContext = createContext<StudioContextValue | undefined>(undefined);
@@ -34,6 +37,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const [paymentsPinHash, setPaymentsPinHash] = useState<string | null>(null);
+  const [appLockPinHash, setAppLockPinHash] = useState<string | null>(null);
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -51,7 +55,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     setIsOwner(roleRow?.role === "owner" || !roleRow);
     const { data: settings } = await supabase
       .from("studio_settings")
-      .select("studio_name, logo_url, background_url, payments_pin_hash")
+      .select("studio_name, logo_url, background_url, payments_pin_hash, app_lock_pin_hash")
       .eq("owner_id", owner)
       .maybeSingle();
     if (settings) {
@@ -59,6 +63,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
       setLogoUrl(settings.logo_url);
       setBackgroundUrl((settings as any).background_url ?? null);
       setPaymentsPinHash((settings as any).payments_pin_hash ?? null);
+      setAppLockPinHash((settings as any).app_lock_pin_hash ?? null);
     }
     setLoading(false);
   };
@@ -141,13 +146,28 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     return hash === paymentsPinHash;
   };
 
+  const setAppLockPin = async (pin: string | null) => {
+    if (!ownerId || !isOwner) return;
+    const hash = pin ? await hashPin(pin) : null;
+    await supabase.from("studio_settings").upsert({ owner_id: ownerId, app_lock_pin_hash: hash, updated_at: new Date().toISOString() } as any);
+    setAppLockPinHash(hash);
+  };
+
+  const verifyAppLockPin = async (pin: string) => {
+    if (!appLockPinHash) return true;
+    const hash = await hashPin(pin);
+    return hash === appLockPinHash;
+  };
+
   return (
     <StudioContext.Provider value={{
       studioName, logoUrl, backgroundUrl,
       paymentsPinSet: !!paymentsPinHash,
+      appLockPinSet: !!appLockPinHash,
       ownerId, isOwner, loading, refresh,
       updateName, uploadLogo, uploadBackground, setBackgroundFromUrl, removeBackground,
       setPaymentsPin, verifyPaymentsPin,
+      setAppLockPin, verifyAppLockPin,
     }}>
       {children}
     </StudioContext.Provider>
