@@ -37,6 +37,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const [paymentsPinHash, setPaymentsPinHash] = useState<string | null>(null);
+  const [appLockPinHash, setAppLockPinHash] = useState<string | null>(null);
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -54,7 +55,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     setIsOwner(roleRow?.role === "owner" || !roleRow);
     const { data: settings } = await supabase
       .from("studio_settings")
-      .select("studio_name, logo_url, background_url, payments_pin_hash")
+      .select("studio_name, logo_url, background_url, payments_pin_hash, app_lock_pin_hash")
       .eq("owner_id", owner)
       .maybeSingle();
     if (settings) {
@@ -62,6 +63,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
       setLogoUrl(settings.logo_url);
       setBackgroundUrl((settings as any).background_url ?? null);
       setPaymentsPinHash((settings as any).payments_pin_hash ?? null);
+      setAppLockPinHash((settings as any).app_lock_pin_hash ?? null);
     }
     setLoading(false);
   };
