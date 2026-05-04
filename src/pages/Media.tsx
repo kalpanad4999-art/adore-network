@@ -238,46 +238,17 @@ const Media = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl font-bold">Media & Classes</h1>
-          <p className="text-muted-foreground mt-1">Gallery, recordings and live online classes</p>
+          <h1 className="font-display text-3xl font-bold">Classes</h1>
+          <p className="text-muted-foreground mt-1">Recordings and live online classes</p>
         </div>
         <Button variant="outline" onClick={copyPublicLink}><Copy className="h-4 w-4 mr-2" />Copy public link</Button>
       </div>
 
-      <Tabs defaultValue="gallery" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
-          <TabsTrigger value="gallery"><ImageIcon className="h-4 w-4 mr-2" />Gallery</TabsTrigger>
+      <Tabs defaultValue="recordings" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-sm">
           <TabsTrigger value="recordings"><Video className="h-4 w-4 mr-2" />Recordings</TabsTrigger>
           <TabsTrigger value="live"><Radio className="h-4 w-4 mr-2" />Live</TabsTrigger>
         </TabsList>
-
-        {/* GALLERY */}
-        <TabsContent value="gallery" className="space-y-4">
-          <div className="flex justify-end">
-            <input ref={galleryInputRef} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => uploadGalleryFiles(e.target.files)} />
-            <Button onClick={() => galleryInputRef.current?.click()}><Upload className="h-4 w-4 mr-2" />Upload photos / videos</Button>
-          </div>
-          {gallery.length === 0 ? (
-            <Card><CardContent className="py-12 text-center text-muted-foreground">No items yet — upload your first photo or video.</CardContent></Card>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {gallery.map((g) => (
-                <div key={g.id} className="group relative">
-                  <MediaThumb item={g} />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition rounded-md flex flex-col justify-between p-2">
-                    <div className="flex justify-between">
-                      <button onClick={() => toggleGalleryPublic(g, !g.is_public)} className="bg-background/90 rounded-full p-1.5" title={g.is_public ? "Public" : "Private"}>
-                        {g.is_public ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                      </button>
-                      <button onClick={() => deleteGallery(g)} className="bg-background/90 rounded-full p-1.5 text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
-                    <span className="text-xs text-white truncate">{g.title}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
 
         {/* RECORDINGS */}
         <TabsContent value="recordings" className="space-y-4">

@@ -67,7 +67,6 @@ const Auth = () => {
       <div className="w-full max-w-md animate-fade-in">
         <div className="mb-8 text-center">
           <h1 className="font-display text-4xl font-bold text-foreground tracking-tight">TRINETRA</h1>
-          <p className="mt-2 text-muted-foreground">Yoga Studio Financial Management</p>
         </div>
 
         <Card>

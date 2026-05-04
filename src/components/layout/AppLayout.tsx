@@ -14,7 +14,7 @@ import { toast } from "sonner";
 const navItems = [
   { to: "/", label: "Customers", icon: Users },
   { to: "/gallery", label: "My Gallery", icon: ImageIcon },
-  { to: "/media", label: "Media", icon: PlayCircle },
+  { to: "/media", label: "Classes", icon: PlayCircle },
   { to: "/payments", label: "Payments", icon: IndianRupee },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ];
