@@ -93,8 +93,9 @@ const Join = () => {
         <Card className="max-w-md w-full">
           <CardContent className="py-10 text-center space-y-3">
             <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
-            <h2 className="font-display text-2xl">You're registered!</h2>
-            <p className="text-muted-foreground">Welcome to {batch.name}. The studio will be in touch.</p>
+            <h2 className="font-display text-3xl">Welcome to TRINETRA YOGA</h2>
+            <p className="text-lg text-foreground">You're registered for <span className="font-semibold">{batch.name}</span>.</p>
+            <p className="text-muted-foreground">Namaste 🙏 The studio will be in touch with you soon.</p>
           </CardContent>
         </Card>
       </div>
