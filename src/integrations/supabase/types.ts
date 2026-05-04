@@ -464,6 +464,7 @@ export type Database = {
       }
       studio_settings: {
         Row: {
+          app_lock_pin_hash: string | null
           background_url: string | null
           logo_url: string | null
           owner_id: string
@@ -472,6 +473,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          app_lock_pin_hash?: string | null
           background_url?: string | null
           logo_url?: string | null
           owner_id: string
@@ -480,6 +482,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          app_lock_pin_hash?: string | null
           background_url?: string | null
           logo_url?: string | null
           owner_id?: string
