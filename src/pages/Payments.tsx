@@ -216,7 +216,16 @@ const Payments = () => {
                                 <p className="text-xs text-muted-foreground mt-0.5">
                                   Paid {new Date(p.paid_on).toLocaleDateString()}{p.valid_until ? ` · valid till ${new Date(p.valid_until).toLocaleDateString()}` : ""}
                                 </p>
-                                {p.notes && <p className="text-xs text-muted-foreground italic mt-0.5 truncate">{p.notes}</p>}
+                                {p.notes_plain ? (
+                                  <p className="text-xs text-muted-foreground italic mt-0.5 truncate">
+                                    {p.notes_encrypted && <LockIcon className="h-3 w-3 inline mr-1" />}
+                                    {p.notes_plain}
+                                  </p>
+                                ) : p.notes_encrypted ? (
+                                  <p className="text-xs text-muted-foreground italic mt-0.5 flex items-center gap-1">
+                                    <LockIcon className="h-3 w-3" /> Encrypted note (unlock app to view)
+                                  </p>
+                                ) : null}
                               </div>
                               <button onClick={() => deletePayment(p.id)} aria-label="Delete" className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"><Trash2 className="h-4 w-4" /></button>
                             </div>
