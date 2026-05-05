@@ -368,6 +368,7 @@ export type Database = {
           id: string
           method: string
           notes: string | null
+          notes_encrypted: string | null
           paid_on: string
           plan: string
           student_id: string
@@ -381,6 +382,7 @@ export type Database = {
           id?: string
           method?: string
           notes?: string | null
+          notes_encrypted?: string | null
           paid_on?: string
           plan?: string
           student_id: string
@@ -394,6 +396,7 @@ export type Database = {
           id?: string
           method?: string
           notes?: string | null
+          notes_encrypted?: string | null
           paid_on?: string
           plan?: string
           student_id?: string
@@ -468,7 +471,12 @@ export type Database = {
           background_url: string | null
           logo_url: string | null
           owner_id: string
+          payments_biometric_credential_id: string | null
+          payments_biometric_public_key: string | null
+          payments_password_hash: string | null
           payments_pin_hash: string | null
+          payments_security_answer_hash: string | null
+          payments_security_question: string | null
           studio_name: string
           updated_at: string
         }
@@ -477,7 +485,12 @@ export type Database = {
           background_url?: string | null
           logo_url?: string | null
           owner_id: string
+          payments_biometric_credential_id?: string | null
+          payments_biometric_public_key?: string | null
+          payments_password_hash?: string | null
           payments_pin_hash?: string | null
+          payments_security_answer_hash?: string | null
+          payments_security_question?: string | null
           studio_name?: string
           updated_at?: string
         }
@@ -486,7 +499,12 @@ export type Database = {
           background_url?: string | null
           logo_url?: string | null
           owner_id?: string
+          payments_biometric_credential_id?: string | null
+          payments_biometric_public_key?: string | null
+          payments_password_hash?: string | null
           payments_pin_hash?: string | null
+          payments_security_answer_hash?: string | null
+          payments_security_question?: string | null
           studio_name?: string
           updated_at?: string
         }

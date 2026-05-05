@@ -8,8 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight, Lock as LockIcon } from "lucide-react";
 import { toast } from "sonner";
+import { encryptString, decryptString, getCachedKey } from "@/lib/crypto";
 
 interface Customer { id: string; name: string; phone: string | null; }
 interface Payment {
@@ -21,6 +22,8 @@ interface Payment {
   plan: string;
   valid_until: string | null;
   notes: string | null;
+  notes_encrypted: string | null;
+  notes_plain?: string | null;
 }
 
 const paymentMethods = ["cash", "upi", "card", "bank-transfer", "other"];
@@ -44,7 +47,17 @@ const Payments = () => {
       supabase.from("student_payments").select("*").eq("user_id", user.id).order("paid_on", { ascending: false }),
     ]);
     setCustomers((cust as Customer[]) || []);
-    setPayments((pays as Payment[]) || []);
+    const list = ((pays as any[]) || []) as Payment[];
+    // Decrypt notes_encrypted with cached E2E key when available
+    const key = await getCachedKey();
+    for (const p of list) {
+      if (p.notes_encrypted && key) {
+        p.notes_plain = await decryptString(p.notes_encrypted, key);
+      } else {
+        p.notes_plain = p.notes;
+      }
+    }
+    setPayments(list);
   };
   useEffect(() => { fetchAll(); }, [user]);
 
@@ -69,6 +82,13 @@ const Payments = () => {
     const amount = parseFloat(form.amount);
     if (!form.student_id) { toast.error("Pick a customer"); return; }
     if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    const noteText = form.notes.trim();
+    let notes_plain: string | null = noteText || null;
+    let notes_encrypted: string | null = null;
+    if (noteText) {
+      const enc = await encryptString(noteText);
+      if (enc) { notes_encrypted = enc; notes_plain = null; }
+    }
     const { error } = await supabase.from("student_payments").insert({
       student_id: form.student_id,
       user_id: user.id,
@@ -77,8 +97,9 @@ const Payments = () => {
       method: form.method,
       plan: form.plan,
       valid_until: form.valid_until || null,
-      notes: form.notes.trim() || null,
-    });
+      notes: notes_plain,
+      notes_encrypted,
+    } as any);
     if (error) { toast.error(error.message); return; }
     toast.success("Payment recorded");
     setForm({ ...form, amount: "", notes: "" });
@@ -195,7 +216,16 @@ const Payments = () => {
                                 <p className="text-xs text-muted-foreground mt-0.5">
                                   Paid {new Date(p.paid_on).toLocaleDateString()}{p.valid_until ? ` · valid till ${new Date(p.valid_until).toLocaleDateString()}` : ""}
                                 </p>
-                                {p.notes && <p className="text-xs text-muted-foreground italic mt-0.5 truncate">{p.notes}</p>}
+                                {p.notes_plain ? (
+                                  <p className="text-xs text-muted-foreground italic mt-0.5 truncate">
+                                    {p.notes_encrypted && <LockIcon className="h-3 w-3 inline mr-1" />}
+                                    {p.notes_plain}
+                                  </p>
+                                ) : p.notes_encrypted ? (
+                                  <p className="text-xs text-muted-foreground italic mt-0.5 flex items-center gap-1">
+                                    <LockIcon className="h-3 w-3" /> Encrypted note (unlock app to view)
+                                  </p>
+                                ) : null}
                               </div>
                               <button onClick={() => deletePayment(p.id)} aria-label="Delete" className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"><Trash2 className="h-4 w-4" /></button>
                             </div>
