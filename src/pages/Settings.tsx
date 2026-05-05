@@ -19,8 +19,14 @@ const PRESET_WALLPAPERS = [
 
 const Settings = () => {
   const {
-    studioName, logoUrl, backgroundUrl, isOwner, paymentsPinSet, appLockPinSet,
-    uploadLogo, uploadBackground, setBackgroundFromUrl, removeBackground, setPaymentsPin, setAppLockPin,
+    studioName, logoUrl, backgroundUrl, isOwner,
+    paymentsPinSet, paymentsPasswordSet, paymentsQuestionSet, paymentsBiometricSet,
+    paymentsSecurityQuestion,
+    appLockPinSet,
+    uploadLogo, uploadBackground, setBackgroundFromUrl, removeBackground,
+    setPaymentsPin, setPaymentsPassword, setPaymentsSecurityQuestion,
+    registerPaymentsBiometric, removePaymentsBiometric,
+    setAppLockPin,
   } = useStudio();
   const { theme, setTheme } = useTheme();
   const logoRef = useRef<HTMLInputElement>(null);
@@ -31,6 +37,11 @@ const Settings = () => {
   const [appPin, setAppPin] = useState("");
   const [appConfirm, setAppConfirm] = useState("");
   const [savingAppPin, setSavingAppPin] = useState(false);
+  // New payments locks
+  const [pwd, setPwd] = useState("");
+  const [pwdConfirm, setPwdConfirm] = useState("");
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
 
   const handleAppPinSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,12 +51,36 @@ const Settings = () => {
     await setAppLockPin(appPin);
     setSavingAppPin(false);
     setAppPin(""); setAppConfirm("");
-    toast.success("App lock PIN saved");
+    toast.success("App lock PIN saved — encryption key activated");
   };
 
   const handleAppPinClear = async () => {
     await setAppLockPin(null);
     toast.success("App lock removed");
+  };
+
+  const savePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwd.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    if (pwd !== pwdConfirm) { toast.error("Passwords do not match"); return; }
+    await setPaymentsPassword(pwd);
+    setPwd(""); setPwdConfirm("");
+    toast.success("Payments password saved");
+  };
+
+  const saveQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (question.trim().length < 5) { toast.error("Enter a question"); return; }
+    if (answer.trim().length < 2) { toast.error("Enter an answer"); return; }
+    await setPaymentsSecurityQuestion(question, answer);
+    setQuestion(""); setAnswer("");
+    toast.success("Security question saved");
+  };
+
+  const enrollBiometric = async () => {
+    const ok = await registerPaymentsBiometric();
+    if (ok) toast.success("Biometric enrolled");
+    else toast.error("Biometric enrollment failed or unsupported");
   };
 
   if (!isOwner) {
