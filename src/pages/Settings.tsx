@@ -20,12 +20,10 @@ const PRESET_WALLPAPERS = [
 const Settings = () => {
   const {
     studioName, logoUrl, backgroundUrl, isOwner,
-    paymentsPinSet, paymentsPasswordSet, paymentsQuestionSet, paymentsBiometricSet,
-    paymentsSecurityQuestion,
+    paymentsPinSet,
     appLockPinSet,
     uploadLogo, uploadBackground, setBackgroundFromUrl, removeBackground,
-    setPaymentsPin, setPaymentsPassword, setPaymentsSecurityQuestion,
-    registerPaymentsBiometric, removePaymentsBiometric,
+    setPaymentsPin,
     setAppLockPin,
   } = useStudio();
   const { theme, setTheme } = useTheme();
@@ -37,11 +35,6 @@ const Settings = () => {
   const [appPin, setAppPin] = useState("");
   const [appConfirm, setAppConfirm] = useState("");
   const [savingAppPin, setSavingAppPin] = useState(false);
-  // New payments locks
-  const [pwd, setPwd] = useState("");
-  const [pwdConfirm, setPwdConfirm] = useState("");
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
 
   const handleAppPinSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,36 +44,12 @@ const Settings = () => {
     await setAppLockPin(appPin);
     setSavingAppPin(false);
     setAppPin(""); setAppConfirm("");
-    toast.success("App lock PIN saved — encryption key activated");
+    toast.success("App lock PIN saved");
   };
 
   const handleAppPinClear = async () => {
     await setAppLockPin(null);
     toast.success("App lock removed");
-  };
-
-  const savePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pwd.length < 6) { toast.error("Password must be at least 6 characters"); return; }
-    if (pwd !== pwdConfirm) { toast.error("Passwords do not match"); return; }
-    await setPaymentsPassword(pwd);
-    setPwd(""); setPwdConfirm("");
-    toast.success("Payments password saved");
-  };
-
-  const saveQuestion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (question.trim().length < 5) { toast.error("Enter a question"); return; }
-    if (answer.trim().length < 2) { toast.error("Enter an answer"); return; }
-    await setPaymentsSecurityQuestion(question, answer);
-    setQuestion(""); setAnswer("");
-    toast.success("Security question saved");
-  };
-
-  const enrollBiometric = async () => {
-    const ok = await registerPaymentsBiometric();
-    if (ok) toast.success("Biometric enrolled");
-    else toast.error("Biometric enrollment failed or unsupported");
   };
 
   if (!isOwner) {
@@ -316,82 +285,13 @@ const Settings = () => {
         </CardContent>
       </Card>
 
-      {/* Payments Password */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2"><Lock className="h-5 w-5" /> Payments Password</CardTitle>
-          <CardDescription>
-            {paymentsPasswordSet ? "A password is set as an alternate unlock method." : "Set an alphanumeric password (min 6 chars) as an alternate unlock."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={savePassword} className="space-y-3">
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>Password</Label>
-                <Input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="Min 6 characters" /></div>
-              <div className="space-y-1.5"><Label>Confirm</Label>
-                <Input type="password" value={pwdConfirm} onChange={(e) => setPwdConfirm(e.target.value)} /></div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit">{paymentsPasswordSet ? "Update password" : "Set password"}</Button>
-              {paymentsPasswordSet && (
-                <Button type="button" variant="ghost" onClick={async () => { await setPaymentsPassword(null); toast.success("Password removed"); }} className="text-destructive hover:text-destructive">Remove</Button>
-              )}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Payments Security Question */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2"><Lock className="h-5 w-5" /> Payments Security Question</CardTitle>
-          <CardDescription>
-            {paymentsQuestionSet ? `Active question: "${paymentsSecurityQuestion}"` : "Add a question + answer as an alternate unlock."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={saveQuestion} className="space-y-3">
-            <div className="space-y-1.5"><Label>Question</Label>
-              <Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="e.g. Your first yoga teacher's name?" maxLength={120} /></div>
-            <div className="space-y-1.5"><Label>Answer</Label>
-              <Input value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Case-insensitive" maxLength={120} /></div>
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit">{paymentsQuestionSet ? "Update question" : "Set question"}</Button>
-              {paymentsQuestionSet && (
-                <Button type="button" variant="ghost" onClick={async () => { await setPaymentsSecurityQuestion(null, null); toast.success("Question removed"); }} className="text-destructive hover:text-destructive">Remove</Button>
-              )}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Payments Biometric */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2"><Lock className="h-5 w-5" /> Payments Biometric</CardTitle>
-          <CardDescription>
-            {paymentsBiometricSet ? "Biometric unlock is enrolled on this device." : "Use your device fingerprint, Face ID, or security key to unlock Payments."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={enrollBiometric}>{paymentsBiometricSet ? "Re-enroll biometric" : "Enroll biometric"}</Button>
-            {paymentsBiometricSet && (
-              <Button variant="ghost" onClick={async () => { await removePaymentsBiometric(); toast.success("Biometric removed"); }} className="text-destructive hover:text-destructive">Remove</Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-
       <Card>
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2"><Lock className="h-5 w-5" /> App Lock PIN</CardTitle>
           <CardDescription>
             {appLockPinSet
-              ? "App lock is on. This PIN is required after sign-in and unlocks end-to-end encrypted notes."
-              : "Set a 4–6 digit PIN required after sign-in. It also derives the key for end-to-end encrypted payment notes."}
+              ? "App lock is on. This PIN is required after sign-in."
+              : "Set a 4–6 digit PIN required after sign-in."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
