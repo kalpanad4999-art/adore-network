@@ -44,7 +44,7 @@ const Settings = () => {
     await setAppLockPin(appPin);
     setSavingAppPin(false);
     setAppPin(""); setAppConfirm("");
-    toast.success("App lock PIN saved — encryption key activated");
+    toast.success("App lock PIN saved");
   };
 
   const handleAppPinClear = async () => {
