@@ -52,30 +52,6 @@ const Settings = () => {
     toast.success("App lock removed");
   };
 
-  const savePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pwd.length < 6) { toast.error("Password must be at least 6 characters"); return; }
-    if (pwd !== pwdConfirm) { toast.error("Passwords do not match"); return; }
-    await setPaymentsPassword(pwd);
-    setPwd(""); setPwdConfirm("");
-    toast.success("Payments password saved");
-  };
-
-  const saveQuestion = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (question.trim().length < 5) { toast.error("Enter a question"); return; }
-    if (answer.trim().length < 2) { toast.error("Enter an answer"); return; }
-    await setPaymentsSecurityQuestion(question, answer);
-    setQuestion(""); setAnswer("");
-    toast.success("Security question saved");
-  };
-
-  const enrollBiometric = async () => {
-    const ok = await registerPaymentsBiometric();
-    if (ok) toast.success("Biometric enrolled");
-    else toast.error("Biometric enrollment failed or unsupported");
-  };
-
   if (!isOwner) {
     return (
       <Card className="max-w-xl">
