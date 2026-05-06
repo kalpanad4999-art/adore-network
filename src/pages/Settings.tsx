@@ -20,12 +20,10 @@ const PRESET_WALLPAPERS = [
 const Settings = () => {
   const {
     studioName, logoUrl, backgroundUrl, isOwner,
-    paymentsPinSet, paymentsPasswordSet, paymentsQuestionSet, paymentsBiometricSet,
-    paymentsSecurityQuestion,
+    paymentsPinSet,
     appLockPinSet,
     uploadLogo, uploadBackground, setBackgroundFromUrl, removeBackground,
-    setPaymentsPin, setPaymentsPassword, setPaymentsSecurityQuestion,
-    registerPaymentsBiometric, removePaymentsBiometric,
+    setPaymentsPin,
     setAppLockPin,
   } = useStudio();
   const { theme, setTheme } = useTheme();
@@ -37,11 +35,6 @@ const Settings = () => {
   const [appPin, setAppPin] = useState("");
   const [appConfirm, setAppConfirm] = useState("");
   const [savingAppPin, setSavingAppPin] = useState(false);
-  // New payments locks
-  const [pwd, setPwd] = useState("");
-  const [pwdConfirm, setPwdConfirm] = useState("");
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
 
   const handleAppPinSave = async (e: React.FormEvent) => {
     e.preventDefault();
