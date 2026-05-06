@@ -8,9 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight, Lock as LockIcon } from "lucide-react";
+import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
-import { encryptString, decryptString, getCachedKey } from "@/lib/crypto";
 
 interface Customer { id: string; name: string; phone: string | null; }
 interface Payment {
@@ -22,8 +21,6 @@ interface Payment {
   plan: string;
   valid_until: string | null;
   notes: string | null;
-  notes_encrypted: string | null;
-  notes_plain?: string | null;
 }
 
 const paymentMethods = ["cash", "upi", "card", "bank-transfer", "other"];
@@ -47,17 +44,7 @@ const Payments = () => {
       supabase.from("student_payments").select("*").eq("user_id", user.id).order("paid_on", { ascending: false }),
     ]);
     setCustomers((cust as Customer[]) || []);
-    const list = ((pays as any[]) || []) as Payment[];
-    // Decrypt notes_encrypted with cached E2E key when available
-    const key = await getCachedKey();
-    for (const p of list) {
-      if (p.notes_encrypted && key) {
-        p.notes_plain = await decryptString(p.notes_encrypted, key);
-      } else {
-        p.notes_plain = p.notes;
-      }
-    }
-    setPayments(list);
+    setPayments(((pays as any[]) || []) as Payment[]);
   };
   useEffect(() => { fetchAll(); }, [user]);
 
@@ -82,13 +69,6 @@ const Payments = () => {
     const amount = parseFloat(form.amount);
     if (!form.student_id) { toast.error("Pick a customer"); return; }
     if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
-    const noteText = form.notes.trim();
-    let notes_plain: string | null = noteText || null;
-    let notes_encrypted: string | null = null;
-    if (noteText) {
-      const enc = await encryptString(noteText);
-      if (enc) { notes_encrypted = enc; notes_plain = null; }
-    }
     const { error } = await supabase.from("student_payments").insert({
       student_id: form.student_id,
       user_id: user.id,
@@ -97,8 +77,7 @@ const Payments = () => {
       method: form.method,
       plan: form.plan,
       valid_until: form.valid_until || null,
-      notes: notes_plain,
-      notes_encrypted,
+      notes: form.notes.trim() || null,
     } as any);
     if (error) { toast.error(error.message); return; }
     toast.success("Payment recorded");
