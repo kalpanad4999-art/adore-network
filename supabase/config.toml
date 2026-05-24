@@ -1,4 +1,4 @@
-project_id = "qgqolmigstdnwyikxkop"
+project_id = "figcbnjibtpzfcmdltvg"
 
 [functions.public-register-student]
 verify_jwt = false
