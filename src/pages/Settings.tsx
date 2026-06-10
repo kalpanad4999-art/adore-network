@@ -29,6 +29,7 @@ const Settings = () => {
     setAppLockPin,
   } = useStudio();
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
   const logoRef = useRef<HTMLInputElement>(null);
   const bgRef = useRef<HTMLInputElement>(null);
   const [pin, setPin] = useState("");
@@ -38,7 +39,44 @@ const Settings = () => {
   const [appConfirm, setAppConfirm] = useState("");
   const [savingAppPin, setSavingAppPin] = useState(false);
 
+  const [currentPwd, setCurrentPwd] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [savingPwd, setSavingPwd] = useState(false);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.email) return;
+    if (newPwd.length < 8) { toast.error("Password must be at least 8 characters"); return; }
+    if (newPwd !== confirmPwd) { toast.error("Passwords do not match"); return; }
+    setSavingPwd(true);
+    try {
+      const { error: signErr } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPwd,
+      });
+      if (signErr) throw new Error("Current password is incorrect");
+      const { error: updErr } = await supabase.auth.updateUser({ password: newPwd });
+      if (updErr) throw updErr;
+      toast.success("Password updated");
+      setCurrentPwd(""); setNewPwd(""); setConfirmPwd("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update password");
+    } finally {
+      setSavingPwd(false);
+    }
+  };
+
   const handleAppPinSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^\d{4,6}$/.test(appPin)) { toast.error("PIN must be 4–6 digits"); return; }
+    if (appPin !== appConfirm) { toast.error("PINs do not match"); return; }
+    setSavingAppPin(true);
+    await setAppLockPin(appPin);
+    setSavingAppPin(false);
+    setAppPin(""); setAppConfirm("");
+    toast.success("App lock PIN saved");
+  };
     e.preventDefault();
     if (!/^\d{4,6}$/.test(appPin)) { toast.error("PIN must be 4–6 digits"); return; }
     if (appPin !== appConfirm) { toast.error("PINs do not match"); return; }
