@@ -337,6 +337,30 @@ export type Database = {
         }
         Relationships: []
       }
+      settings: {
+        Row: {
+          email: string | null
+          id: string
+          studio_name: string | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          email?: string | null
+          id: string
+          studio_name?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          email?: string | null
+          id?: string
+          studio_name?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       staff_invitations: {
         Row: {
           accepted_at: string | null
@@ -462,31 +486,49 @@ export type Database = {
           },
         ]
       }
-      studio_settings: {
+      studio_security: {
         Row: {
           app_lock_pin_hash: string | null
-          background_url: string | null
-          logo_url: string | null
+          created_at: string
           owner_id: string
           payments_pin_hash: string | null
-          studio_name: string
           updated_at: string
         }
         Insert: {
           app_lock_pin_hash?: string | null
-          background_url?: string | null
-          logo_url?: string | null
+          created_at?: string
           owner_id: string
           payments_pin_hash?: string | null
-          studio_name?: string
           updated_at?: string
         }
         Update: {
           app_lock_pin_hash?: string | null
+          created_at?: string
+          owner_id?: string
+          payments_pin_hash?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      studio_settings: {
+        Row: {
+          background_url: string | null
+          logo_url: string | null
+          owner_id: string
+          studio_name: string
+          updated_at: string
+        }
+        Insert: {
+          background_url?: string | null
+          logo_url?: string | null
+          owner_id: string
+          studio_name?: string
+          updated_at?: string
+        }
+        Update: {
           background_url?: string | null
           logo_url?: string | null
           owner_id?: string
-          payments_pin_hash?: string | null
           studio_name?: string
           updated_at?: string
         }

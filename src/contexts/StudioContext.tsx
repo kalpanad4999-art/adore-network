@@ -65,8 +65,20 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
       setStudioName(s.studio_name || "TRINETRA");
       setLogoUrl(s.logo_url);
       setBackgroundUrl(s.background_url ?? null);
+    }
+    // PIN hashes live in an owner-only table; only the owner can read them.
+    if (roleRow?.role !== "staff") {
+      const { data: sec } = await supabase
+        .from("studio_security" as any)
+        .select("payments_pin_hash, app_lock_pin_hash")
+        .eq("owner_id", owner)
+        .maybeSingle();
+      const s = (sec ?? {}) as any;
       setPaymentsPinHash(s.payments_pin_hash ?? null);
       setAppLockPinHash(s.app_lock_pin_hash ?? null);
+    } else {
+      setPaymentsPinHash(null);
+      setAppLockPinHash(null);
     }
     setLoading(false);
   };
@@ -140,10 +152,19 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     setBackgroundUrl(null);
   };
 
+  const upsertSecurity = async (patch: Record<string, any>) => {
+    if (!ownerId) return;
+    await supabase.from("studio_security" as any).upsert({
+      owner_id: ownerId,
+      ...patch,
+      updated_at: new Date().toISOString(),
+    } as any);
+  };
+
   const setPaymentsPin = async (pin: string | null) => {
     if (!isOwner) return;
     const hash = pin ? await sha256Hex(pin) : null;
-    await upsertSettings({ payments_pin_hash: hash });
+    await upsertSecurity({ payments_pin_hash: hash });
     setPaymentsPinHash(hash);
   };
   const verifyPaymentsPin = async (pin: string) => {
@@ -154,7 +175,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
   const setAppLockPin = async (pin: string | null) => {
     if (!isOwner) return;
     const hash = pin ? await sha256Hex(pin) : null;
-    await upsertSettings({ app_lock_pin_hash: hash });
+    await upsertSecurity({ app_lock_pin_hash: hash });
     setAppLockPinHash(hash);
   };
 
