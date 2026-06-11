@@ -381,6 +381,11 @@ const Customers = () => {
                               </p>
                             )}
                             {c.address && <p className="text-xs text-muted-foreground truncate mt-0.5">{c.address}</p>}
+                            {b.custom_fields?.filter((f) => f.enabled !== false).map((f) => {
+                              const v = c.custom_data?.[f.id];
+                              if (!v) return null;
+                              return <p key={f.id} className="text-xs text-muted-foreground mt-0.5 truncate"><span className="font-medium text-foreground/80">{f.name}:</span> {v}</p>;
+                            })}
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
                             <DropdownMenu>
