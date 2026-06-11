@@ -62,13 +62,14 @@ const Customers = () => {
   // Batch dialog
   const [batchOpen, setBatchOpen] = useState(false);
   const [editingBatchId, setEditingBatchId] = useState<string | null>(null);
-  const [batchForm, setBatchForm] = useState<{ name: string; description: string; start_date: string; fee: string; required_fields: string[] }>({ name: "", description: "", start_date: "", fee: "", required_fields: ["name"] });
+  const [batchForm, setBatchForm] = useState<{ name: string; description: string; start_date: string; fee: string; required_fields: string[]; custom_fields: CustomField[] }>({ name: "", description: "", start_date: "", fee: "", required_fields: ["name"], custom_fields: [] });
 
   // Customer dialog
   const [custOpen, setCustOpen] = useState(false);
   const [editingCustId, setEditingCustId] = useState<string | null>(null);
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
   const [custForm, setCustForm] = useState({ name: "", email: "", phone: "", address: "", notes: "", height: "", weight: "" });
+  const [custCustom, setCustCustom] = useState<Record<string, string>>({});
 
   // QR dialog
   const [qrBatch, setQrBatch] = useState<Batch | null>(null);
