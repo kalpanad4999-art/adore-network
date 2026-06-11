@@ -28,6 +28,21 @@ interface Customer {
   batch_id: string | null;
 }
 
+interface Customer {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  batch_id: string | null;
+  custom_data: Record<string, string> | null;
+}
+
+interface CustomField { id: string; name: string; required: boolean; enabled: boolean; }
+
 interface Batch {
   id: string;
   name: string;
@@ -36,6 +51,7 @@ interface Batch {
   fee: number;
   public_token: string;
   required_fields: string[];
+  custom_fields: CustomField[];
 }
 
 const FIELD_OPTIONS: { key: string; label: string }[] = [
