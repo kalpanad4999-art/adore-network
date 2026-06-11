@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner";
 import { Loader2, CheckCircle2 } from "lucide-react";
 
-interface BatchInfo { id: string; name: string; description: string | null; fee: number; start_date: string | null; required_fields: string[] | null; }
+interface CustomField { id: string; name: string; required: boolean; enabled: boolean; }
+interface BatchInfo { id: string; name: string; description: string | null; fee: number; start_date: string | null; required_fields: string[] | null; custom_fields: CustomField[] | null; }
 
 const phoneRegex = /^[+\d][\d\s\-()]{6,19}$/;
 const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -21,6 +22,7 @@ const Join = () => {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "", height: "", weight: "" });
+  const [customData, setCustomData] = useState<Record<string, string>>({});
 
   useEffect(() => {
     (async () => {
