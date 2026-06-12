@@ -279,16 +279,36 @@ const Renewals = () => {
                       : "No active membership"}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => sendReminder(r)}
-                  disabled={!r.customer.phone || !r.renewalDate}
-                  className="shrink-0"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  WhatsApp Reminder
-                </Button>
+                {(() => {
+                  const waUrl = buildWaUrl(r);
+                  const disabled = !waUrl;
+                  return (
+                    <Button
+                      asChild={!disabled}
+                      size="sm"
+                      variant="outline"
+                      disabled={disabled}
+                      className="shrink-0"
+                    >
+                      {disabled ? (
+                        <span>
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          WhatsApp Reminder
+                        </span>
+                      ) : (
+                        <a
+                          href={waUrl!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => markReminderSent(r)}
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          WhatsApp Reminder
+                        </a>
+                      )}
+                    </Button>
+                  );
+                })()}
               </CardContent>
             </Card>
           ))}
