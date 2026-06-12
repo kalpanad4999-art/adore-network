@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Customers from "./pages/Customers";
 import Payments from "./pages/Payments";
+import Renewals from "./pages/Renewals";
 import Settings from "./pages/Settings";
 import Join from "./pages/Join";
 import Media from "./pages/Media";
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/gallery" element={<ProtectedRoute><Gallery /></ProtectedRoute>} />
             <Route path="/media" element={<ProtectedRoute><Media /></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute><PaymentsGuard><Payments /></PaymentsGuard></ProtectedRoute>} />
+            <Route path="/renewals" element={<ProtectedRoute><Renewals /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/students" element={<Navigate to="/" replace />} />
             <Route path="/classes" element={<Navigate to="/media" replace />} />

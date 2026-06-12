@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,13 +17,30 @@ interface Payment {
   amount: number;
   paid_on: string;
   method: string;
-  plan: string;
+  duration_months: number | null;
   valid_until: string | null;
-  notes: string | null;
 }
 
 const paymentMethods = ["cash", "upi", "card", "bank-transfer", "other"];
-const paymentPlans = ["drop-in", "monthly", "quarterly", "annual", "package"];
+const durationPresets = [
+  { value: "1", label: "1 Month" },
+  { value: "2", label: "2 Months" },
+  { value: "3", label: "3 Months" },
+  { value: "6", label: "6 Months" },
+  { value: "12", label: "12 Months" },
+  { value: "custom", label: "Custom" },
+];
+
+const addMonths = (isoDate: string, months: number): string => {
+  if (!isoDate || !months || months <= 0) return "";
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1 + months, d));
+  // Handle month-end overflow: if day shifted, clamp to last day of target month
+  if (dt.getUTCDate() !== d) {
+    dt.setUTCDate(0);
+  }
+  return dt.toISOString().slice(0, 10);
+};
 
 const Payments = () => {
   const { user } = useAuth();
@@ -33,9 +49,26 @@ const Payments = () => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState({
-    student_id: "", amount: "", paid_on: new Date().toISOString().slice(0, 10),
-    method: "cash", plan: "monthly", valid_until: "", notes: "",
+    student_id: "",
+    amount: "",
+    paid_on: new Date().toISOString().slice(0, 10),
+    method: "cash",
+    duration: "1",
+    customDuration: "",
   });
+
+  const effectiveMonths = useMemo(() => {
+    if (form.duration === "custom") {
+      const n = parseInt(form.customDuration, 10);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    }
+    return parseInt(form.duration, 10) || 0;
+  }, [form.duration, form.customDuration]);
+
+  const renewalDate = useMemo(
+    () => addMonths(form.paid_on, effectiveMonths),
+    [form.paid_on, effectiveMonths]
+  );
 
   const fetchAll = async () => {
     if (!user) return;
@@ -69,19 +102,22 @@ const Payments = () => {
     const amount = parseFloat(form.amount);
     if (!form.student_id) { toast.error("Pick a customer"); return; }
     if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    if (!effectiveMonths) { toast.error("Enter a valid membership duration"); return; }
+    if (!renewalDate) { toast.error("Could not calculate renewal date"); return; }
+
     const { error } = await supabase.from("student_payments").insert({
       student_id: form.student_id,
       user_id: user.id,
       amount,
       paid_on: form.paid_on,
       method: form.method,
-      plan: form.plan,
-      valid_until: form.valid_until || null,
-      notes: form.notes.trim() || null,
+      duration_months: effectiveMonths,
+      valid_until: renewalDate,
+      reminder_sent_at: null,
     } as any);
     if (error) { toast.error(error.message); return; }
-    toast.success("Payment recorded");
-    setForm({ ...form, amount: "", notes: "" });
+    toast.success("Payment recorded · renewal scheduled");
+    setForm({ ...form, amount: "", customDuration: "" });
     setAddOpen(false);
     fetchAll();
   };
@@ -104,10 +140,10 @@ const Payments = () => {
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />Record Payment</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display">Record Payment</DialogTitle>
-              <DialogDescription>Log amount, date, method, and plan.</DialogDescription>
+              <DialogDescription>Renewal date is auto-calculated from duration.</DialogDescription>
             </DialogHeader>
             <form onSubmit={addPayment} className="space-y-4">
               <div className="space-y-2">
@@ -125,22 +161,38 @@ const Payments = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Method</Label>
+                  <Label>Payment Method</Label>
                   <Select value={form.method} onValueChange={(v) => setForm({ ...form, method: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{paymentMethods.map((m) => <SelectItem key={m} value={m}>{m.toUpperCase()}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Plan</Label>
-                  <Select value={form.plan} onValueChange={(v) => setForm({ ...form, plan: v })}>
+                  <Label>Membership Duration</Label>
+                  <Select value={form.duration} onValueChange={(v) => setForm({ ...form, duration: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{paymentPlans.map((p) => <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>)}</SelectContent>
+                    <SelectContent>{durationPresets.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
-              <div className="space-y-2"><Label>Valid until <span className="text-muted-foreground text-xs">(optional)</span></Label><Input type="date" value={form.valid_until} onChange={(e) => setForm({ ...form, valid_until: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Notes</Label><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength={500} /></div>
+              {form.duration === "custom" && (
+                <div className="space-y-2">
+                  <Label>Custom duration (months)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="120"
+                    placeholder="e.g. 18"
+                    value={form.customDuration}
+                    onChange={(e) => setForm({ ...form, customDuration: e.target.value })}
+                    required
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Renewal Date <span className="text-muted-foreground text-xs">(auto)</span></Label>
+                <Input type="date" value={renewalDate} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+              </div>
               <Button type="submit" className="w-full">Save Payment</Button>
             </form>
           </DialogContent>
@@ -189,15 +241,17 @@ const Payments = () => {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-semibold">₹{Number(p.amount).toLocaleString()}</span>
-                                  <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">{p.plan}</span>
+                                  {p.duration_months ? (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                                      {p.duration_months} mo
+                                    </span>
+                                  ) : null}
                                   <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground uppercase">{p.method}</span>
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                  Paid {new Date(p.paid_on).toLocaleDateString()}{p.valid_until ? ` · valid till ${new Date(p.valid_until).toLocaleDateString()}` : ""}
+                                  Paid {new Date(p.paid_on).toLocaleDateString()}
+                                  {p.valid_until ? ` · renews ${new Date(p.valid_until).toLocaleDateString()}` : ""}
                                 </p>
-                                {p.notes && (
-                                  <p className="text-xs text-muted-foreground italic mt-0.5 truncate">{p.notes}</p>
-                                )}
                               </div>
                               <button onClick={() => deletePayment(p.id)} aria-label="Delete" className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"><Trash2 className="h-4 w-4" /></button>
                             </div>
