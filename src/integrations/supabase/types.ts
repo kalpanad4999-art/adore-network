@@ -392,11 +392,13 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          duration_months: number | null
           id: string
           method: string
           notes: string | null
           paid_on: string
-          plan: string
+          plan: string | null
+          reminder_sent_at: string | null
           student_id: string
           updated_at: string
           user_id: string
@@ -405,11 +407,13 @@ export type Database = {
         Insert: {
           amount?: number
           created_at?: string
+          duration_months?: number | null
           id?: string
           method?: string
           notes?: string | null
           paid_on?: string
-          plan?: string
+          plan?: string | null
+          reminder_sent_at?: string | null
           student_id: string
           updated_at?: string
           user_id: string
@@ -418,11 +422,13 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          duration_months?: number | null
           id?: string
           method?: string
           notes?: string | null
           paid_on?: string
-          plan?: string
+          plan?: string | null
+          reminder_sent_at?: string | null
           student_id?: string
           updated_at?: string
           user_id?: string
