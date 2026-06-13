@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
+import { registerBiometric, verifyBiometric } from "@/lib/biometric";
+import { logAudit } from "@/lib/audit";
 
 const sha256Hex = async (input: string) => {
   const enc = new TextEncoder().encode(input);
