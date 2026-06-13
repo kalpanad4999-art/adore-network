@@ -268,6 +268,42 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json
+          device: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          owner_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json
+          device?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          owner_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json
+          device?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          owner_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -505,6 +541,8 @@ export type Database = {
           owner_id: string
           payments_pin_hash: string | null
           updated_at: string
+          webauthn_credential_id: string | null
+          webauthn_enabled: boolean
         }
         Insert: {
           app_lock_pin_hash?: string | null
@@ -512,6 +550,8 @@ export type Database = {
           owner_id: string
           payments_pin_hash?: string | null
           updated_at?: string
+          webauthn_credential_id?: string | null
+          webauthn_enabled?: boolean
         }
         Update: {
           app_lock_pin_hash?: string | null
@@ -519,6 +559,8 @@ export type Database = {
           owner_id?: string
           payments_pin_hash?: string | null
           updated_at?: string
+          webauthn_credential_id?: string | null
+          webauthn_enabled?: boolean
         }
         Relationships: []
       }
