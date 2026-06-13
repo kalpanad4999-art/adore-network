@@ -47,6 +47,8 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const [paymentsPinHash, setPaymentsPinHash] = useState<string | null>(null);
   const [appLockPinHash, setAppLockPinHash] = useState<string | null>(null);
+  const [biometricCredentialId, setBiometricCredentialId] = useState<string | null>(null);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
