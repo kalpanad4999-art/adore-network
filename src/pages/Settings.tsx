@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStudio } from "@/contexts/StudioContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,8 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Image as ImageIcon, Upload, Trash2, Lock, ShieldCheck, Sun, Moon, Check, KeyRound } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Upload, Trash2, Lock, ShieldCheck, ShieldAlert, Sun, Moon, Check, KeyRound, Fingerprint, History } from "lucide-react";
 import { toast } from "sonner";
+import { biometricSupported } from "@/lib/biometric";
 
 const PRESET_WALLPAPERS = [
   { name: "Sunrise Meditation", url: "https://images.unsplash.com/photo-1545389336-cf090694435e?auto=format&fit=crop&w=1920&q=70" },
@@ -21,28 +28,67 @@ const PRESET_WALLPAPERS = [
 
 const Settings = () => {
   const {
-    studioName, logoUrl, backgroundUrl, isOwner,
-    paymentsPinSet,
-    appLockPinSet,
-    uploadLogo, uploadBackground, setBackgroundFromUrl, removeBackground,
-    setPaymentsPin,
+    backgroundUrl, isOwner, ownerId,
+    paymentsPinSet, appLockPinSet,
+    biometricEnabled,
+    uploadBackground, setBackgroundFromUrl, removeBackground,
+    setPaymentsPassword, enableBiometric, disableBiometric,
     setAppLockPin,
   } = useStudio();
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
-  const logoRef = useRef<HTMLInputElement>(null);
   const bgRef = useRef<HTMLInputElement>(null);
-  const [pin, setPin] = useState("");
-  const [confirmPin, setConfirmPin] = useState("");
-  const [savingPin, setSavingPin] = useState(false);
+
+  // Payment Lock password state
+  const [currentLockPwd, setCurrentLockPwd] = useState("");
+  const [newLockPwd, setNewLockPwd] = useState("");
+  const [confirmLockPwd, setConfirmLockPwd] = useState("");
+  const [savingLock, setSavingLock] = useState(false);
+  const [removingLock, setRemovingLock] = useState(false);
+  const [removePwd, setRemovePwd] = useState("");
+
+  // Biometric state
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
+
+  // App lock PIN
   const [appPin, setAppPin] = useState("");
   const [appConfirm, setAppConfirm] = useState("");
   const [savingAppPin, setSavingAppPin] = useState(false);
 
+  // Account password
   const [currentPwd, setCurrentPwd] = useState("");
   const [newPwd, setNewPwd] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
   const [savingPwd, setSavingPwd] = useState(false);
+
+  // Audit log
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
+  useEffect(() => { biometricSupported().then(setBioAvailable); }, []);
+
+  useEffect(() => {
+    if (!ownerId || !isOwner) return;
+    (async () => {
+      const { data } = await supabase
+        .from("payment_audit_logs" as any)
+        .select("id, action, created_at, device, details")
+        .eq("owner_id", ownerId)
+        .order("created_at", { ascending: false })
+        .limit(15);
+      setAuditLogs((data as any[]) || []);
+    })();
+  }, [ownerId, isOwner, paymentsPinSet, biometricEnabled]);
+
+  if (!isOwner) {
+    return (
+      <Card className="max-w-xl">
+        <CardContent className="py-10 text-center text-muted-foreground">
+          Only the studio owner can manage settings.
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,10 +97,7 @@ const Settings = () => {
     if (newPwd !== confirmPwd) { toast.error("Passwords do not match"); return; }
     setSavingPwd(true);
     try {
-      const { error: signErr } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPwd,
-      });
+      const { error: signErr } = await supabase.auth.signInWithPassword({ email: user.email, password: currentPwd });
       if (signErr) throw new Error("Current password is incorrect");
       const { error: updErr } = await supabase.auth.updateUser({ password: newPwd });
       if (updErr) throw updErr;
@@ -62,9 +105,50 @@ const Settings = () => {
       setCurrentPwd(""); setNewPwd(""); setConfirmPwd("");
     } catch (err: any) {
       toast.error(err.message || "Failed to update password");
-    } finally {
-      setSavingPwd(false);
-    }
+    } finally { setSavingPwd(false); }
+  };
+
+  const handleLockSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newLockPwd.length < 4) { toast.error("Password must be at least 4 characters"); return; }
+    if (newLockPwd !== confirmLockPwd) { toast.error("Passwords do not match"); return; }
+    setSavingLock(true);
+    try {
+      await setPaymentsPassword(newLockPwd, paymentsPinSet ? currentLockPwd : undefined);
+      setCurrentLockPwd(""); setNewLockPwd(""); setConfirmLockPwd("");
+      toast.success(paymentsPinSet ? "Payment Lock password updated" : "Payment Lock enabled");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save password");
+    } finally { setSavingLock(false); }
+  };
+
+  const handleDisableLock = async () => {
+    setRemovingLock(true);
+    try {
+      await setPaymentsPassword(null, removePwd);
+      setRemovePwd("");
+      toast.success("Payment Lock disabled");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to disable Payment Lock");
+    } finally { setRemovingLock(false); }
+  };
+
+  const handleEnableBio = async () => {
+    setBioBusy(true);
+    try {
+      await enableBiometric();
+      toast.success("Fingerprint unlock enabled");
+    } catch (err: any) {
+      toast.error(err.message || "Could not enable fingerprint");
+    } finally { setBioBusy(false); }
+  };
+
+  const handleDisableBio = async () => {
+    setBioBusy(true);
+    try {
+      await disableBiometric();
+      toast.success("Fingerprint unlock disabled");
+    } finally { setBioBusy(false); }
   };
 
   const handleAppPinSave = async (e: React.FormEvent) => {
@@ -77,59 +161,14 @@ const Settings = () => {
     setAppPin(""); setAppConfirm("");
     toast.success("App lock PIN saved");
   };
-
-  const handleAppPinClear = async () => {
-    await setAppLockPin(null);
-    toast.success("App lock removed");
-  };
-
-  if (!isOwner) {
-    return (
-      <Card className="max-w-xl">
-        <CardContent className="py-10 text-center text-muted-foreground">
-          Only the studio owner can manage settings.
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const handleLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error("Logo must be under 2 MB"); return; }
-    try { await uploadLogo(file); toast.success("Logo updated"); }
-    catch { toast.error("Failed to upload logo"); }
-    e.target.value = "";
-  };
+  const handleAppPinClear = async () => { await setAppLockPin(null); toast.success("App lock removed"); };
 
   const handleBackground = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]; if (!file) return;
     if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
     try { await uploadBackground(file); toast.success("Background updated"); }
     catch { toast.error("Failed to upload background"); }
     e.target.value = "";
-  };
-
-  const handleRemoveBg = async () => {
-    await removeBackground();
-    toast.success("Background removed");
-  };
-
-  const handlePinSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!/^\d{4,6}$/.test(pin)) { toast.error("PIN must be 4–6 digits"); return; }
-    if (pin !== confirmPin) { toast.error("PINs do not match"); return; }
-    setSavingPin(true);
-    await setPaymentsPin(pin);
-    setSavingPin(false);
-    setPin(""); setConfirmPin("");
-    toast.success("Payments PIN saved");
-  };
-
-  const handlePinClear = async () => {
-    await setPaymentsPin(null);
-    toast.success("Payments PIN removed");
   };
 
   return (
@@ -139,7 +178,7 @@ const Settings = () => {
         <p className="text-muted-foreground mt-1">Customize your studio's look and security.</p>
       </div>
 
-      {/* Appearance / Theme */}
+      {/* Appearance */}
       <Card>
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2">
@@ -149,185 +188,192 @@ const Settings = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3 max-w-md">
-            <button
-              type="button"
-              onClick={() => { setTheme("light"); toast.success("Light mode on"); }}
-              className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-4 transition-all ${theme === "light" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
-            >
-              <Sun className="h-5 w-5" />
-              <span className="font-medium">Light</span>
+            <button type="button" onClick={() => { setTheme("light"); toast.success("Light mode on"); }}
+              className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-4 transition-all ${theme === "light" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
+              <Sun className="h-5 w-5" /><span className="font-medium">Light</span>
               {theme === "light" && <Check className="h-4 w-4 text-primary ml-1" />}
             </button>
-            <button
-              type="button"
-              onClick={() => { setTheme("dark"); toast.success("Dark mode on"); }}
-              className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-4 transition-all ${theme === "dark" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
-            >
-              <Moon className="h-5 w-5" />
-              <span className="font-medium">Dark</span>
+            <button type="button" onClick={() => { setTheme("dark"); toast.success("Dark mode on"); }}
+              className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-4 transition-all ${theme === "dark" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
+              <Moon className="h-5 w-5" /><span className="font-medium">Dark</span>
               {theme === "dark" && <Check className="h-4 w-4 text-primary ml-1" />}
             </button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Logo */}
-      <Card>
+      {/* Security Settings */}
+      <Card className="border-primary/30">
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2"><ImageIcon className="h-5 w-5" /> Studio Logo</CardTitle>
-          <CardDescription>Shown on this Settings page. Recommended square PNG, under 2 MB.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="h-20 w-20 rounded-xl border bg-muted flex items-center justify-center overflow-hidden">
-              {logoUrl ? (
-                <img src={logoUrl} alt={`${studioName} logo`} className="h-full w-full object-cover" />
-              ) : (
-                <ImageIcon className="h-7 w-7 text-muted-foreground" />
-              )}
-            </div>
-            <div>
-              <p className="font-medium">{studioName}</p>
-              <p className="text-sm text-muted-foreground">{logoUrl ? "Click to replace" : "No logo uploaded"}</p>
-            </div>
-          </div>
-          <input ref={logoRef} type="file" accept="image/*" hidden onChange={handleLogo} />
-          <Button onClick={() => logoRef.current?.click()} variant="outline" className="gap-2">
-            <Upload className="h-4 w-4" /> {logoUrl ? "Replace logo" : "Upload logo"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Background */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display">App Background</CardTitle>
-          <CardDescription>Set a custom background image used across the app.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="aspect-video w-full rounded-xl border bg-muted overflow-hidden">
-            {backgroundUrl ? (
-              <img src={backgroundUrl} alt="App background" className="h-full w-full object-cover" />
-            ) : (
-              <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">
-                No background set
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm">Wallpaper presets</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {PRESET_WALLPAPERS.map((wp) => {
-                const active = backgroundUrl === wp.url;
-                return (
-                  <button
-                    key={wp.url}
-                    type="button"
-                    onClick={async () => {
-                      try { await setBackgroundFromUrl(wp.url); toast.success(`${wp.name} applied`); }
-                      catch { toast.error("Failed to apply wallpaper"); }
-                    }}
-                    className={`group relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40"}`}
-                  >
-                    <img src={wp.url} alt={wp.name} className="h-full w-full object-cover" loading="lazy" />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
-                      <span className="text-xs text-white font-medium">{wp.name}</span>
-                    </div>
-                    {active && (
-                      <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="h-3.5 w-3.5 text-primary-foreground" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <input ref={bgRef} type="file" accept="image/*" hidden onChange={handleBackground} />
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => bgRef.current?.click()} variant="outline" className="gap-2">
-              <Upload className="h-4 w-4" /> {backgroundUrl ? "Replace background" : "Upload background"}
-            </Button>
-            {backgroundUrl && (
-              <Button onClick={handleRemoveBg} variant="ghost" className="gap-2 text-destructive hover:text-destructive">
-                <Trash2 className="h-4 w-4" /> Remove
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Payments PIN */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2"><Lock className="h-5 w-5" /> Payments Security PIN</CardTitle>
+          <CardTitle className="font-display flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" /> Security Settings
+          </CardTitle>
           <CardDescription>
-            {paymentsPinSet
-              ? "A PIN is set. Anyone opening Payments will need to enter it."
-              : "Set a 4–6 digit PIN to lock the Payments page."}
+            Protect payment actions with a password and optional fingerprint unlock.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {paymentsPinSet && (
-            <div className="flex items-center gap-2 text-sm text-foreground bg-muted/50 rounded-lg px-3 py-2">
-              <ShieldCheck className="h-4 w-4 text-primary" /> Payments page is locked
+        <CardContent className="space-y-5">
+          {/* Status indicators */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className={`rounded-lg border px-3 py-2.5 flex items-center gap-2 ${paymentsPinSet ? "bg-primary/5 border-primary/30" : "bg-muted/40"}`}>
+              <Lock className={`h-4 w-4 ${paymentsPinSet ? "text-primary" : "text-muted-foreground"}`} />
+              <div className="text-xs">
+                <div className="font-medium">Payment Lock</div>
+                <div className="text-muted-foreground">{paymentsPinSet ? "Active" : "Off"}</div>
+              </div>
             </div>
-          )}
-          <form onSubmit={handlePinSave} className="space-y-3">
+            <div className={`rounded-lg border px-3 py-2.5 flex items-center gap-2 ${paymentsPinSet ? "bg-primary/5 border-primary/30" : "bg-muted/40"}`}>
+              <KeyRound className={`h-4 w-4 ${paymentsPinSet ? "text-primary" : "text-muted-foreground"}`} />
+              <div className="text-xs">
+                <div className="font-medium">Password</div>
+                <div className="text-muted-foreground">{paymentsPinSet ? "Enabled" : "Not set"}</div>
+              </div>
+            </div>
+            <div className={`rounded-lg border px-3 py-2.5 flex items-center gap-2 ${biometricEnabled ? "bg-primary/5 border-primary/30" : "bg-muted/40"}`}>
+              <Fingerprint className={`h-4 w-4 ${biometricEnabled ? "text-primary" : "text-muted-foreground"}`} />
+              <div className="text-xs">
+                <div className="font-medium">Fingerprint</div>
+                <div className="text-muted-foreground">{biometricEnabled ? "Enabled" : (bioAvailable ? "Off" : "Unavailable")}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Password form */}
+          <form onSubmit={handleLockSave} className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <Label className="font-medium">{paymentsPinSet ? "Change Payment Lock password" : "Create Payment Lock password"}</Label>
+              {paymentsPinSet && <Badge variant="secondary">Owner only</Badge>}
+            </div>
+            {paymentsPinSet && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Current password</Label>
+                <Input type="password" autoComplete="current-password" value={currentLockPwd}
+                  onChange={(e) => setCurrentLockPwd(e.target.value)} placeholder="Current password" />
+              </div>
+            )}
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>{paymentsPinSet ? "New PIN" : "PIN"}</Label>
-                <Input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="new-password"
-                  maxLength={6}
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                  placeholder="4–6 digits"
-                />
+                <Label className="text-xs">{paymentsPinSet ? "New password" : "Password"}</Label>
+                <Input type="password" autoComplete="new-password" minLength={4} value={newLockPwd}
+                  onChange={(e) => setNewLockPwd(e.target.value)} placeholder="At least 4 characters" />
               </div>
               <div className="space-y-1.5">
-                <Label>Confirm PIN</Label>
-                <Input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="new-password"
-                  maxLength={6}
-                  value={confirmPin}
-                  onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
-                  placeholder="Repeat PIN"
-                />
+                <Label className="text-xs">Confirm</Label>
+                <Input type="password" autoComplete="new-password" minLength={4} value={confirmLockPwd}
+                  onChange={(e) => setConfirmLockPwd(e.target.value)} placeholder="Repeat password" />
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={savingPin}>
-                {savingPin ? "Saving…" : paymentsPinSet ? "Update PIN" : "Set PIN"}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="submit" disabled={savingLock}>
+                {savingLock ? "Saving…" : paymentsPinSet ? "Update password" : "Enable Payment Lock"}
               </Button>
               {paymentsPinSet && (
-                <Button type="button" variant="ghost" onClick={handlePinClear} className="text-destructive hover:text-destructive">
-                  Remove PIN
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="ghost" className="gap-2 text-destructive hover:text-destructive">
+                      <ShieldAlert className="h-4 w-4" /> Disable Payment Lock
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Disable Payment Lock?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Disabling Payment Lock will reduce protection for payment records. Continue?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Confirm current password</Label>
+                      <Input type="password" value={removePwd} onChange={(e) => setRemovePwd(e.target.value)} placeholder="Current password" />
+                    </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setRemovePwd("")}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        disabled={removingLock || !removePwd}
+                        onClick={(e) => { e.preventDefault(); handleDisableLock(); }}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        {removingLock ? "Disabling…" : "Yes, disable"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           </form>
+
+          {/* Biometric */}
+          <div className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <Label className="font-medium flex items-center gap-2">
+                  <Fingerprint className="h-4 w-4" /> Fingerprint unlock
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {bioAvailable
+                    ? "Unlock the Payments area with your device fingerprint or face. Falls back to your password if biometrics fail."
+                    : "This device does not support a built-in biometric authenticator. Password will be used as fallback."}
+                </p>
+              </div>
+              <Switch
+                checked={biometricEnabled}
+                disabled={!bioAvailable || !paymentsPinSet || bioBusy}
+                onCheckedChange={(checked) => {
+                  if (checked) handleEnableBio();
+                  else handleDisableBio();
+                }}
+              />
+            </div>
+            {!paymentsPinSet && (
+              <p className="text-xs text-muted-foreground">Set a Payment Lock password before enabling fingerprint.</p>
+            )}
+          </div>
+
+          {/* Access control note */}
+          <p className="text-xs text-muted-foreground">
+            Only the owner account can change these security settings. Staff can use the Payments area after unlocking but cannot modify the lock.
+          </p>
         </CardContent>
       </Card>
 
+      {/* Audit log */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display flex items-center gap-2">
+            <History className="h-5 w-5" /> Recent security &amp; payment activity
+          </CardTitle>
+          <CardDescription>Latest 15 events on this studio. Owner-only view.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {auditLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No activity yet.</p>
+          ) : (
+            <ul className="divide-y">
+              {auditLogs.map((log) => (
+                <li key={log.id} className="py-2.5 text-sm flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{log.action.replace(/_/g, " ").replace(/\./g, " · ")}</div>
+                    <div className="text-xs text-muted-foreground truncate">{log.device || "unknown device"}</div>
+                  </div>
+                  <div className="text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(log.created_at).toLocaleString()}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* App Lock PIN */}
       <Card>
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2"><Lock className="h-5 w-5" /> App Lock PIN</CardTitle>
           <CardDescription>
-            {appLockPinSet
-              ? "App lock is on. This PIN is required after sign-in."
-              : "Set a 4–6 digit PIN required after sign-in."}
+            {appLockPinSet ? "App lock is on. This PIN is required after sign-in." : "Set a 4–6 digit PIN required after sign-in."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {appLockPinSet && (
-            <div className="flex items-center gap-2 text-sm text-foreground bg-muted/50 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2 text-sm bg-muted/50 rounded-lg px-3 py-2">
               <ShieldCheck className="h-4 w-4 text-primary" /> App is locked after sign-in
             </div>
           )}
@@ -358,36 +404,86 @@ const Settings = () => {
         </CardContent>
       </Card>
 
+      {/* Account password */}
       <Card>
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2"><KeyRound className="h-5 w-5" /> Account Password</CardTitle>
-          <CardDescription>
-            Change the password for your owner account. You'll need your current password to confirm.
-          </CardDescription>
+          <CardDescription>Change the password for your owner account. You'll need your current password to confirm.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordChange} className="space-y-3">
             <div className="space-y-1.5">
               <Label>Current password</Label>
-              <Input type="password" autoComplete="current-password"
-                value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} placeholder="••••••••" />
+              <Input type="password" autoComplete="current-password" value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} placeholder="••••••••" />
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>New password</Label>
-                <Input type="password" autoComplete="new-password" minLength={8}
-                  value={newPwd} onChange={(e) => setNewPwd(e.target.value)} placeholder="At least 8 characters" />
+                <Input type="password" autoComplete="new-password" minLength={8} value={newPwd} onChange={(e) => setNewPwd(e.target.value)} placeholder="At least 8 characters" />
               </div>
               <div className="space-y-1.5">
                 <Label>Confirm new password</Label>
-                <Input type="password" autoComplete="new-password" minLength={8}
-                  value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} placeholder="Repeat password" />
+                <Input type="password" autoComplete="new-password" minLength={8} value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} placeholder="Repeat password" />
               </div>
             </div>
             <Button type="submit" disabled={savingPwd || !currentPwd || !newPwd || !confirmPwd}>
               {savingPwd ? "Updating…" : "Update password"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Background */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-display">App Background</CardTitle>
+          <CardDescription>Set a custom background image used across the app.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="aspect-video w-full rounded-xl border bg-muted overflow-hidden">
+            {backgroundUrl ? (
+              <img src={backgroundUrl} alt="App background" className="h-full w-full object-cover" />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">No background set</div>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm">Wallpaper presets</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {PRESET_WALLPAPERS.map((wp) => {
+                const active = backgroundUrl === wp.url;
+                return (
+                  <button key={wp.url} type="button"
+                    onClick={async () => {
+                      try { await setBackgroundFromUrl(wp.url); toast.success(`${wp.name} applied`); }
+                      catch { toast.error("Failed to apply wallpaper"); }
+                    }}
+                    className={`group relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40"}`}>
+                    <img src={wp.url} alt={wp.name} className="h-full w-full object-cover" loading="lazy" />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
+                      <span className="text-xs text-white font-medium">{wp.name}</span>
+                    </div>
+                    {active && (
+                      <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-3.5 w-3.5 text-primary-foreground" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <input ref={bgRef} type="file" accept="image/*" hidden onChange={handleBackground} />
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => bgRef.current?.click()} variant="outline" className="gap-2">
+              <Upload className="h-4 w-4" /> {backgroundUrl ? "Replace background" : "Upload background"}
+            </Button>
+            {backgroundUrl && (
+              <Button onClick={async () => { await removeBackground(); toast.success("Background removed"); }} variant="ghost" className="gap-2 text-destructive hover:text-destructive">
+                <Trash2 className="h-4 w-4" /> Remove
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
