@@ -79,15 +79,19 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     if (roleRow?.role !== "staff") {
       const { data: sec } = await supabase
         .from("studio_security" as any)
-        .select("payments_pin_hash, app_lock_pin_hash")
+        .select("payments_pin_hash, app_lock_pin_hash, webauthn_credential_id, webauthn_enabled")
         .eq("owner_id", owner)
         .maybeSingle();
       const s = (sec ?? {}) as any;
       setPaymentsPinHash(s.payments_pin_hash ?? null);
       setAppLockPinHash(s.app_lock_pin_hash ?? null);
+      setBiometricCredentialId(s.webauthn_credential_id ?? null);
+      setBiometricEnabled(!!s.webauthn_enabled && !!s.webauthn_credential_id);
     } else {
       setPaymentsPinHash(null);
       setAppLockPinHash(null);
+      setBiometricCredentialId(null);
+      setBiometricEnabled(false);
     }
     setLoading(false);
   };
