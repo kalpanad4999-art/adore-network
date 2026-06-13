@@ -174,15 +174,62 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     } as any);
   };
 
-  const setPaymentsPin = async (pin: string | null) => {
+  const setPaymentsPassword = async (pin: string | null, currentPassword?: string) => {
     if (!isOwner) return;
+    // If a password is already set and we're changing it, require current password
+    if (paymentsPinHash && pin) {
+      if (!currentPassword) throw new Error("Current password is required");
+      const currentHash = await sha256Hex(currentPassword);
+      if (currentHash !== paymentsPinHash) throw new Error("Current password is incorrect");
+    }
+    // Removing requires current password as well
+    if (paymentsPinHash && pin === null) {
+      if (!currentPassword) throw new Error("Current password is required to disable Payment Lock");
+      const currentHash = await sha256Hex(currentPassword);
+      if (currentHash !== paymentsPinHash) throw new Error("Current password is incorrect");
+    }
     const hash = pin ? await sha256Hex(pin) : null;
-    await upsertSecurity({ payments_pin_hash: hash });
+    const patch: Record<string, any> = { payments_pin_hash: hash };
+    // If lock is being disabled, also disable biometric
+    if (!hash) {
+      patch.webauthn_enabled = false;
+      patch.webauthn_credential_id = null;
+    }
+    await upsertSecurity(patch);
     setPaymentsPinHash(hash);
+    if (!hash) { setBiometricEnabled(false); setBiometricCredentialId(null); }
+    await logAudit(ownerId, pin ? (paymentsPinHash ? "payment_lock.password_changed" : "payment_lock.enabled") : "payment_lock.disabled");
   };
   const verifyPaymentsPin = async (pin: string) => {
     if (!paymentsPinHash) return false;
-    return (await sha256Hex(pin)) === paymentsPinHash;
+    const ok = (await sha256Hex(pin)) === paymentsPinHash;
+    await logAudit(ownerId, ok ? "payment_lock.unlock_password_success" : "payment_lock.unlock_password_failed");
+    return ok;
+  };
+
+  const enableBiometric = async () => {
+    if (!isOwner || !user) return;
+    if (!paymentsPinHash) throw new Error("Set a Payment Lock password first");
+    const credentialId = await registerBiometric(user.id, user.email || "owner");
+    await upsertSecurity({ webauthn_credential_id: credentialId, webauthn_enabled: true });
+    setBiometricCredentialId(credentialId);
+    setBiometricEnabled(true);
+    await logAudit(ownerId, "payment_lock.biometric_enabled");
+  };
+
+  const disableBiometric = async () => {
+    if (!isOwner) return;
+    await upsertSecurity({ webauthn_enabled: false, webauthn_credential_id: null });
+    setBiometricCredentialId(null);
+    setBiometricEnabled(false);
+    await logAudit(ownerId, "payment_lock.biometric_disabled");
+  };
+
+  const verifyBiometricUnlock = async () => {
+    if (!biometricEnabled || !biometricCredentialId) return false;
+    const ok = await verifyBiometric(biometricCredentialId);
+    await logAudit(ownerId, ok ? "payment_lock.unlock_biometric_success" : "payment_lock.unlock_biometric_failed");
+    return ok;
   };
 
   const setAppLockPin = async (pin: string | null) => {
