@@ -44,11 +44,6 @@ const Settings = () => {
   const [appConfirm, setAppConfirm] = useState("");
   const [savingAppPin, setSavingAppPin] = useState(false);
 
-  // Account password
-  const [currentPwd, setCurrentPwd] = useState("");
-  const [newPwd, setNewPwd] = useState("");
-  const [confirmPwd, setConfirmPwd] = useState("");
-  const [savingPwd, setSavingPwd] = useState(false);
 
   // Audit log
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
