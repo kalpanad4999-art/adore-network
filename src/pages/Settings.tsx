@@ -73,23 +73,6 @@ const Settings = () => {
     );
   }
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user?.email) return;
-    if (newPwd.length < 8) { toast.error("Password must be at least 8 characters"); return; }
-    if (newPwd !== confirmPwd) { toast.error("Passwords do not match"); return; }
-    setSavingPwd(true);
-    try {
-      const { error: signErr } = await supabase.auth.signInWithPassword({ email: user.email, password: currentPwd });
-      if (signErr) throw new Error("Current password is incorrect");
-      const { error: updErr } = await supabase.auth.updateUser({ password: newPwd });
-      if (updErr) throw updErr;
-      toast.success("Password updated");
-      setCurrentPwd(""); setNewPwd(""); setConfirmPwd("");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update password");
-    } finally { setSavingPwd(false); }
-  };
 
   const handleLockSave = async (e: React.FormEvent) => {
     e.preventDefault();
