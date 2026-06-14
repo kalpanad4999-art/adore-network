@@ -129,13 +129,6 @@ const Settings = () => {
   };
   const handleAppPinClear = async () => { await setAppLockPin(null); toast.success("App lock removed"); };
 
-  const handleBackground = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
-    try { await uploadBackground(file); toast.success("Background updated"); }
-    catch { toast.error("Failed to upload background"); }
-    e.target.value = "";
-  };
 
   return (
     <div className="space-y-6 max-w-3xl">
