@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useStudio } from "@/contexts/StudioContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,31 +12,20 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Upload, Trash2, Lock, ShieldCheck, ShieldAlert, Sun, Moon, Check, KeyRound, Fingerprint, History } from "lucide-react";
+import { Lock, ShieldCheck, ShieldAlert, Sun, Moon, Check, KeyRound, Fingerprint, History } from "lucide-react";
 import { toast } from "sonner";
 import { biometricSupported } from "@/lib/biometric";
 
-const PRESET_WALLPAPERS = [
-  { name: "Sunrise Meditation", url: "https://images.unsplash.com/photo-1545389336-cf090694435e?auto=format&fit=crop&w=1920&q=70" },
-  { name: "Forest Calm", url: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1920&q=70" },
-  { name: "Mountain Mist", url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=70" },
-  { name: "Ocean Breath", url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=70" },
-  { name: "Zen Stones", url: "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?auto=format&fit=crop&w=1920&q=70" },
-  { name: "Lotus Bloom", url: "https://images.unsplash.com/photo-1531171596281-8b5d26917d8b?auto=format&fit=crop&w=1920&q=70" },
-];
 
 const Settings = () => {
   const {
-    backgroundUrl, isOwner, ownerId,
+    isOwner, ownerId,
     paymentsPinSet, appLockPinSet,
     biometricEnabled,
-    uploadBackground, setBackgroundFromUrl, removeBackground,
     setPaymentsPassword, enableBiometric, disableBiometric,
     setAppLockPin,
   } = useStudio();
   const { theme, setTheme } = useTheme();
-  const { user } = useAuth();
-  const bgRef = useRef<HTMLInputElement>(null);
 
   // Payment Lock password state
   const [currentLockPwd, setCurrentLockPwd] = useState("");
@@ -56,11 +44,6 @@ const Settings = () => {
   const [appConfirm, setAppConfirm] = useState("");
   const [savingAppPin, setSavingAppPin] = useState(false);
 
-  // Account password
-  const [currentPwd, setCurrentPwd] = useState("");
-  const [newPwd, setNewPwd] = useState("");
-  const [confirmPwd, setConfirmPwd] = useState("");
-  const [savingPwd, setSavingPwd] = useState(false);
 
   // Audit log
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -90,23 +73,6 @@ const Settings = () => {
     );
   }
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user?.email) return;
-    if (newPwd.length < 8) { toast.error("Password must be at least 8 characters"); return; }
-    if (newPwd !== confirmPwd) { toast.error("Passwords do not match"); return; }
-    setSavingPwd(true);
-    try {
-      const { error: signErr } = await supabase.auth.signInWithPassword({ email: user.email, password: currentPwd });
-      if (signErr) throw new Error("Current password is incorrect");
-      const { error: updErr } = await supabase.auth.updateUser({ password: newPwd });
-      if (updErr) throw updErr;
-      toast.success("Password updated");
-      setCurrentPwd(""); setNewPwd(""); setConfirmPwd("");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update password");
-    } finally { setSavingPwd(false); }
-  };
 
   const handleLockSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,13 +129,6 @@ const Settings = () => {
   };
   const handleAppPinClear = async () => { await setAppLockPin(null); toast.success("App lock removed"); };
 
-  const handleBackground = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5 MB"); return; }
-    try { await uploadBackground(file); toast.success("Background updated"); }
-    catch { toast.error("Failed to upload background"); }
-    e.target.value = "";
-  };
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -404,88 +363,6 @@ const Settings = () => {
         </CardContent>
       </Card>
 
-      {/* Account password */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2"><KeyRound className="h-5 w-5" /> Account Password</CardTitle>
-          <CardDescription>Change the password for your owner account. You'll need your current password to confirm.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePasswordChange} className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Current password</Label>
-              <Input type="password" autoComplete="current-password" value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} placeholder="••••••••" />
-            </div>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>New password</Label>
-                <Input type="password" autoComplete="new-password" minLength={8} value={newPwd} onChange={(e) => setNewPwd(e.target.value)} placeholder="At least 8 characters" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Confirm new password</Label>
-                <Input type="password" autoComplete="new-password" minLength={8} value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} placeholder="Repeat password" />
-              </div>
-            </div>
-            <Button type="submit" disabled={savingPwd || !currentPwd || !newPwd || !confirmPwd}>
-              {savingPwd ? "Updating…" : "Update password"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Background */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display">App Background</CardTitle>
-          <CardDescription>Set a custom background image used across the app.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="aspect-video w-full rounded-xl border bg-muted overflow-hidden">
-            {backgroundUrl ? (
-              <img src={backgroundUrl} alt="App background" className="h-full w-full object-cover" />
-            ) : (
-              <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">No background set</div>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm">Wallpaper presets</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {PRESET_WALLPAPERS.map((wp) => {
-                const active = backgroundUrl === wp.url;
-                return (
-                  <button key={wp.url} type="button"
-                    onClick={async () => {
-                      try { await setBackgroundFromUrl(wp.url); toast.success(`${wp.name} applied`); }
-                      catch { toast.error("Failed to apply wallpaper"); }
-                    }}
-                    className={`group relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40"}`}>
-                    <img src={wp.url} alt={wp.name} className="h-full w-full object-cover" loading="lazy" />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 py-1.5">
-                      <span className="text-xs text-white font-medium">{wp.name}</span>
-                    </div>
-                    {active && (
-                      <div className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="h-3.5 w-3.5 text-primary-foreground" />
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <input ref={bgRef} type="file" accept="image/*" hidden onChange={handleBackground} />
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => bgRef.current?.click()} variant="outline" className="gap-2">
-              <Upload className="h-4 w-4" /> {backgroundUrl ? "Replace background" : "Upload background"}
-            </Button>
-            {backgroundUrl && (
-              <Button onClick={async () => { await removeBackground(); toast.success("Background removed"); }} variant="ghost" className="gap-2 text-destructive hover:text-destructive">
-                <Trash2 className="h-4 w-4" /> Remove
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

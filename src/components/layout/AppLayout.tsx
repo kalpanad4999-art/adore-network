@@ -174,10 +174,8 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-h-screen">
-        <header className="md:hidden flex items-center justify-between border-b border-border px-4 py-3 bg-card">
+        <header className="md:hidden flex items-center border-b border-border px-4 py-3 bg-card">
           <button onClick={() => setSidebarOpen(true)}><Menu className="h-5 w-5" /></button>
-          <StudioBrand compact />
-          <div className="w-5" />
         </header>
 
         <div className="flex-1 overflow-auto">
