@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Image as ImageIcon, Video, Radio, ExternalLink } from "lucide-react";
+import SupportChatWidget from "@/components/SupportChatWidget";
 import { format } from "date-fns";
 
 type G = { id: string; title: string | null; description: string | null; media_type: "image" | "video"; storage_path: string; thumbnail_path: string | null };
@@ -112,6 +113,7 @@ const PublicStudio = () => {
           </TabsContent>
         </Tabs>
       </main>
+      {ownerId && <SupportChatWidget ownerId={ownerId} />}
     </div>
   );
 };

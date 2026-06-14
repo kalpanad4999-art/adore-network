@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2 } from "lucide-react";
+import SupportChatWidget from "@/components/SupportChatWidget";
 
 interface CustomField { id: string; name: string; required: boolean; enabled: boolean; }
 interface BatchInfo { id: string; name: string; description: string | null; fee: number; start_date: string | null; required_fields: string[] | null; custom_fields: CustomField[] | null; }
@@ -243,6 +244,7 @@ const Join = () => {
           </form>
         </CardContent>
       </Card>
+      {token && <SupportChatWidget batchToken={token} />}
     </div>
   );
 };

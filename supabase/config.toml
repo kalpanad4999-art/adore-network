@@ -2,3 +2,6 @@ project_id = "figcbnjibtpzfcmdltvg"
 
 [functions.public-register-student]
 verify_jwt = false
+
+[functions.support-chat]
+verify_jwt = false
