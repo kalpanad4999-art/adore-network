@@ -20,16 +20,13 @@ import { biometricSupported } from "@/lib/biometric";
 
 const Settings = () => {
   const {
-    backgroundUrl, isOwner, ownerId,
+    isOwner, ownerId,
     paymentsPinSet, appLockPinSet,
     biometricEnabled,
-    uploadBackground, setBackgroundFromUrl, removeBackground,
     setPaymentsPassword, enableBiometric, disableBiometric,
     setAppLockPin,
   } = useStudio();
   const { theme, setTheme } = useTheme();
-  const { user } = useAuth();
-  const bgRef = useRef<HTMLInputElement>(null);
 
   // Payment Lock password state
   const [currentLockPwd, setCurrentLockPwd] = useState("");
