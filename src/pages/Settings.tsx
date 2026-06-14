@@ -17,14 +17,6 @@ import { Lock, ShieldCheck, ShieldAlert, Sun, Moon, Check, KeyRound, Fingerprint
 import { toast } from "sonner";
 import { biometricSupported } from "@/lib/biometric";
 
-const PRESET_WALLPAPERS = [
-  { name: "Sunrise Meditation", url: "https://images.unsplash.com/photo-1545389336-cf090694435e?auto=format&fit=crop&w=1920&q=70" },
-  { name: "Forest Calm", url: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1920&q=70" },
-  { name: "Mountain Mist", url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=70" },
-  { name: "Ocean Breath", url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=70" },
-  { name: "Zen Stones", url: "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?auto=format&fit=crop&w=1920&q=70" },
-  { name: "Lotus Bloom", url: "https://images.unsplash.com/photo-1531171596281-8b5d26917d8b?auto=format&fit=crop&w=1920&q=70" },
-];
 
 const Settings = () => {
   const {
