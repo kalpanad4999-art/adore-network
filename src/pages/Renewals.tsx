@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ interface Payment {
   reminder_sent_at: string | null;
 }
 
-type Status = "active" | "due_soon" | "due_today" | "expired" | "renewed";
+type Bucket = "active" | "due_7" | "due_3" | "due_today" | "expired";
 
 interface Renewal {
   customer: Customer;
@@ -26,7 +26,7 @@ interface Renewal {
   previous: Payment | null;
   renewalDate: string | null;
   daysRemaining: number | null;
-  status: Status;
+  bucket: Bucket | null; // null = no membership data
   reminderState: "not_sent" | "sent" | "renewed";
 }
 
@@ -37,37 +37,47 @@ const today = () => {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 };
 
-const daysBetween = (iso: string) => {
-  const [y, m, d] = iso.split("-").map(Number);
-  const target = new Date(y, m - 1, d);
-  const diff = target.getTime() - today().getTime();
-  return Math.round(diff / 86400000);
+// Parse YYYY-MM-DD as a local date (avoids timezone shifts).
+const parseISODate = (iso: string): Date | null => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return isNaN(d.getTime()) ? null : d;
 };
 
-const statusLabel: Record<Status, string> = {
+const daysBetween = (iso: string): number | null => {
+  const target = parseISODate(iso);
+  if (!target) return null;
+  return Math.round((target.getTime() - today().getTime()) / 86400000);
+};
+
+const bucketLabel: Record<Bucket, string> = {
   active: "Active",
-  due_soon: "Due Soon",
+  due_7: "Due in 7 Days",
+  due_3: "Due in 3 Days",
   due_today: "Due Today",
   expired: "Expired",
-  renewed: "Renewed",
 };
 
-const statusColor: Record<Status, string> = {
+const bucketColor: Record<Bucket, string> = {
   active: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-  due_soon: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  due_today: "bg-orange-500/15 text-orange-700 dark:text-orange-400",
+  due_7: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  due_3: "bg-orange-500/15 text-orange-700 dark:text-orange-400",
+  due_today: "bg-orange-600/15 text-orange-700 dark:text-orange-400",
   expired: "bg-destructive/15 text-destructive",
-  renewed: "bg-primary/15 text-primary",
 };
 
-const filters = [
+type FilterKey = "all" | Bucket | "renewed";
+
+const filters: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
   { key: "active", label: "Active" },
-  { key: "due_soon", label: "Due Soon" },
+  { key: "due_7", label: "Due in 7 Days" },
+  { key: "due_3", label: "Due in 3 Days" },
   { key: "due_today", label: "Due Today" },
   { key: "expired", label: "Expired" },
   { key: "renewed", label: "Renewed" },
-] as const;
+];
 
 const buildMessage = (name: string, renewalDate: string) =>
   `Hello ${name},\n\nYour membership at ${STUDIO_NAME} will expire on ${new Date(renewalDate).toLocaleDateString()}.\n\nPlease renew your membership before the expiry date to continue uninterrupted access to classes.\n\nThank you,\n${STUDIO_NAME}`;
@@ -78,11 +88,11 @@ const Renewals = () => {
   const { user } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [filter, setFilter] = useState<(typeof filters)[number]["key"]>("all");
+  const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     const [{ data: cust }, { data: pays }] = await Promise.all([
@@ -92,8 +102,34 @@ const Renewals = () => {
     setCustomers((cust as Customer[]) || []);
     setPayments(((pays as any[]) || []) as Payment[]);
     setLoading(false);
-  };
-  useEffect(() => { fetchAll(); }, [user]);
+  }, [user]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Realtime: recalc when payments change
+  useEffect(() => {
+    if (!user) return;
+    const ch = supabase
+      .channel("renewals-payments")
+      .on("postgres_changes", { event: "*", schema: "public", table: "student_payments", filter: `user_id=eq.${user.id}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `user_id=eq.${user.id}` }, () => fetchAll())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user, fetchAll]);
+
+  // Daily refresh at 12:00 AM
+  useEffect(() => {
+    const schedule = () => {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+      return next.getTime() - now.getTime();
+    };
+    const t = setTimeout(function tick() {
+      fetchAll();
+      (tick as any)._t = setTimeout(tick, schedule());
+    }, schedule());
+    return () => clearTimeout(t);
+  }, [fetchAll]);
 
   const renewals: Renewal[] = useMemo(() => {
     const byCustomer = new Map<string, Payment[]>();
@@ -101,63 +137,67 @@ const Renewals = () => {
       if (!byCustomer.has(p.student_id)) byCustomer.set(p.student_id, []);
       byCustomer.get(p.student_id)!.push(p);
     });
-    return customers.map<Renewal>((c) => {
-      const list = (byCustomer.get(c.id) || []).slice().sort((a, b) => (b.paid_on > a.paid_on ? 1 : -1));
-      const latest = list[0] || null;
-      const previous = list[1] || null;
+
+    let invalidDates = 0;
+    const list = customers.map<Renewal>((c) => {
+      const ps = (byCustomer.get(c.id) || []).slice().sort((a, b) => (b.paid_on > a.paid_on ? 1 : -1));
+      const latest = ps[0] || null;
+      const previous = ps[1] || null;
       const renewalDate = latest?.valid_until || null;
-      const daysRemaining = renewalDate ? daysBetween(renewalDate) : null;
+      let daysRemaining: number | null = null;
+      let bucket: Bucket | null = null;
 
-      let status: Status = "active";
-      let reminderState: "not_sent" | "sent" | "renewed" = "not_sent";
-
-      if (!latest || !renewalDate) {
-        status = "expired";
-      } else if (daysRemaining === null) {
-        status = "active";
-      } else if (daysRemaining < 0) {
-        status = "expired";
-      } else if (daysRemaining === 0) {
-        status = "due_today";
-      } else if (daysRemaining <= 7) {
-        status = "due_soon";
-      } else {
-        status = "active";
+      if (renewalDate) {
+        daysRemaining = daysBetween(renewalDate);
+        if (daysRemaining === null) {
+          invalidDates++;
+        } else if (daysRemaining < 0) bucket = "expired";
+        else if (daysRemaining === 0) bucket = "due_today";
+        else if (daysRemaining >= 1 && daysRemaining <= 3) bucket = "due_3";
+        else if (daysRemaining >= 4 && daysRemaining <= 7) bucket = "due_7";
+        else bucket = "active";
       }
 
-      // If a newer payment exists after a prior renewal, mark as renewed if latest paid_on is recent (<= 7 days)
+      let reminderState: "not_sent" | "sent" | "renewed" = "not_sent";
       if (latest && previous && previous.valid_until) {
-        const renewedRecently = daysBetween(latest.paid_on) >= -30 && latest.paid_on >= previous.valid_until.slice(0, 10).slice(0, 10);
-        // Show "Renewed" badge if latest payment was made within 30 days after previous expiry/renewal
-        if (renewedRecently && status === "active") {
+        if (latest.paid_on >= previous.valid_until.slice(0, 10) && bucket === "active") {
           reminderState = "renewed";
         }
       }
       if (latest?.reminder_sent_at && reminderState === "not_sent") reminderState = "sent";
 
-      return { customer: c, latest, previous, renewalDate, daysRemaining, status, reminderState };
+      return { customer: c, latest, previous, renewalDate, daysRemaining, bucket, reminderState };
     });
+
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.debug("[Renewals] records:", list.length, "invalidDates:", invalidDates);
+    }
+    return list;
   }, [customers, payments]);
 
   const counts = useMemo(() => {
     const c = { due_7: 0, due_3: 0, due_today: 0, expired: 0 };
     renewals.forEach((r) => {
-      if (r.daysRemaining === null) return;
-      if (r.daysRemaining < 0) c.expired++;
-      else if (r.daysRemaining === 0) c.due_today++;
-      if (r.daysRemaining >= 0 && r.daysRemaining <= 3) c.due_3++;
-      if (r.daysRemaining >= 0 && r.daysRemaining <= 7) c.due_7++;
+      if (r.bucket === "due_7") c.due_7++;
+      else if (r.bucket === "due_3") c.due_3++;
+      else if (r.bucket === "due_today") c.due_today++;
+      else if (r.bucket === "expired") c.expired++;
     });
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.debug("[Renewals] counts:", c);
+    }
     return c;
   }, [renewals]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return renewals.filter((r) => {
-      if (filter !== "all") {
-        if (filter === "renewed") {
-          if (r.reminderState !== "renewed") return false;
-        } else if (r.status !== filter) return false;
+      if (filter === "renewed") {
+        if (r.reminderState !== "renewed") return false;
+      } else if (filter !== "all") {
+        if (r.bucket !== filter) return false;
       }
       if (term && !(r.customer.name.toLowerCase().includes(term) || (r.customer.phone || "").includes(term))) return false;
       return true;
@@ -215,10 +255,10 @@ const Renewals = () => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon={<CalendarClock className="h-5 w-5" />} label="Due in 7 Days" value={counts.due_7} tone="amber" />
-        <StatCard icon={<CalendarClock className="h-5 w-5" />} label="Due in 3 Days" value={counts.due_3} tone="orange" />
-        <StatCard icon={<AlertTriangle className="h-5 w-5" />} label="Due Today" value={counts.due_today} tone="orange" />
-        <StatCard icon={<AlertTriangle className="h-5 w-5" />} label="Expired" value={counts.expired} tone="destructive" />
+        <StatCard icon={<CalendarClock className="h-5 w-5" />} label="Due in 7 Days" value={counts.due_7} tone="amber" active={filter === "due_7"} onClick={() => setFilter(filter === "due_7" ? "all" : "due_7")} />
+        <StatCard icon={<CalendarClock className="h-5 w-5" />} label="Due in 3 Days" value={counts.due_3} tone="orange" active={filter === "due_3"} onClick={() => setFilter(filter === "due_3" ? "all" : "due_3")} />
+        <StatCard icon={<AlertTriangle className="h-5 w-5" />} label="Due Today" value={counts.due_today} tone="orange" active={filter === "due_today"} onClick={() => setFilter(filter === "due_today" ? "all" : "due_today")} />
+        <StatCard icon={<AlertTriangle className="h-5 w-5" />} label="Expired" value={counts.expired} tone="destructive" active={filter === "expired"} onClick={() => setFilter(filter === "expired" ? "all" : "expired")} />
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
@@ -255,9 +295,11 @@ const Renewals = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold truncate">{r.customer.name}</h3>
-                    <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-medium ${statusColor[r.status]}`}>
-                      {statusLabel[r.status]}
-                    </span>
+                    {r.bucket && (
+                      <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-medium ${bucketColor[r.bucket]}`}>
+                        {bucketLabel[r.bucket]}
+                      </span>
+                    )}
                     {r.reminderState === "sent" && (
                       <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">
                         Reminder sent
@@ -318,18 +360,20 @@ const Renewals = () => {
   );
 };
 
-const StatCard = ({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number; tone: "amber" | "orange" | "destructive" }) => {
+const StatCard = ({ icon, label, value, tone, active, onClick }: { icon: React.ReactNode; label: string; value: number; tone: "amber" | "orange" | "destructive"; active?: boolean; onClick?: () => void }) => {
   const toneClass =
     tone === "amber" ? "border-amber-500/30 from-amber-500/10" :
     tone === "orange" ? "border-orange-500/30 from-orange-500/10" :
     "border-destructive/30 from-destructive/10";
   return (
-    <Card className={`bg-gradient-to-br ${toneClass} to-transparent border`}>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">{icon}{label}</div>
-        <p className="font-display text-3xl font-bold mt-1">{value}</p>
-      </CardContent>
-    </Card>
+    <button type="button" onClick={onClick} className="text-left">
+      <Card className={`bg-gradient-to-br ${toneClass} to-transparent border transition-all hover:shadow-md ${active ? "ring-2 ring-primary" : ""}`}>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs uppercase tracking-wider">{icon}{label}</div>
+          <p className="font-display text-3xl font-bold mt-1">{value}</p>
+        </CardContent>
+      </Card>
+    </button>
   );
 };
 
