@@ -181,27 +181,26 @@ const Payments = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Membership Duration</Label>
-                  <Select value={form.duration} onValueChange={(v) => setForm({ ...form, duration: v })}>
+                  <Label>Duration Unit</Label>
+                  <Select value={form.durationUnit} onValueChange={(v) => setForm({ ...form, durationUnit: v as Unit })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{durationPresets.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
+                    <SelectContent>{unitOptions.map((u) => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
-              {form.duration === "custom" && (
-                <div className="space-y-2">
-                  <Label>Custom duration (months)</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="120"
-                    placeholder="e.g. 18"
-                    value={form.customDuration}
-                    onChange={(e) => setForm({ ...form, customDuration: e.target.value })}
-                    required
-                  />
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label>Duration Value <span className="text-muted-foreground text-xs">(1–{unitMax[form.durationUnit]} {form.durationUnit})</span></Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={unitMax[form.durationUnit]}
+                  step={1}
+                  placeholder="e.g. 3"
+                  value={form.durationValue}
+                  onChange={(e) => setForm({ ...form, durationValue: e.target.value.replace(/[^0-9]/g, "") })}
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <Label>Renewal Date <span className="text-muted-foreground text-xs">(auto)</span></Label>
                 <Input type="date" value={renewalDate} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
