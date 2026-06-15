@@ -106,8 +106,13 @@ const Payments = () => {
     const amount = parseFloat(form.amount);
     if (!form.student_id) { toast.error("Pick a customer"); return; }
     if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
-    if (!effectiveMonths) { toast.error("Enter a valid membership duration"); return; }
+    if (!effectiveValue) { toast.error("Enter a valid duration"); return; }
     if (!renewalDate) { toast.error("Could not calculate renewal date"); return; }
+
+    const months_equiv =
+      form.durationUnit === "months" ? effectiveValue :
+      form.durationUnit === "years" ? effectiveValue * 12 :
+      Math.max(1, Math.round(effectiveValue / 30));
 
     const { error } = await supabase.from("student_payments").insert({
       student_id: form.student_id,
@@ -115,14 +120,16 @@ const Payments = () => {
       amount,
       paid_on: form.paid_on,
       method: form.method,
-      duration_months: effectiveMonths,
+      duration_value: effectiveValue,
+      duration_unit: form.durationUnit,
+      duration_months: months_equiv,
       valid_until: renewalDate,
       reminder_sent_at: null,
     } as any);
     if (error) { toast.error(error.message); return; }
-    await logAudit(ownerId, "payment.created", { amount, duration_months: effectiveMonths, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
+    await logAudit(ownerId, "payment.created", { amount, duration_value: effectiveValue, duration_unit: form.durationUnit, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
     toast.success("Payment recorded · renewal scheduled");
-    setForm({ ...form, amount: "", customDuration: "" });
+    setForm({ ...form, amount: "", durationValue: "1" });
     setAddOpen(false);
     fetchAll();
   };
