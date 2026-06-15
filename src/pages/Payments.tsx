@@ -59,21 +59,19 @@ const Payments = () => {
     amount: "",
     paid_on: new Date().toISOString().slice(0, 10),
     method: "cash",
-    duration: "1",
-    customDuration: "",
+    durationValue: "1",
+    durationUnit: "months" as Unit,
   });
 
-  const effectiveMonths = useMemo(() => {
-    if (form.duration === "custom") {
-      const n = parseInt(form.customDuration, 10);
-      return Number.isFinite(n) && n > 0 ? n : 0;
-    }
-    return parseInt(form.duration, 10) || 0;
-  }, [form.duration, form.customDuration]);
+  const effectiveValue = useMemo(() => {
+    const n = parseInt(form.durationValue, 10);
+    if (!Number.isFinite(n) || n < 1) return 0;
+    return Math.min(n, unitMax[form.durationUnit]);
+  }, [form.durationValue, form.durationUnit]);
 
   const renewalDate = useMemo(
-    () => addMonths(form.paid_on, effectiveMonths),
-    [form.paid_on, effectiveMonths]
+    () => addDuration(form.paid_on, effectiveValue, form.durationUnit),
+    [form.paid_on, effectiveValue, form.durationUnit]
   );
 
   const fetchAll = async () => {
