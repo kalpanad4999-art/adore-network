@@ -253,7 +253,11 @@ const Payments = () => {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-semibold">₹{Number(p.amount).toLocaleString()}</span>
-                                  {p.duration_months ? (
+                                  {(p.duration_value && p.duration_unit) ? (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                                      {p.duration_value} {p.duration_unit}
+                                    </span>
+                                  ) : p.duration_months ? (
                                     <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
                                       {p.duration_months} mo
                                     </span>
