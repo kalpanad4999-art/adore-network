@@ -429,6 +429,8 @@ export type Database = {
           amount: number
           created_at: string
           duration_months: number | null
+          duration_unit: string | null
+          duration_value: number | null
           id: string
           method: string
           notes: string | null
@@ -444,6 +446,8 @@ export type Database = {
           amount?: number
           created_at?: string
           duration_months?: number | null
+          duration_unit?: string | null
+          duration_value?: number | null
           id?: string
           method?: string
           notes?: string | null
@@ -459,6 +463,8 @@ export type Database = {
           amount?: number
           created_at?: string
           duration_months?: number | null
+          duration_unit?: string | null
+          duration_value?: number | null
           id?: string
           method?: string
           notes?: string | null

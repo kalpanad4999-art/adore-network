@@ -20,27 +20,30 @@ interface Payment {
   paid_on: string;
   method: string;
   duration_months: number | null;
+  duration_value: number | null;
+  duration_unit: string | null;
   valid_until: string | null;
 }
 
 const paymentMethods = ["cash", "upi", "card", "bank-transfer", "other"];
-const durationPresets = [
-  { value: "1", label: "1 Month" },
-  { value: "2", label: "2 Months" },
-  { value: "3", label: "3 Months" },
-  { value: "6", label: "6 Months" },
-  { value: "12", label: "12 Months" },
-  { value: "custom", label: "Custom" },
+type Unit = "days" | "months" | "years";
+const unitOptions: { value: Unit; label: string }[] = [
+  { value: "days", label: "Days" },
+  { value: "months", label: "Months" },
+  { value: "years", label: "Years" },
 ];
+const unitMax: Record<Unit, number> = { days: 365, months: 60, years: 10 };
 
-const addMonths = (isoDate: string, months: number): string => {
-  if (!isoDate || !months || months <= 0) return "";
+const addDuration = (isoDate: string, value: number, unit: Unit): string => {
+  if (!isoDate || !value || value <= 0) return "";
   const [y, m, d] = isoDate.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1 + months, d));
-  // Handle month-end overflow: if day shifted, clamp to last day of target month
-  if (dt.getUTCDate() !== d) {
-    dt.setUTCDate(0);
+  if (unit === "days") {
+    const dt = new Date(Date.UTC(y, m - 1, d + value));
+    return dt.toISOString().slice(0, 10);
   }
+  const months = unit === "years" ? value * 12 : value;
+  const dt = new Date(Date.UTC(y, m - 1 + months, d));
+  if (dt.getUTCDate() !== d) dt.setUTCDate(0);
   return dt.toISOString().slice(0, 10);
 };
 
@@ -56,21 +59,19 @@ const Payments = () => {
     amount: "",
     paid_on: new Date().toISOString().slice(0, 10),
     method: "cash",
-    duration: "1",
-    customDuration: "",
+    durationValue: "1",
+    durationUnit: "months" as Unit,
   });
 
-  const effectiveMonths = useMemo(() => {
-    if (form.duration === "custom") {
-      const n = parseInt(form.customDuration, 10);
-      return Number.isFinite(n) && n > 0 ? n : 0;
-    }
-    return parseInt(form.duration, 10) || 0;
-  }, [form.duration, form.customDuration]);
+  const effectiveValue = useMemo(() => {
+    const n = parseInt(form.durationValue, 10);
+    if (!Number.isFinite(n) || n < 1) return 0;
+    return Math.min(n, unitMax[form.durationUnit]);
+  }, [form.durationValue, form.durationUnit]);
 
   const renewalDate = useMemo(
-    () => addMonths(form.paid_on, effectiveMonths),
-    [form.paid_on, effectiveMonths]
+    () => addDuration(form.paid_on, effectiveValue, form.durationUnit),
+    [form.paid_on, effectiveValue, form.durationUnit]
   );
 
   const fetchAll = async () => {
@@ -105,8 +106,13 @@ const Payments = () => {
     const amount = parseFloat(form.amount);
     if (!form.student_id) { toast.error("Pick a customer"); return; }
     if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
-    if (!effectiveMonths) { toast.error("Enter a valid membership duration"); return; }
+    if (!effectiveValue) { toast.error("Enter a valid duration"); return; }
     if (!renewalDate) { toast.error("Could not calculate renewal date"); return; }
+
+    const months_equiv =
+      form.durationUnit === "months" ? effectiveValue :
+      form.durationUnit === "years" ? effectiveValue * 12 :
+      Math.max(1, Math.round(effectiveValue / 30));
 
     const { error } = await supabase.from("student_payments").insert({
       student_id: form.student_id,
@@ -114,14 +120,16 @@ const Payments = () => {
       amount,
       paid_on: form.paid_on,
       method: form.method,
-      duration_months: effectiveMonths,
+      duration_value: effectiveValue,
+      duration_unit: form.durationUnit,
+      duration_months: months_equiv,
       valid_until: renewalDate,
       reminder_sent_at: null,
     } as any);
     if (error) { toast.error(error.message); return; }
-    await logAudit(ownerId, "payment.created", { amount, duration_months: effectiveMonths, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
+    await logAudit(ownerId, "payment.created", { amount, duration_value: effectiveValue, duration_unit: form.durationUnit, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
     toast.success("Payment recorded · renewal scheduled");
-    setForm({ ...form, amount: "", customDuration: "" });
+    setForm({ ...form, amount: "", durationValue: "1" });
     setAddOpen(false);
     fetchAll();
   };
@@ -173,27 +181,26 @@ const Payments = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Membership Duration</Label>
-                  <Select value={form.duration} onValueChange={(v) => setForm({ ...form, duration: v })}>
+                  <Label>Duration Unit</Label>
+                  <Select value={form.durationUnit} onValueChange={(v) => setForm({ ...form, durationUnit: v as Unit })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{durationPresets.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
+                    <SelectContent>{unitOptions.map((u) => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
-              {form.duration === "custom" && (
-                <div className="space-y-2">
-                  <Label>Custom duration (months)</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="120"
-                    placeholder="e.g. 18"
-                    value={form.customDuration}
-                    onChange={(e) => setForm({ ...form, customDuration: e.target.value })}
-                    required
-                  />
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label>Duration Value <span className="text-muted-foreground text-xs">(1–{unitMax[form.durationUnit]} {form.durationUnit})</span></Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={unitMax[form.durationUnit]}
+                  step={1}
+                  placeholder="e.g. 3"
+                  value={form.durationValue}
+                  onChange={(e) => setForm({ ...form, durationValue: e.target.value.replace(/[^0-9]/g, "") })}
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <Label>Renewal Date <span className="text-muted-foreground text-xs">(auto)</span></Label>
                 <Input type="date" value={renewalDate} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
@@ -246,7 +253,11 @@ const Payments = () => {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-semibold">₹{Number(p.amount).toLocaleString()}</span>
-                                  {p.duration_months ? (
+                                  {(p.duration_value && p.duration_unit) ? (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                                      {p.duration_value} {p.duration_unit}
+                                    </span>
+                                  ) : p.duration_months ? (
                                     <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
                                       {p.duration_months} mo
                                     </span>
