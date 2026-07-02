@@ -15,6 +15,7 @@ import {
 import { Lock, ShieldCheck, ShieldAlert, Sun, Moon, Check, KeyRound, Fingerprint, History } from "lucide-react";
 import { toast } from "sonner";
 import { biometricSupported } from "@/lib/biometric";
+import { TransferOwnershipCard } from "@/components/TransferOwnershipCard";
 
 
 const Settings = () => {
@@ -362,6 +363,9 @@ const Settings = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* Transfer Ownership */}
+      <TransferOwnershipCard />
 
     </div>
   );
