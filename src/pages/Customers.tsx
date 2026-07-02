@@ -239,10 +239,7 @@ const Customers = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Customers</h1>
-          <p className="text-muted-foreground mt-1">Organized by batch — owner only</p>
-        </div>
+        <h1 className="font-display text-3xl font-bold">Customers</h1>
         <Dialog open={batchOpen} onOpenChange={(v) => { if (!v) resetBatchForm(); else setBatchOpen(true); }}>
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />Add Batch</Button>
