@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.support-chat]
 verify_jwt = false
+
+[functions.transfer-ownership]
+verify_jwt = false
