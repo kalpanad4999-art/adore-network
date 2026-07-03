@@ -56,6 +56,116 @@ export type Database = {
         }
         Relationships: []
       }
+      chatbot_chat_history: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          matched_kb_id: string | null
+          owner_id: string
+          phone: string | null
+          question: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          matched_kb_id?: string | null
+          owner_id: string
+          phone?: string | null
+          question: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          matched_kb_id?: string | null
+          owner_id?: string
+          phone?: string | null
+          question?: string
+        }
+        Relationships: []
+      }
+      chatbot_knowledge: {
+        Row: {
+          alternate_questions: string[]
+          answer: string
+          category: string | null
+          created_at: string
+          id: string
+          keywords: string[]
+          owner_id: string
+          question: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          alternate_questions?: string[]
+          answer: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          owner_id: string
+          question: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          alternate_questions?: string[]
+          answer?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          keywords?: string[]
+          owner_id?: string
+          question?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chatbot_pending_questions: {
+        Row: {
+          created_at: string
+          id: string
+          knowledge_id: string | null
+          owner_id: string
+          phone: string | null
+          question: string
+          resolved: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          knowledge_id?: string | null
+          owner_id: string
+          phone?: string | null
+          question: string
+          resolved?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          knowledge_id?: string | null
+          owner_id?: string
+          phone?: string | null
+          question?: string
+          resolved?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_pending_questions_knowledge_id_fkey"
+            columns: ["knowledge_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_knowledge"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
