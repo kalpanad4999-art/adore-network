@@ -16,6 +16,7 @@ import { Lock, ShieldCheck, ShieldAlert, Sun, Moon, Check, KeyRound, Fingerprint
 import { toast } from "sonner";
 import { biometricSupported } from "@/lib/biometric";
 import { TransferOwnershipCard } from "@/components/TransferOwnershipCard";
+import { ChatbotKnowledgeCard } from "@/components/ChatbotKnowledgeCard";
 
 
 const Settings = () => {
@@ -363,6 +364,9 @@ const Settings = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* AI Chatbot Knowledge Base */}
+      <ChatbotKnowledgeCard />
 
       {/* Transfer Ownership */}
       <TransferOwnershipCard />
