@@ -49,10 +49,34 @@ export const TransferOwnershipCard = () => {
   };
 
   const invoke = async (payload: any) => {
-    const { data, error } = await supabase.functions.invoke("transfer-ownership", { body: payload });
-    if (error) throw new Error(error.message || "Request failed");
-    if (data?.error) throw new Error(data.error);
-    return data;
+    const { data: sess } = await supabase.auth.getSession();
+    const token = sess.session?.access_token;
+    if (!token) throw new Error("Your session has expired. Please sign in again.");
+
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transfer-ownership`;
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (e: any) {
+      console.error("transfer-ownership network error", e);
+      throw new Error("Network error contacting the server. Check your connection.");
+    }
+    let body: any = null;
+    try { body = await res.json(); } catch { /* ignore */ }
+    if (!res.ok) {
+      console.error("transfer-ownership response error", res.status, body);
+      throw new Error(body?.error || `Request failed (${res.status})`);
+    }
+    if (body?.error) throw new Error(body.error);
+    return body;
   };
 
   const handleVerifyStep = (e: React.FormEvent) => {

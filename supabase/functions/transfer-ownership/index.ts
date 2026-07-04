@@ -1,5 +1,12 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+// Transfer studio ownership from current owner to a new (or existing) user.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 const OWNED_TABLES = [
   "students",
@@ -29,31 +36,57 @@ Deno.serve(async (req) => {
   try {
     const auth = req.headers.get("Authorization") || "";
     const token = auth.replace(/^Bearer\s+/i, "");
-    if (!token) return json({ error: "Missing auth" }, 401);
+    if (!token) {
+      console.error("transfer-ownership: missing auth header");
+      return json({ error: "You must be signed in" }, 401);
+    }
 
-    // Verify caller
     const userClient = createClient(SUPABASE_URL, ANON_KEY, {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData.user) return json({ error: "Invalid session" }, 401);
+    if (userErr || !userData.user) {
+      console.error("transfer-ownership: invalid session", userErr);
+      return json({ error: "Session expired. Please sign in again." }, 401);
+    }
     const caller = userData.user;
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
     const body = await req.json().catch(() => ({}));
     const action = body.action as string;
+    console.log("transfer-ownership action:", action, "by", caller.email);
 
     // ── check email ────────────────────────────────────
     if (action === "check_email") {
       const email = String(body.email || "").trim().toLowerCase();
-      if (!email) return json({ error: "Email required" }, 400);
-      const { data } = await admin
+      if (!email) return json({ error: "Email is required" }, 400);
+
+      // Look up via auth admin so we catch users without a profile row
+      const { data: list, error: listErr } = await admin.auth.admin.listUsers({
+        page: 1,
+        perPage: 200,
+      });
+      if (listErr) {
+        console.error("listUsers failed", listErr);
+        return json({ error: "Could not look up user" }, 500);
+      }
+      const found = list.users.find((u) => (u.email || "").toLowerCase() === email);
+      if (!found) return json({ exists: false });
+
+      const { data: prof } = await admin
         .from("profiles")
         .select("id, full_name, email")
-        .ilike("email", email)
+        .eq("id", found.id)
         .maybeSingle();
-      if (!data) return json({ exists: false });
-      return json({ exists: true, user: { id: data.id, full_name: data.full_name, email: data.email } });
+
+      return json({
+        exists: true,
+        user: {
+          id: found.id,
+          full_name: prof?.full_name ?? (found.user_metadata as any)?.full_name ?? null,
+          email: found.email,
+        },
+      });
     }
 
     // ── transfer ownership ─────────────────────────────
@@ -90,18 +123,22 @@ Deno.serve(async (req) => {
         email: currentEmail,
         password: currentPassword,
       });
-      if (pwErr) return json({ error: "Incorrect current password" }, 401);
+      if (pwErr) {
+        console.warn("password re-verify failed", pwErr.message);
+        return json({ error: "Incorrect current password" }, 401);
+      }
 
-      // Resolve or create target user
+      // Resolve or create target user via auth admin
       let targetId: string | null = null;
-      const { data: existingProfile } = await admin
-        .from("profiles")
-        .select("id, full_name, email")
-        .ilike("email", targetEmail)
-        .maybeSingle();
+      let createdNewAccount = false;
 
-      if (existingProfile) {
-        targetId = existingProfile.id;
+      const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+      const existingAuth = list?.users.find(
+        (u) => (u.email || "").toLowerCase() === targetEmail,
+      );
+
+      if (existingAuth) {
+        targetId = existingAuth.id;
       } else {
         if (!createNew) return json({ error: "No account found with this email" }, 404);
         const fullName = String(newUser.fullName || "").trim();
@@ -116,45 +153,42 @@ Deno.serve(async (req) => {
           email_confirm: true,
           user_metadata: { full_name: fullName, phone },
         });
-        if (cErr || !created.user) return json({ error: cErr?.message || "Could not create account" }, 400);
+        if (cErr || !created.user) {
+          console.error("createUser failed", cErr);
+          return json({ error: cErr?.message || "Could not create account" }, 400);
+        }
         targetId = created.user.id;
+        createdNewAccount = true;
 
-        // Update profile with phone
-        await admin.from("profiles").update({ full_name: fullName, phone }).eq("id", targetId);
+        await admin.from("profiles").upsert({
+          id: targetId,
+          email: targetEmail,
+          full_name: fullName,
+          phone,
+        });
       }
 
       if (!targetId) return json({ error: "Unable to resolve target user" }, 500);
       const OLD = caller.id;
       const NEW = targetId;
 
-      // Guard: target must not already own a different studio with data
-      const { data: targetRole } = await admin
-        .from("user_roles")
-        .select("role, owner_id")
-        .eq("user_id", NEW)
-        .maybeSingle();
-      if (targetRole?.role === "owner" && targetRole.owner_id !== NEW && targetRole.owner_id !== OLD) {
-        return json({ error: "Target user already owns another studio" }, 400);
-      }
-
       // Reassign business data
       for (const table of OWNED_TABLES) {
         const { error } = await admin.from(table).update({ user_id: NEW }).eq("user_id", OLD);
-        if (error) return json({ error: `Failed reassigning ${table}: ${error.message}` }, 500);
+        if (error) {
+          console.error(`reassign ${table} failed`, error);
+          return json({ error: `Failed reassigning ${table}: ${error.message}` }, 500);
+        }
       }
 
-      // Transfer studio_settings & studio_security (drop any placeholder rows for NEW first)
+      // Transfer studio_settings & studio_security
       await admin.from("studio_settings").delete().eq("owner_id", NEW);
       await admin.from("studio_settings").update({ owner_id: NEW }).eq("owner_id", OLD);
       await admin.from("studio_security").delete().eq("owner_id", NEW);
       await admin.from("studio_security").update({ owner_id: NEW }).eq("owner_id", OLD);
 
       // Move any staff under OLD to NEW
-      await admin
-        .from("user_roles")
-        .update({ owner_id: NEW })
-        .eq("owner_id", OLD)
-        .eq("role", "staff");
+      await admin.from("user_roles").update({ owner_id: NEW }).eq("owner_id", OLD).eq("role", "staff");
 
       // Old owner becomes staff of NEW
       await admin.from("user_roles").delete().eq("user_id", OLD);
@@ -175,7 +209,7 @@ Deno.serve(async (req) => {
           previous_email: currentEmail,
           new_owner: NEW,
           new_email: targetEmail,
-          created_new_account: !existingProfile,
+          created_new_account: createdNewAccount,
         },
         device,
       });
