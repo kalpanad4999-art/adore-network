@@ -93,6 +93,7 @@ const InviteStaffDialog = () => {
 
 const AppLayout = ({ children }: { children: ReactNode }) => {
   const { signOut } = useAuth();
+  const { ownerId } = useStudio();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
