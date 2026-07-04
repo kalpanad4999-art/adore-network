@@ -46,24 +46,8 @@ const Settings = () => {
   const [appConfirm, setAppConfirm] = useState("");
   const [savingAppPin, setSavingAppPin] = useState(false);
 
-
-  // Audit log
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-
   useEffect(() => { biometricSupported().then(setBioAvailable); }, []);
 
-  useEffect(() => {
-    if (!ownerId || !isOwner) return;
-    (async () => {
-      const { data } = await supabase
-        .from("payment_audit_logs" as any)
-        .select("id, action, created_at, device, details")
-        .eq("owner_id", ownerId)
-        .order("created_at", { ascending: false })
-        .limit(15);
-      setAuditLogs((data as any[]) || []);
-    })();
-  }, [ownerId, isOwner, paymentsPinSet, biometricEnabled]);
 
   if (!isOwner) {
     return (
