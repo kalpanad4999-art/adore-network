@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Lock, ShieldCheck, ShieldAlert, Sun, Moon, Check, KeyRound, Fingerprint, History } from "lucide-react";
+import { Lock, ShieldCheck, ShieldAlert, Sun, Moon, Check, KeyRound, Fingerprint } from "lucide-react";
 import { toast } from "sonner";
 import { biometricSupported } from "@/lib/biometric";
 import { TransferOwnershipCard } from "@/components/TransferOwnershipCard";
@@ -46,24 +46,8 @@ const Settings = () => {
   const [appConfirm, setAppConfirm] = useState("");
   const [savingAppPin, setSavingAppPin] = useState(false);
 
-
-  // Audit log
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-
   useEffect(() => { biometricSupported().then(setBioAvailable); }, []);
 
-  useEffect(() => {
-    if (!ownerId || !isOwner) return;
-    (async () => {
-      const { data } = await supabase
-        .from("payment_audit_logs" as any)
-        .select("id, action, created_at, device, details")
-        .eq("owner_id", ownerId)
-        .order("created_at", { ascending: false })
-        .limit(15);
-      setAuditLogs((data as any[]) || []);
-    })();
-  }, [ownerId, isOwner, paymentsPinSet, biometricEnabled]);
 
   if (!isOwner) {
     return (
@@ -295,34 +279,6 @@ const Settings = () => {
         </CardContent>
       </Card>
 
-      {/* Audit log */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <History className="h-5 w-5" /> Recent security &amp; payment activity
-          </CardTitle>
-          <CardDescription>Latest 15 events on this studio. Owner-only view.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {auditLogs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No activity yet.</p>
-          ) : (
-            <ul className="divide-y">
-              {auditLogs.map((log) => (
-                <li key={log.id} className="py-2.5 text-sm flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{log.action.replace(/_/g, " ").replace(/\./g, " · ")}</div>
-                    <div className="text-xs text-muted-foreground truncate">{log.device || "unknown device"}</div>
-                  </div>
-                  <div className="text-xs text-muted-foreground whitespace-nowrap">
-                    {new Date(log.created_at).toLocaleString()}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
 
       {/* App Lock PIN */}
       <Card>
