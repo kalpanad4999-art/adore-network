@@ -204,6 +204,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
           })}
         </nav>
       </main>
+      {ownerId && <SupportChatWidget ownerId={ownerId} />}
     </div>
   );
 };
