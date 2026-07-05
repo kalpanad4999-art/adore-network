@@ -50,15 +50,8 @@ const Settings = () => {
   useEffect(() => { biometricSupported().then(setBioAvailable); }, []);
 
 
-  if (!isOwner) {
-    return (
-      <Card className="max-w-xl">
-        <CardContent className="py-10 text-center text-muted-foreground">
-          Only the studio owner can manage settings.
-        </CardContent>
-      </Card>
-    );
-  }
+  // Settings page is accessible to all users; owner-only sections are gated below.
+
 
 
   const handleLockSave = async (e: React.FormEvent) => {
