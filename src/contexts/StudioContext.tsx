@@ -72,7 +72,28 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
       .maybeSingle();
     const owner = roleRow?.owner_id || user.id;
     setOwnerId(owner);
-    setIsOwner(roleRow?.role === "owner" || !roleRow);
+    const isOwnerRole = roleRow?.role === "owner" || !roleRow;
+    setIsOwner(isOwnerRole);
+    if (isOwnerRole) {
+      setPermissions(ALL_ALLOWED);
+    } else {
+      const { data: perm } = await supabase
+        .from("staff_permissions" as any)
+        .select("can_customers,can_gallery,can_classes,can_payments,can_renewals,is_active")
+        .eq("staff_user_id", user.id)
+        .maybeSingle();
+      const p = (perm ?? null) as any;
+      if (!p) {
+        setPermissions(ALL_ALLOWED); // grandfather
+      } else if (!p.is_active) {
+        setPermissions({ customers: false, gallery: false, classes: false, payments: false, renewals: false });
+      } else {
+        setPermissions({
+          customers: !!p.can_customers, gallery: !!p.can_gallery, classes: !!p.can_classes,
+          payments: !!p.can_payments, renewals: !!p.can_renewals,
+        });
+      }
+    }
     const { data: settings } = await supabase
       .from("studio_settings")
       .select("*")
