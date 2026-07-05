@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { biometricSupported } from "@/lib/biometric";
 import { TransferOwnershipCard } from "@/components/TransferOwnershipCard";
 import { ChatbotKnowledgeCard } from "@/components/ChatbotKnowledgeCard";
+import { StaffPermissionsCard } from "@/components/StaffPermissionsCard";
 
 
 const Settings = () => {
