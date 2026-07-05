@@ -534,6 +534,45 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_permissions: {
+        Row: {
+          can_classes: boolean
+          can_customers: boolean
+          can_gallery: boolean
+          can_payments: boolean
+          can_renewals: boolean
+          created_at: string
+          is_active: boolean
+          owner_id: string
+          staff_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          can_classes?: boolean
+          can_customers?: boolean
+          can_gallery?: boolean
+          can_payments?: boolean
+          can_renewals?: boolean
+          created_at?: string
+          is_active?: boolean
+          owner_id: string
+          staff_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          can_classes?: boolean
+          can_customers?: boolean
+          can_gallery?: boolean
+          can_payments?: boolean
+          can_renewals?: boolean
+          created_at?: string
+          is_active?: boolean
+          owner_id?: string
+          staff_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       student_payments: {
         Row: {
           amount: number
@@ -829,6 +868,10 @@ export type Database = {
             }
             Returns: string
           }
+      staff_has_permission: {
+        Args: { _module: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "owner" | "staff"
