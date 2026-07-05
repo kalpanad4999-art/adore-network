@@ -20,6 +20,7 @@ import Gallery from "./pages/Gallery";
 import PublicStudio from "./pages/PublicStudio";
 import NotFound from "./pages/NotFound";
 import PaymentsGuard from "./components/PaymentsGuard";
+import PermissionGuard from "./components/PermissionGuard";
 
 const queryClient = new QueryClient();
 
