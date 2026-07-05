@@ -59,6 +59,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [permissions, setPermissions] = useState<ModulePermissions>(ALL_ALLOWED);
   const [loading, setLoading] = useState(true);
 
   const refresh = async () => {
