@@ -273,9 +273,11 @@ const Settings = () => {
           </p>
         </CardContent>
       </Card>
+      )}
 
 
-      {/* App Lock PIN */}
+      {/* App Lock PIN — owner only */}
+      {isOwner && (
       <Card>
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2"><Lock className="h-5 w-5" /> App Lock PIN</CardTitle>
@@ -315,12 +317,16 @@ const Settings = () => {
           </form>
         </CardContent>
       </Card>
+      )}
 
-      {/* AI Chatbot Knowledge Base */}
-      <ChatbotKnowledgeCard />
+      {/* Staff & Permissions — owner only */}
+      <StaffPermissionsCard />
 
-      {/* Transfer Ownership */}
-      <TransferOwnershipCard />
+      {/* AI Chatbot Knowledge Base — owner only */}
+      {isOwner && <ChatbotKnowledgeCard />}
+
+      {/* Transfer Ownership — owner only */}
+      {isOwner && <TransferOwnershipCard />}
 
     </div>
   );
