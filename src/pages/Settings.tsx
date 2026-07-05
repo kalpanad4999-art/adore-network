@@ -141,7 +141,8 @@ const Settings = () => {
         </CardContent>
       </Card>
 
-      {/* Security Settings */}
+      {/* Payment Lock — owner only */}
+      {isOwner && (
       <Card className="border-primary/30">
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2">
