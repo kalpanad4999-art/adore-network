@@ -11,8 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
-interface Customer { id: string; name: string; phone: string | null; }
+interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
+interface Batch { id: string; name: string; }
 interface Payment {
   id: string;
   student_id: string;
@@ -47,13 +49,41 @@ const addDuration = (isoDate: string, value: number, unit: Unit): string => {
   return dt.toISOString().slice(0, 10);
 };
 
+type RangeKey = "today" | "week" | "month" | "year" | "all";
+const rangeOptions: { value: RangeKey; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "week", label: "This Week" },
+  { value: "month", label: "This Month" },
+  { value: "year", label: "This Year" },
+  { value: "all", label: "All Time" },
+];
+
+const startOfRange = (key: RangeKey): Date | null => {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (key) {
+    case "today": return d;
+    case "week": {
+      const dow = d.getDay(); // 0 Sun..6 Sat
+      const diff = (dow + 6) % 7; // week starts Monday
+      d.setDate(d.getDate() - diff);
+      return d;
+    }
+    case "month": return new Date(now.getFullYear(), now.getMonth(), 1);
+    case "year": return new Date(now.getFullYear(), 0, 1);
+    case "all": return null;
+  }
+};
+
 const Payments = () => {
   const { user } = useAuth();
   const { ownerId } = useStudio();
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
+  const [range, setRange] = useState<RangeKey>("month");
   const [form, setForm] = useState({
     student_id: "",
     amount: "",
@@ -76,14 +106,25 @@ const Payments = () => {
 
   const fetchAll = async () => {
     if (!user) return;
-    const [{ data: cust }, { data: pays }] = await Promise.all([
-      supabase.from("students").select("id,name,phone").eq("user_id", user.id).order("name"),
+    const [{ data: cust }, { data: pays }, { data: bat }] = await Promise.all([
+      supabase.from("students").select("id,name,phone,batch_id").eq("user_id", user.id).order("name"),
       supabase.from("student_payments").select("*").eq("user_id", user.id).order("paid_on", { ascending: false }),
+      supabase.from("batches").select("id,name").eq("user_id", user.id),
     ]);
     setCustomers((cust as Customer[]) || []);
     setPayments(((pays as any[]) || []) as Payment[]);
+    setBatches((bat as Batch[]) || []);
   };
   useEffect(() => { fetchAll(); }, [user]);
+
+  const batchMap = useMemo(() => {
+    const m = new Map<string, string>();
+    batches.forEach((b) => m.set(b.id, b.name));
+    return m;
+  }, [batches]);
+
+  const selectedCustomer = customers.find((c) => c.id === form.student_id);
+  const selectedBatchName = selectedCustomer?.batch_id ? (batchMap.get(selectedCustomer.batch_id) || "No Batch Assigned") : "No Batch Assigned";
 
   const grouped = useMemo(() => {
     const map = new Map<string, Payment[]>();
@@ -142,13 +183,39 @@ const Payments = () => {
 
   const grandTotal = payments.reduce((s, p) => s + Number(p.amount), 0);
 
+  // Income Overview chart data
+  const chartData = useMemo(() => {
+    const start = startOfRange(range);
+    const filtered = start
+      ? payments.filter((p) => new Date(p.paid_on) >= start)
+      : payments;
+
+    const buckets = new Map<string, number>();
+    const isDaily = range === "today" || range === "week" || range === "month";
+    filtered.forEach((p) => {
+      const d = new Date(p.paid_on);
+      const key = isDaily
+        ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+        : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      buckets.set(key, (buckets.get(key) || 0) + Number(p.amount));
+    });
+    const rows = Array.from(buckets.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => {
+        const label = isDaily
+          ? k.slice(5) // MM-DD
+          : k; // YYYY-MM
+        return { label, amount: v };
+      });
+    return rows;
+  }, [payments, range]);
+
+  const rangeTotal = chartData.reduce((s, r) => s + r.amount, 0);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Payments</h1>
-          <p className="text-muted-foreground mt-1">Owner-only — grouped per customer</p>
-        </div>
+        <h1 className="font-display text-3xl font-bold">Payments</h1>
         <Dialog open={addOpen} onOpenChange={setAddOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />Record Payment</Button>
@@ -167,6 +234,10 @@ const Payments = () => {
                     {customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Batch <span className="text-muted-foreground text-xs">(auto)</span></Label>
+                <Input value={form.student_id ? selectedBatchName : ""} readOnly disabled placeholder="Select a customer first" className="bg-muted/50 cursor-not-allowed" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Amount (₹)</Label><Input type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
@@ -218,6 +289,51 @@ const Payments = () => {
             <p className="font-display text-3xl font-bold mt-1 flex items-center"><IndianRupee className="h-6 w-6" />{grandTotal.toLocaleString()}</p>
           </div>
           <p className="text-sm text-muted-foreground">{payments.length} payment{payments.length === 1 ? "" : "s"}</p>
+        </CardContent>
+      </Card>
+
+      {/* Income Overview */}
+      <Card>
+        <CardContent className="p-5 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h2 className="font-display text-xl font-bold">Income Overview</h2>
+              <p className="text-xs text-muted-foreground mt-0.5 flex items-center">
+                <IndianRupee className="h-3 w-3" />{rangeTotal.toLocaleString()} in selected range
+              </p>
+            </div>
+            <Select value={range} onValueChange={(v) => setRange(v as RangeKey)}>
+              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {rangeOptions.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="h-64 w-full">
+            {chartData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">No income in this range.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.5} />
+                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} width={60} />
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: "hsl(var(--foreground))" }}
+                    formatter={(v: number) => [`₹${Number(v).toLocaleString()}`, "Income"]}
+                  />
+                  <Area type="monotone" dataKey="amount" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#incomeFill)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
         </CardContent>
       </Card>
 

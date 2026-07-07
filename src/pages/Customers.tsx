@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStudio } from "@/contexts/StudioContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -56,8 +58,11 @@ const phoneRegex = /^[+\d][\d\s\-()]{6,19}$/;
 
 const Customers = () => {
   const { user } = useAuth();
+  const { isOwner } = useStudio();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Batch dialog
   const [batchOpen, setBatchOpen] = useState(false);
@@ -224,9 +229,23 @@ const Customers = () => {
     fetchCustomers();
   };
 
-  const deleteCustomer = async (id: string) => {
-    await supabase.from("students").delete().eq("id", id);
-    toast.success("Customer removed"); fetchCustomers();
+  const confirmDeleteCustomer = async () => {
+    if (!deleteTarget || !user) return;
+    setDeleting(true);
+    try {
+      // Cascade delete related records first (no FK cascade in schema).
+      const { error: payErr } = await supabase.from("student_payments").delete().eq("student_id", deleteTarget.id);
+      if (payErr) throw payErr;
+      const { error: custErr } = await supabase.from("students").delete().eq("id", deleteTarget.id);
+      if (custErr) throw custErr;
+      toast.success("Customer deleted successfully.");
+      setDeleteTarget(null);
+      fetchCustomers();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete customer");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const moveCustomer = async (customerId: string, targetBatchId: string) => {
@@ -402,7 +421,9 @@ const Customers = () => {
                               </DropdownMenuContent>
                             </DropdownMenu>
                             <button onClick={() => editCustomer(c)} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
-                            <button onClick={() => deleteCustomer(c.id)} className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
+                            {isOwner && (
+                              <button onClick={() => setDeleteTarget(c)} title="Delete customer" className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -475,6 +496,28 @@ const Customers = () => {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Delete customer confirmation (owner-only) */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v && !deleting) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete this customer? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(e) => { e.preventDefault(); confirmDeleteCustomer(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting..." : "Delete Customer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

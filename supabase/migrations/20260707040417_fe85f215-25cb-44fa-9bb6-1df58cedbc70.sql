@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Staff deletes owner students" ON public.students;
