@@ -421,7 +421,9 @@ const Customers = () => {
                               </DropdownMenuContent>
                             </DropdownMenu>
                             <button onClick={() => editCustomer(c)} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
-                            <button onClick={() => deleteCustomer(c.id)} className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
+                            {isOwner && (
+                              <button onClick={() => setDeleteTarget(c)} title="Delete customer" className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
+                            )}
                           </div>
                         </div>
                       ))}
