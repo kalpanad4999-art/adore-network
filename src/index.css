@@ -50,8 +50,8 @@
     --sidebar-border: 30 20% 88%;
     --sidebar-ring: 158 35% 38%;
 
-    --font-display: 'Cormorant Garamond', serif;
-    --font-body: 'DM Sans', sans-serif;
+    --font-display: 'Archivo Black', 'Archivo', sans-serif;
+    --font-body: 'Space Grotesk', 'Archivo', sans-serif;
   }
 
   .dark {
@@ -102,11 +102,36 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-weight: 500;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+
+  h1 { letter-spacing: -0.01em; }
+
+  button, a, label, input, textarea, select, [role="button"], [role="tab"], [role="menuitem"] {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  input::placeholder, textarea::placeholder {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* Preserve casing where uppercase would break meaning */
+  code, pre, kbd, samp, .no-uppercase,
+  [type="email"], [type="password"], [type="url"], [type="tel"],
+  [contenteditable="true"] {
+    text-transform: none;
+    letter-spacing: normal;
   }
 }
 
@@ -116,5 +141,9 @@
   }
   .font-body {
     font-family: var(--font-body);
+  }
+  .normal-case-force {
+    text-transform: none !important;
+    letter-spacing: normal !important;
   }
 }
