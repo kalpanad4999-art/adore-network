@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import PaymentReceiptDialog, { ReceiptData } from "@/components/PaymentReceiptDialog";
+import { FileText } from "lucide-react";
 
 interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
 interface Batch { id: string; name: string; }
@@ -77,13 +79,16 @@ const startOfRange = (key: RangeKey): Date | null => {
 
 const Payments = () => {
   const { user } = useAuth();
-  const { ownerId } = useStudio();
+  const { ownerId, studioName } = useStudio();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [range, setRange] = useState<RangeKey>("month");
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
+  const [studioAddress, setStudioAddress] = useState<string>("");
   const [form, setForm] = useState({
     student_id: "",
     amount: "",
@@ -155,7 +160,7 @@ const Payments = () => {
       form.durationUnit === "years" ? effectiveValue * 12 :
       Math.max(1, Math.round(effectiveValue / 30));
 
-    const { error } = await supabase.from("student_payments").insert({
+    const { data: inserted, error } = await supabase.from("student_payments").insert({
       student_id: form.student_id,
       user_id: user.id,
       amount,
@@ -166,10 +171,32 @@ const Payments = () => {
       duration_months: months_equiv,
       valid_until: renewalDate,
       reminder_sent_at: null,
-    } as any);
+    } as any).select("id").single();
     if (error) { toast.error(error.message); return; }
     await logAudit(ownerId, "payment.created", { amount, duration_value: effectiveValue, duration_unit: form.durationUnit, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
     toast.success("Payment recorded · renewal scheduled");
+
+    // Prepare receipt for the just-recorded payment
+    const cust = customers.find((c) => c.id === form.student_id);
+    const batchName = cust?.batch_id ? (batchMap.get(cust.batch_id) || "No Batch Assigned") : "No Batch Assigned";
+    const receiptNo = `TY-${new Date(form.paid_on).toISOString().slice(0,10).replace(/-/g,"")}-${(inserted?.id || "").slice(0,6).toUpperCase()}`;
+    setReceiptData({
+      receiptNumber: receiptNo,
+      dateIssued: form.paid_on,
+      customerName: cust?.name || "—",
+      customerContact: cust?.phone || undefined,
+      batchName,
+      planDescription: `${batchName} Membership · ${effectiveValue} ${form.durationUnit}`,
+      paymentMethod: form.method,
+      amount,
+      durationValue: effectiveValue,
+      durationUnit: form.durationUnit,
+      renewalDate,
+      studioName: studioName || "Trinetra Yoga",
+      studioAddress: studioAddress || undefined,
+    });
+    setReceiptOpen(true);
+
     setForm({ ...form, amount: "", durationValue: "1" });
     setAddOpen(false);
     fetchAll();
@@ -385,7 +412,38 @@ const Payments = () => {
                                   {p.valid_until ? ` · renews ${new Date(p.valid_until).toLocaleDateString()}` : ""}
                                 </p>
                               </div>
-                              <button onClick={() => deletePayment(p.id)} aria-label="Delete" className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"><Trash2 className="h-4 w-4" /></button>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => {
+                                    const batchName = c.batch_id ? (batchMap.get(c.batch_id) || "No Batch Assigned") : "No Batch Assigned";
+                                    const unit = p.duration_unit || (p.duration_months ? "months" : "months");
+                                    const val = p.duration_value ?? p.duration_months ?? 1;
+                                    const receiptNo = `TY-${new Date(p.paid_on).toISOString().slice(0,10).replace(/-/g,"")}-${p.id.slice(0,6).toUpperCase()}`;
+                                    setReceiptData({
+                                      receiptNumber: receiptNo,
+                                      dateIssued: p.paid_on,
+                                      customerName: c.name,
+                                      customerContact: c.phone || undefined,
+                                      batchName,
+                                      planDescription: `${batchName} Membership · ${val} ${unit}`,
+                                      paymentMethod: p.method,
+                                      amount: Number(p.amount),
+                                      durationValue: val,
+                                      durationUnit: unit,
+                                      renewalDate: p.valid_until || "",
+                                      studioName: studioName || "Trinetra Yoga",
+                                      studioAddress: studioAddress || undefined,
+                                    });
+                                    setReceiptOpen(true);
+                                  }}
+                                  aria-label="Generate Bill"
+                                  title="Generate Bill"
+                                  className="p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </button>
+                                <button onClick={() => deletePayment(p.id)} aria-label="Delete" className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -398,6 +456,7 @@ const Payments = () => {
           })}
         </div>
       )}
+      <PaymentReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} data={receiptData} />
     </div>
   );
 };
