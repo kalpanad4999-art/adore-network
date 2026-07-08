@@ -160,7 +160,7 @@ const Payments = () => {
       form.durationUnit === "years" ? effectiveValue * 12 :
       Math.max(1, Math.round(effectiveValue / 30));
 
-    const { error } = await supabase.from("student_payments").insert({
+    const { data: inserted, error } = await supabase.from("student_payments").insert({
       student_id: form.student_id,
       user_id: user.id,
       amount,
@@ -171,10 +171,32 @@ const Payments = () => {
       duration_months: months_equiv,
       valid_until: renewalDate,
       reminder_sent_at: null,
-    } as any);
+    } as any).select("id").single();
     if (error) { toast.error(error.message); return; }
     await logAudit(ownerId, "payment.created", { amount, duration_value: effectiveValue, duration_unit: form.durationUnit, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
     toast.success("Payment recorded · renewal scheduled");
+
+    // Prepare receipt for the just-recorded payment
+    const cust = customers.find((c) => c.id === form.student_id);
+    const batchName = cust?.batch_id ? (batchMap.get(cust.batch_id) || "No Batch Assigned") : "No Batch Assigned";
+    const receiptNo = `TY-${new Date(form.paid_on).toISOString().slice(0,10).replace(/-/g,"")}-${(inserted?.id || "").slice(0,6).toUpperCase()}`;
+    setReceiptData({
+      receiptNumber: receiptNo,
+      dateIssued: form.paid_on,
+      customerName: cust?.name || "—",
+      customerContact: cust?.phone || undefined,
+      batchName,
+      planDescription: `${batchName} Membership · ${effectiveValue} ${form.durationUnit}`,
+      paymentMethod: form.method,
+      amount,
+      durationValue: effectiveValue,
+      durationUnit: form.durationUnit,
+      renewalDate,
+      studioName: studioName || "Trinetra Yoga",
+      studioAddress: studioAddress || undefined,
+    });
+    setReceiptOpen(true);
+
     setForm({ ...form, amount: "", durationValue: "1" });
     setAddOpen(false);
     fetchAll();
