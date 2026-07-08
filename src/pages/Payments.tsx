@@ -456,6 +456,7 @@ const Payments = () => {
           })}
         </div>
       )}
+      <PaymentReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} data={receiptData} />
     </div>
   );
 };
