@@ -1,10 +1,1 @@
-project_id = "figcbnjibtpzfcmdltvg"
-
-[functions.public-register-student]
-verify_jwt = false
-
-[functions.support-chat]
-verify_jwt = false
-
-[functions.transfer-ownership]
-verify_jwt = false
+project_id = "nmbssvcdgsopdzajgqoq"
