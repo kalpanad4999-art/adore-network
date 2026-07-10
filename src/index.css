@@ -41,6 +41,18 @@
     --warning: 38 90% 55%;
     --warning-foreground: 20 25% 15%;
 
+    /* Typography accents — premium editorial palette */
+    --text-heading: 158 40% 20%;        /* deep forest */
+    --text-subheading: 22 40% 32%;      /* warm bronze */
+    --text-body: 20 25% 18%;            /* ink */
+    --text-muted: 25 12% 45%;           /* soft taupe */
+    --text-label: 158 25% 30%;          /* sage label */
+    --text-link: 175 55% 32%;           /* deep teal */
+    --text-link-hover: 175 65% 25%;
+    --text-value: 28 75% 38%;           /* amber gold */
+    --text-emphasis: 340 55% 38%;       /* garnet */
+    --text-inverse: 40 33% 98%;
+
     --sidebar-background: 35 30% 96%;
     --sidebar-foreground: 20 20% 30%;
     --sidebar-primary: 158 35% 38%;
@@ -53,6 +65,7 @@
     --font-display: 'Archivo Black', 'Archivo', sans-serif;
     --font-body: 'Space Grotesk', 'Archivo', sans-serif;
   }
+
 
   .dark {
     --background: 20 20% 8%;
@@ -91,6 +104,18 @@
     --sidebar-accent-foreground: 35 15% 80%;
     --sidebar-border: 20 12% 20%;
     --sidebar-ring: 158 35% 45%;
+
+    /* Typography accents — dark mode */
+    --text-heading: 40 45% 92%;         /* warm ivory */
+    --text-subheading: 28 55% 72%;      /* soft bronze */
+    --text-body: 35 20% 88%;
+    --text-muted: 30 10% 62%;
+    --text-label: 158 30% 70%;          /* sage */
+    --text-link: 175 60% 62%;           /* bright teal */
+    --text-link-hover: 175 70% 72%;
+    --text-value: 38 85% 65%;           /* amber */
+    --text-emphasis: 340 65% 68%;       /* rose garnet */
+    --text-inverse: 20 20% 8%;
   }
 }
 
@@ -100,21 +125,41 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background;
+    color: hsl(var(--text-body));
     font-family: var(--font-body);
     text-transform: uppercase;
     letter-spacing: 0.02em;
     font-weight: 500;
   }
 
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.01em;
+    color: hsl(var(--text-heading));
   }
 
   h1 { letter-spacing: -0.01em; }
+
+  h3, h4, h5, h6 {
+    color: hsl(var(--text-subheading));
+  }
+
+  label, [role="tab"] {
+    color: hsl(var(--text-label));
+    font-weight: 600;
+  }
+
+  a:not([class*="btn"]):not([data-no-accent]) {
+    color: hsl(var(--text-link));
+    transition: color 0.2s ease;
+  }
+  a:not([class*="btn"]):not([data-no-accent]):hover {
+    color: hsl(var(--text-link-hover));
+  }
 
   button, a, label, input, textarea, select, [role="button"], [role="tab"], [role="menuitem"] {
     text-transform: uppercase;
@@ -124,6 +169,7 @@
   input::placeholder, textarea::placeholder {
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    color: hsl(var(--text-muted));
   }
 
   /* Preserve casing where uppercase would break meaning */
@@ -146,4 +192,13 @@
     text-transform: none !important;
     letter-spacing: normal !important;
   }
+  .text-heading { color: hsl(var(--text-heading)); }
+  .text-subheading { color: hsl(var(--text-subheading)); }
+  .text-body-ink { color: hsl(var(--text-body)); }
+  .text-label-accent { color: hsl(var(--text-label)); }
+  .text-link-accent { color: hsl(var(--text-link)); }
+  .text-value { color: hsl(var(--text-value)); font-weight: 700; }
+  .text-emphasis { color: hsl(var(--text-emphasis)); }
+  .text-inverse { color: hsl(var(--text-inverse)); }
 }
+
