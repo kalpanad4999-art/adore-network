@@ -134,7 +134,7 @@ const SupportChatWidget = ({ ownerId, batchToken }: Props) => {
             <MessageCircle className="h-4 w-4" />
           </div>
           <div>
-            <p className="font-display text-sm leading-tight">Trinetra Support</p>
+            <p className="font-display text-sm leading-tight">Trinetra Yoga Support</p>
             <p className="text-[10px] opacity-80">{phone ? "Verified" : "Live assistant"}</p>
           </div>
         </div>

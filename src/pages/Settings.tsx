@@ -123,7 +123,7 @@ const Settings = () => {
           <CardTitle className="font-display flex items-center gap-2">
             {theme === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />} Appearance
           </CardTitle>
-          <CardDescription>Choose how TRINETRA looks on this device.</CardDescription>
+          <CardDescription>Choose how TRINETRA YOGA looks on this device.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3 max-w-md">

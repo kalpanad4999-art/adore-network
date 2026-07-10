@@ -50,7 +50,7 @@ const StudioContext = createContext<StudioContextValue | undefined>(undefined);
 
 export const StudioProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [studioName, setStudioName] = useState("TRINETRA");
+  const [studioName, setStudioName] = useState("TRINETRA YOGA");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const [paymentsPinHash, setPaymentsPinHash] = useState<string | null>(null);
@@ -101,7 +101,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
       .maybeSingle();
     if (settings) {
       const s = settings as any;
-      setStudioName(s.studio_name || "TRINETRA");
+      setStudioName(s.studio_name || "TRINETRA YOGA");
       setLogoUrl(s.logo_url);
       setBackgroundUrl(s.background_url ?? null);
     }
@@ -156,7 +156,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
 
   const updateName = async (name: string) => {
     if (!isOwner) return;
-    const trimmed = name.trim().slice(0, 60) || "TRINETRA";
+    const trimmed = name.trim().slice(0, 60) || "TRINETRA YOGA";
     await upsertSettings({ studio_name: trimmed });
     setStudioName(trimmed);
   };
