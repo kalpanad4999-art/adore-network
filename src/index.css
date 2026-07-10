@@ -41,6 +41,18 @@
     --warning: 38 90% 55%;
     --warning-foreground: 20 25% 15%;
 
+    /* Typography accents — premium editorial palette */
+    --text-heading: 158 40% 20%;        /* deep forest */
+    --text-subheading: 22 40% 32%;      /* warm bronze */
+    --text-body: 20 25% 18%;            /* ink */
+    --text-muted: 25 12% 45%;           /* soft taupe */
+    --text-label: 158 25% 30%;          /* sage label */
+    --text-link: 175 55% 32%;           /* deep teal */
+    --text-link-hover: 175 65% 25%;
+    --text-value: 28 75% 38%;           /* amber gold */
+    --text-emphasis: 340 55% 38%;       /* garnet */
+    --text-inverse: 40 33% 98%;
+
     --sidebar-background: 35 30% 96%;
     --sidebar-foreground: 20 20% 30%;
     --sidebar-primary: 158 35% 38%;
@@ -53,6 +65,7 @@
     --font-display: 'Archivo Black', 'Archivo', sans-serif;
     --font-body: 'Space Grotesk', 'Archivo', sans-serif;
   }
+
 
   .dark {
     --background: 20 20% 8%;
