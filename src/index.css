@@ -104,6 +104,18 @@
     --sidebar-accent-foreground: 35 15% 80%;
     --sidebar-border: 20 12% 20%;
     --sidebar-ring: 158 35% 45%;
+
+    /* Typography accents — dark mode */
+    --text-heading: 40 45% 92%;         /* warm ivory */
+    --text-subheading: 28 55% 72%;      /* soft bronze */
+    --text-body: 35 20% 88%;
+    --text-muted: 30 10% 62%;
+    --text-label: 158 30% 70%;          /* sage */
+    --text-link: 175 60% 62%;           /* bright teal */
+    --text-link-hover: 175 70% 72%;
+    --text-value: 38 85% 65%;           /* amber */
+    --text-emphasis: 340 65% 68%;       /* rose garnet */
+    --text-inverse: 20 20% 8%;
   }
 }
 
@@ -113,12 +125,14 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background;
+    color: hsl(var(--text-body));
     font-family: var(--font-body);
     text-transform: uppercase;
     letter-spacing: 0.02em;
     font-weight: 500;
   }
+
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
