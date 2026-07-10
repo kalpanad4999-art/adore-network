@@ -139,9 +139,27 @@
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.01em;
+    color: hsl(var(--text-heading));
   }
 
   h1 { letter-spacing: -0.01em; }
+
+  h3, h4, h5, h6 {
+    color: hsl(var(--text-subheading));
+  }
+
+  label, [role="tab"] {
+    color: hsl(var(--text-label));
+    font-weight: 600;
+  }
+
+  a:not([class*="btn"]):not([data-no-accent]) {
+    color: hsl(var(--text-link));
+    transition: color 0.2s ease;
+  }
+  a:not([class*="btn"]):not([data-no-accent]):hover {
+    color: hsl(var(--text-link-hover));
+  }
 
   button, a, label, input, textarea, select, [role="button"], [role="tab"], [role="menuitem"] {
     text-transform: uppercase;
@@ -151,6 +169,7 @@
   input::placeholder, textarea::placeholder {
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    color: hsl(var(--text-muted));
   }
 
   /* Preserve casing where uppercase would break meaning */
@@ -173,4 +192,13 @@
     text-transform: none !important;
     letter-spacing: normal !important;
   }
+  .text-heading { color: hsl(var(--text-heading)); }
+  .text-subheading { color: hsl(var(--text-subheading)); }
+  .text-body-ink { color: hsl(var(--text-body)); }
+  .text-label-accent { color: hsl(var(--text-label)); }
+  .text-link-accent { color: hsl(var(--text-link)); }
+  .text-value { color: hsl(var(--text-value)); font-weight: 700; }
+  .text-emphasis { color: hsl(var(--text-emphasis)); }
+  .text-inverse { color: hsl(var(--text-inverse)); }
 }
+
