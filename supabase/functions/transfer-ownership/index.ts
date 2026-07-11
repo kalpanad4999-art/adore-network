@@ -58,6 +58,17 @@ Deno.serve(async (req) => {
 
     // ── check email ────────────────────────────────────
     if (action === "check_email") {
+      // Only the current studio owner may enumerate accounts, to prevent
+      // any signed-in user (incl. staff) from harvesting emails / names.
+      const { data: callerRoleCheck } = await admin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", caller.id)
+        .maybeSingle();
+      if (!callerRoleCheck || callerRoleCheck.role !== "owner") {
+        return json({ error: "Only the studio owner can look up accounts" }, 403);
+      }
+
       const email = String(body.email || "").trim().toLowerCase();
       if (!email) return json({ error: "Email is required" }, 400);
 
