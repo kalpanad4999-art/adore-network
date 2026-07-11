@@ -223,6 +223,8 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          expires_at: string | null
+          expiry_action: string
           id: string
           is_public: boolean
           media_type: string
@@ -235,6 +237,8 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          expires_at?: string | null
+          expiry_action?: string
           id?: string
           is_public?: boolean
           media_type: string
@@ -247,6 +251,8 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          expires_at?: string | null
+          expiry_action?: string
           id?: string
           is_public?: boolean
           media_type?: string
@@ -772,6 +778,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_gallery: {
+        Args: { _owner: string }
+        Returns: {
+          deleted_paths: string[]
+        }[]
+      }
       get_batch_by_token: {
         Args: { _token: string }
         Returns: {
