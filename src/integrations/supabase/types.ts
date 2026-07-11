@@ -308,6 +308,9 @@ export type Database = {
       }
       live_classes: {
         Row: {
+          auto_convert_to_recording: boolean
+          converted_at: string | null
+          converted_recording_id: string | null
           created_at: string
           description: string | null
           duration_minutes: number
@@ -315,12 +318,18 @@ export type Database = {
           is_public: boolean
           meeting_url: string
           platform: string | null
+          recording_hide_after_days: number | null
+          recording_publish_delay_minutes: number | null
+          recording_visibility: string
           scheduled_at: string
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          auto_convert_to_recording?: boolean
+          converted_at?: string | null
+          converted_recording_id?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number
@@ -328,12 +337,18 @@ export type Database = {
           is_public?: boolean
           meeting_url: string
           platform?: string | null
+          recording_hide_after_days?: number | null
+          recording_publish_delay_minutes?: number | null
+          recording_visibility?: string
           scheduled_at: string
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          auto_convert_to_recording?: boolean
+          converted_at?: string | null
+          converted_recording_id?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number
@@ -341,6 +356,9 @@ export type Database = {
           is_public?: boolean
           meeting_url?: string
           platform?: string | null
+          recording_hide_after_days?: number | null
+          recording_publish_delay_minutes?: number | null
+          recording_visibility?: string
           scheduled_at?: string
           title?: string
           updated_at?: string
@@ -452,45 +470,68 @@ export type Database = {
       }
       recordings: {
         Row: {
+          archived_at: string | null
           created_at: string
           description: string | null
           duration_minutes: number | null
+          expires_at: string | null
           external_url: string | null
           id: string
           is_public: boolean
+          public_slug: string | null
+          publish_at: string | null
           recorded_on: string | null
+          source_live_class_id: string | null
           storage_path: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
+          expires_at?: string | null
           external_url?: string | null
           id?: string
           is_public?: boolean
+          public_slug?: string | null
+          publish_at?: string | null
           recorded_on?: string | null
+          source_live_class_id?: string | null
           storage_path?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           description?: string | null
           duration_minutes?: number | null
+          expires_at?: string | null
           external_url?: string | null
           id?: string
           is_public?: boolean
+          public_slug?: string | null
+          publish_at?: string | null
           recorded_on?: string | null
+          source_live_class_id?: string | null
           storage_path?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "recordings_source_live_class_id_fkey"
+            columns: ["source_live_class_id"]
+            isOneToOne: false
+            referencedRelation: "live_classes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       settings: {
         Row: {
@@ -829,9 +870,24 @@ export type Database = {
           duration_minutes: number
           external_url: string
           id: string
+          public_slug: string
           recorded_on: string
           storage_path: string
           title: string
+        }[]
+      }
+      get_recording_by_slug: {
+        Args: { _slug: string }
+        Returns: {
+          created_at: string
+          description: string
+          duration_minutes: number
+          external_url: string
+          id: string
+          recorded_on: string
+          storage_path: string
+          title: string
+          user_id: string
         }[]
       }
       has_role: {
@@ -840,6 +896,13 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      process_live_class_lifecycle: {
+        Args: never
+        Returns: {
+          archived: number
+          converted: number
+        }[]
       }
       register_student_via_token:
         | {
