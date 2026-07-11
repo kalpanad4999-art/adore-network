@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const userQuestion = lastUser?.content?.trim() || "";
 
-    // 1) Knowledge base first — works with or without phone.
+    // 1) Knowledge base first — safe for any visitor.
     if (userQuestion) {
       const kb = await searchKnowledgeBase(ownerId, userQuestion);
       if (kb) {
@@ -147,37 +147,31 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2) Customer context path (requires phone) — used for personal data questions.
-    let contextBlock = "";
-    let verified = false;
+    // 2) Personal customer data (payments, membership, renewals) is NOT released
+    //    through this public widget. Knowing a phone number alone is not proof
+    //    of account ownership, so we refuse and direct the customer to the studio.
+    //    (Previously this branch returned membership + payment history in the reply.)
+    const PRIVATE_DATA_REPLY =
+      "For questions about your membership, payments, or renewals, please contact Trinetra Yoga directly on WhatsApp or by phone — we can't share personal account details through this chat.";
+
     if (phone) {
-      const customer = await findCustomer(ownerId, phone);
-      if (!customer) {
-        const reply = "We could not locate your account with that phone number. Please double-check the number you registered with, or contact Trinetra Yoga support.";
-        return json({ reply });
-      }
-      verified = true;
-      const ctx = await buildCustomerContext(ownerId, customer.id, customer.name, customer.batch_id);
-      contextBlock = `\n\nVERIFIED CUSTOMER DATA (use only this data; never invent facts):\n${JSON.stringify(ctx, null, 2)}`;
-    }
-
-    // 3) If no phone and KB missed, log as pending and return fallback.
-    if (!phone) {
       if (userQuestion && !testMode) {
-        await logPending(ownerId, null, userQuestion);
-        await logHistory(ownerId, null, userQuestion, FALLBACK, null);
+        await logHistory(ownerId, phone, userQuestion, PRIVATE_DATA_REPLY, null);
+        await logPending(ownerId, phone, userQuestion);
       }
-      return json({ reply: FALLBACK, source: "fallback" });
+      return json({ reply: PRIVATE_DATA_REPLY, source: "fallback" });
     }
 
-    const system = `You are the friendly customer-support assistant for a Trinetra Yoga studio.
-Tone: warm, concise, professional. Short paragraphs and bullet points.
-Rules:
-- Only answer using the VERIFIED CUSTOMER DATA block. Never fabricate membership, payment, attendance, or class details.
-- Attendance tracking is not available yet — say so if asked.
-- For renewals: if days remaining <= 7, flag expiry and suggest renewing.
-- Format dates like "12 Jun 2026". Amounts in ₹.
-- If the answer is not in the data, reply exactly: "${FALLBACK}"${contextBlock}`;
+    // 3) No phone and KB missed — log as pending and return fallback.
+    if (userQuestion && !testMode) {
+      await logPending(ownerId, null, userQuestion);
+      await logHistory(ownerId, null, userQuestion, FALLBACK, null);
+    }
+    return json({ reply: FALLBACK, source: "fallback" });
+
+    // (AI fallback path removed — it required verified customer context that we
+    //  no longer trust from a phone number alone.)
+    const system = `unused`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
