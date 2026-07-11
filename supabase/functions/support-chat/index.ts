@@ -168,36 +168,6 @@ Deno.serve(async (req) => {
       await logHistory(ownerId, null, userQuestion, FALLBACK, null);
     }
     return json({ reply: FALLBACK, source: "fallback" });
-
-    // (AI fallback path removed — it required verified customer context that we
-    //  no longer trust from a phone number alone.)
-    const system = `unused`;
-
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [{ role: "system", content: system }, ...messages],
-      }),
-    });
-
-    if (aiRes.status === 429) return json({ error: "Too many requests, please wait a moment." }, 429);
-    if (aiRes.status === 402) return json({ error: "AI credits exhausted. Please contact the studio." }, 402);
-    if (!aiRes.ok) {
-      console.error("AI gateway error", aiRes.status, await aiRes.text());
-      return json({ reply: FALLBACK, source: "fallback" });
-    }
-
-    const data = await aiRes.json();
-    let reply: string = data.choices?.[0]?.message?.content?.trim() || FALLBACK;
-
-    const isFallback = norm(reply).includes(norm(FALLBACK).slice(0, 40));
-    if (userQuestion && !testMode) {
-      await logHistory(ownerId, phone || null, userQuestion, reply, null);
-      if (isFallback) await logPending(ownerId, phone || null, userQuestion);
-    }
-    return json({ reply, verified, source: isFallback ? "fallback" : "ai" });
   } catch (e) {
     console.error("support-chat error", e);
     return json({ reply: FALLBACK, source: "fallback" });
