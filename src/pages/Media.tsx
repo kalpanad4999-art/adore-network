@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Video, Radio, Plus, Trash2, ExternalLink, Upload, Eye, EyeOff, Copy, Link as LinkIcon, QrCode } from "lucide-react";
+import ShareLinkDialog from "@/components/ShareLinkDialog";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { QRCodeSVG } from "qrcode.react";
