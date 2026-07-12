@@ -344,6 +344,14 @@ const GalleryPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ShareLinkDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        url={publicGalleryUrl}
+        title="Gallery public link"
+        description="Permanent link to your public gallery — always shows the latest photos and videos."
+      />
     </div>
   );
 };
