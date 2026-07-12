@@ -187,6 +187,7 @@ const Media = () => {
   const [liveForm, setLiveForm] = useState(DEFAULT_LIVE_FORM);
 
   const [shareRec, setShareRec] = useState<Recording | null>(null);
+  const [shareRecordingsOpen, setShareRecordingsOpen] = useState(false);
 
   const fetchAll = async () => {
     if (!user) return;
