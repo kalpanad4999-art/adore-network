@@ -84,17 +84,28 @@ const GalleryPage = () => {
     if (!files || files.length === 0) return;
     const arr = Array.from(files).filter((f) => {
       const ok = f.type.startsWith("image/") || f.type.startsWith("video/");
-      if (!ok) toast.error(`${f.name}: unsupported type`);
-      if (f.size > 100 * 1024 * 1024) { toast.error(`${f.name}: max 100MB`); return false; }
-      return ok;
+      if (!ok) { toast.error(`${f.name}: unsupported type`); return false; }
+      if (f.size > 200 * 1024 * 1024) { toast.error(`${f.name}: max 200MB`); return false; }
+      return true;
     });
     if (arr.length === 0) return;
+    previews.forEach((u) => URL.revokeObjectURL(u));
     setPendingFiles(arr);
+    setPreviews(arr.map((f) => URL.createObjectURL(f)));
     setMode("quick");
     setQuickHours(24);
     setCustomDateTime("");
     setExpiryAction("hide");
     setDialogOpen(true);
+  };
+
+  const removePending = (idx: number) => {
+    URL.revokeObjectURL(previews[idx]);
+    const nextFiles = pendingFiles.filter((_, i) => i !== idx);
+    const nextPreviews = previews.filter((_, i) => i !== idx);
+    setPendingFiles(nextFiles);
+    setPreviews(nextPreviews);
+    if (nextFiles.length === 0) setDialogOpen(false);
   };
 
   const computedExpiry = (): Date | null => {
