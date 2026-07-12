@@ -19,6 +19,8 @@ import Media from "./pages/Media";
 import Gallery from "./pages/Gallery";
 import PublicStudio from "./pages/PublicStudio";
 import PublicRecording from "./pages/PublicRecording";
+import PublicGallery from "./pages/PublicGallery";
+import PublicRecordings from "./pages/PublicRecordings";
 import NotFound from "./pages/NotFound";
 import PaymentsGuard from "./components/PaymentsGuard";
 import PermissionGuard from "./components/PermissionGuard";
@@ -52,6 +54,8 @@ const App = () => (
             <Route path="/join/:token" element={<Join />} />
             <Route path="/studio/:ownerId" element={<PublicStudio />} />
             <Route path="/r/:slug" element={<PublicRecording />} />
+            <Route path="/gallery/:ownerId" element={<PublicGallery />} />
+            <Route path="/recordings/:ownerId" element={<PublicRecordings />} />
             <Route path="/" element={<ProtectedRoute><PermissionGuard module="customers"><Customers /></PermissionGuard></ProtectedRoute>} />
             <Route path="/gallery" element={<ProtectedRoute><PermissionGuard module="gallery"><Gallery /></PermissionGuard></ProtectedRoute>} />
             <Route path="/media" element={<ProtectedRoute><PermissionGuard module="classes"><Media /></PermissionGuard></ProtectedRoute>} />

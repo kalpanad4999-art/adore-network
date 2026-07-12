@@ -8,9 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Image as ImageIcon, Trash2, Upload, Eye, EyeOff, Copy, Clock, Infinity as InfinityIcon } from "lucide-react";
+import { Image as ImageIcon, Trash2, Upload, Eye, EyeOff, Copy, Clock, Infinity as InfinityIcon, QrCode, X } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNowStrict } from "date-fns";
+import ShareLinkDialog from "@/components/ShareLinkDialog";
 
 type Gallery = { id: string; title: string | null; description: string | null; media_type: "image" | "video"; storage_path: string; thumbnail_path: string | null; is_public: boolean; created_at: string; expires_at: string | null; expiry_action: "hide" | "delete" };
 
@@ -55,12 +56,14 @@ const GalleryPage = () => {
 
   // Upload dialog state
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mode, setMode] = useState<"forever" | "quick" | "custom">("quick");
   const [quickHours, setQuickHours] = useState<number>(24);
   const [customDateTime, setCustomDateTime] = useState<string>("");
   const [expiryAction, setExpiryAction] = useState<"hide" | "delete">("hide");
   const [uploading, setUploading] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const fetchAll = async () => {
     if (!user) return;
@@ -81,17 +84,28 @@ const GalleryPage = () => {
     if (!files || files.length === 0) return;
     const arr = Array.from(files).filter((f) => {
       const ok = f.type.startsWith("image/") || f.type.startsWith("video/");
-      if (!ok) toast.error(`${f.name}: unsupported type`);
-      if (f.size > 100 * 1024 * 1024) { toast.error(`${f.name}: max 100MB`); return false; }
-      return ok;
+      if (!ok) { toast.error(`${f.name}: unsupported type`); return false; }
+      if (f.size > 200 * 1024 * 1024) { toast.error(`${f.name}: max 200MB`); return false; }
+      return true;
     });
     if (arr.length === 0) return;
+    previews.forEach((u) => URL.revokeObjectURL(u));
     setPendingFiles(arr);
+    setPreviews(arr.map((f) => URL.createObjectURL(f)));
     setMode("quick");
     setQuickHours(24);
     setCustomDateTime("");
     setExpiryAction("hide");
     setDialogOpen(true);
+  };
+
+  const removePending = (idx: number) => {
+    URL.revokeObjectURL(previews[idx]);
+    const nextFiles = pendingFiles.filter((_, i) => i !== idx);
+    const nextPreviews = previews.filter((_, i) => i !== idx);
+    setPendingFiles(nextFiles);
+    setPreviews(nextPreviews);
+    if (nextFiles.length === 0) setDialogOpen(false);
   };
 
   const computedExpiry = (): Date | null => {
@@ -131,6 +145,8 @@ const GalleryPage = () => {
     }
     setUploading(false);
     setDialogOpen(false);
+    previews.forEach((u) => URL.revokeObjectURL(u));
+    setPreviews([]);
     setPendingFiles([]);
     if (ok > 0) toast.success(`Uploaded ${ok} item${ok > 1 ? "s" : ""}`);
     fetchAll();
@@ -148,11 +164,12 @@ const GalleryPage = () => {
     fetchAll();
   };
 
+  const publicGalleryUrl = workspaceId ? `${window.location.origin}/gallery/${workspaceId}` : "";
+
   const copyPublicLink = () => {
-    if (!workspaceId) return;
-    const url = `${window.location.origin}/studio/${workspaceId}`;
-    navigator.clipboard.writeText(url);
-    toast.success("Public studio link copied");
+    if (!publicGalleryUrl) return;
+    navigator.clipboard.writeText(publicGalleryUrl);
+    toast.success("Public gallery link copied");
   };
 
   const expiry = computedExpiry();
@@ -168,10 +185,12 @@ const GalleryPage = () => {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={copyPublicLink}><Copy className="h-4 w-4 mr-2" />Copy public link</Button>
-          <input ref={inputRef} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => { openDialogForFiles(e.target.files); if (inputRef.current) inputRef.current.value = ""; }} />
+          <Button variant="outline" onClick={() => setShareOpen(true)} disabled={!workspaceId}><QrCode className="h-4 w-4 mr-2" />QR Code</Button>
+          <input ref={inputRef} type="file" accept="image/*,video/mp4,video/quicktime,video/webm,video/*" multiple hidden onChange={(e) => { openDialogForFiles(e.target.files); if (inputRef.current) inputRef.current.value = ""; }} />
           <Button onClick={() => inputRef.current?.click()}><Upload className="h-4 w-4 mr-2" />Upload</Button>
         </div>
       </div>
+
 
       {items.length === 0 ? (
         <Card><CardContent className="py-16 text-center text-muted-foreground">No items yet — upload your first photo or video.</CardContent></Card>
@@ -211,6 +230,28 @@ const GalleryPage = () => {
           </DialogHeader>
 
           <div className="space-y-4">
+            {pendingFiles.length > 0 && (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {pendingFiles.map((f, i) => (
+                  <div key={i} className="relative group">
+                    {f.type.startsWith("image/") ? (
+                      <img src={previews[i]} alt={f.name} className="aspect-square w-full object-cover rounded-md" />
+                    ) : (
+                      <video src={previews[i]} className="aspect-square w-full object-cover rounded-md bg-black" muted playsInline />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removePending(i)}
+                      className="absolute top-1 right-1 bg-background/90 rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                      aria-label="Remove"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <RadioGroup value={mode} onValueChange={(v) => setMode(v as typeof mode)} className="space-y-2">
               <label className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition ${mode === "quick" ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}>
                 <RadioGroupItem value="quick" />
@@ -303,6 +344,14 @@ const GalleryPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ShareLinkDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        url={publicGalleryUrl}
+        title="Gallery public link"
+        description="Permanent link to your public gallery — always shows the latest photos and videos."
+      />
     </div>
   );
 };

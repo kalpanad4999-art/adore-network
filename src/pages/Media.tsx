@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Video, Radio, Plus, Trash2, ExternalLink, Upload, Eye, EyeOff, Copy, Link as LinkIcon, QrCode } from "lucide-react";
+import ShareLinkDialog from "@/components/ShareLinkDialog";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { QRCodeSVG } from "qrcode.react";
@@ -186,6 +187,7 @@ const Media = () => {
   const [liveForm, setLiveForm] = useState(DEFAULT_LIVE_FORM);
 
   const [shareRec, setShareRec] = useState<Recording | null>(null);
+  const [shareRecordingsOpen, setShareRecordingsOpen] = useState(false);
 
   const fetchAll = async () => {
     if (!user) return;
@@ -321,11 +323,11 @@ const Media = () => {
     setLiveOpen(true);
   };
 
-  const copyPublicStudioLink = () => {
-    if (!workspaceId) return;
-    const url = `${window.location.origin}/studio/${workspaceId}`;
-    navigator.clipboard.writeText(url);
-    toast.success("Public studio link copied");
+  const publicRecordingsUrl = workspaceId ? `${window.location.origin}/recordings/${workspaceId}` : "";
+  const copyRecordingsLink = () => {
+    if (!publicRecordingsUrl) return;
+    navigator.clipboard.writeText(publicRecordingsUrl);
+    toast.success("Public recordings link copied");
   };
 
   return (
@@ -335,7 +337,6 @@ const Media = () => {
           <h1 className="font-display text-3xl font-bold">Classes</h1>
           <p className="text-muted-foreground mt-1">Recordings and live online classes</p>
         </div>
-        <Button variant="outline" onClick={copyPublicStudioLink}><Copy className="h-4 w-4 mr-2" />Copy public link</Button>
       </div>
 
       <Tabs defaultValue="recordings" className="w-full">
@@ -345,9 +346,12 @@ const Media = () => {
         </TabsList>
 
         <TabsContent value="recordings" className="space-y-4">
-          {canManage && (
-            <div className="flex justify-end gap-2 flex-wrap">
-              <input ref={recordingInputRef} type="file" accept="video/*" hidden onChange={(e) => uploadRecordingFile(e.target.files)} />
+          <div className="flex justify-end gap-2 flex-wrap">
+            <Button variant="outline" onClick={copyRecordingsLink}><Copy className="h-4 w-4 mr-2" />Copy public link</Button>
+            <Button variant="outline" onClick={() => setShareRecordingsOpen(true)} disabled={!workspaceId}><QrCode className="h-4 w-4 mr-2" />QR Code</Button>
+            {canManage && (
+              <>
+                <input ref={recordingInputRef} type="file" accept="video/mp4,video/quicktime,video/webm,video/*" hidden onChange={(e) => uploadRecordingFile(e.target.files)} />
               <Button variant="outline" onClick={() => recordingInputRef.current?.click()}><Upload className="h-4 w-4 mr-2" />Upload video</Button>
               <Dialog open={recOpen} onOpenChange={setRecOpen}>
                 <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add link</Button></DialogTrigger>
@@ -366,8 +370,9 @@ const Media = () => {
                   </form>
                 </DialogContent>
               </Dialog>
-            </div>
-          )}
+              </>
+            )}
+          </div>
           {recordings.length === 0 ? (
             <Card><CardContent className="py-12 text-center text-muted-foreground">No recordings yet.</CardContent></Card>
           ) : (
@@ -382,6 +387,13 @@ const Media = () => {
             </div>
           )}
           <PublicLinkDialog open={!!shareRec} onOpenChange={(v) => !v && setShareRec(null)} slug={shareRec?.public_slug ?? null} title={shareRec?.title ?? ""} />
+          <ShareLinkDialog
+            open={shareRecordingsOpen}
+            onOpenChange={setShareRecordingsOpen}
+            url={publicRecordingsUrl}
+            title="Recordings public link"
+            description="Permanent link to your public recorded classes — always shows the latest recordings."
+          />
         </TabsContent>
 
         <TabsContent value="live" className="space-y-4">
