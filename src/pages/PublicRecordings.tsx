@@ -1,0 +1,83 @@
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "@/components/ui/card";
+import { Video, ExternalLink } from "lucide-react";
+import { format } from "date-fns";
+
+type R = { id: string; title: string; description: string | null; storage_path: string | null; external_url: string | null; duration_minutes: number | null; recorded_on: string | null; public_slug: string | null };
+
+const useSigned = (bucket: string, path: string | null) => {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    if (!path) return;
+    supabase.storage.from(bucket).createSignedUrl(path, 3600).then(({ data }) => { if (alive) setUrl(data?.signedUrl ?? null); });
+    return () => { alive = false; };
+  }, [bucket, path]);
+  return url;
+};
+
+const RecCard = ({ r }: { r: R }) => {
+  const url = useSigned("studio-recordings", r.storage_path);
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-2">
+        <h4 className="font-medium">{r.title}</h4>
+        {r.description && <p className="text-sm text-muted-foreground">{r.description}</p>}
+        <p className="text-xs text-muted-foreground">
+          {r.recorded_on ? format(new Date(r.recorded_on), "PP") : ""}
+          {r.duration_minutes ? ` · ${r.duration_minutes} min` : ""}
+        </p>
+        {r.storage_path && url && <video src={url} controls playsInline className="w-full rounded-md bg-black" />}
+        {r.external_url && !r.storage_path && (
+          <a href={r.external_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary inline-flex items-center gap-1">
+            <ExternalLink className="h-3.5 w-3.5" />Watch
+          </a>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+const PublicRecordings = () => {
+  const { ownerId } = useParams<{ ownerId: string }>();
+  const [items, setItems] = useState<R[]>([]);
+  const [studioName, setStudioName] = useState("Studio");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!ownerId) return;
+    (async () => {
+      const [r, s] = await Promise.all([
+        supabase.rpc("get_public_recordings", { _owner: ownerId }),
+        supabase.from("studio_settings").select("studio_name").eq("owner_id", ownerId).maybeSingle(),
+      ]);
+      setItems((r.data as R[]) || []);
+      if (s.data?.studio_name) setStudioName(s.data.studio_name);
+      setLoading(false);
+    })();
+  }, [ownerId]);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b py-6 px-4 text-center">
+        <h1 className="font-display text-4xl">{studioName}</h1>
+        <p className="text-muted-foreground mt-1 flex items-center justify-center gap-2"><Video className="h-4 w-4" /> Recorded Classes</p>
+      </header>
+      <main className="max-w-5xl mx-auto p-4 md:p-8">
+        {items.length === 0 ? (
+          <Card><CardContent className="py-16 text-center text-muted-foreground">No public recordings yet.</CardContent></Card>
+        ) : (
+          <div className="grid sm:grid-cols-2 gap-4">
+            {items.map((it) => <RecCard key={it.id} r={it} />)}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default PublicRecordings;
