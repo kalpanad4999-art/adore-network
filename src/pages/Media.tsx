@@ -370,8 +370,9 @@ const Media = () => {
                   </form>
                 </DialogContent>
               </Dialog>
-            </div>
-          )}
+              </>
+            )}
+          </div>
           {recordings.length === 0 ? (
             <Card><CardContent className="py-12 text-center text-muted-foreground">No recordings yet.</CardContent></Card>
           ) : (
