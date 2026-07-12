@@ -387,6 +387,13 @@ const Media = () => {
             </div>
           )}
           <PublicLinkDialog open={!!shareRec} onOpenChange={(v) => !v && setShareRec(null)} slug={shareRec?.public_slug ?? null} title={shareRec?.title ?? ""} />
+          <ShareLinkDialog
+            open={shareRecordingsOpen}
+            onOpenChange={setShareRecordingsOpen}
+            url={publicRecordingsUrl}
+            title="Recordings public link"
+            description="Permanent link to your public recorded classes — always shows the latest recordings."
+          />
         </TabsContent>
 
         <TabsContent value="live" className="space-y-4">
