@@ -19,6 +19,8 @@ import Media from "./pages/Media";
 import Gallery from "./pages/Gallery";
 import PublicStudio from "./pages/PublicStudio";
 import PublicRecording from "./pages/PublicRecording";
+import PublicGallery from "./pages/PublicGallery";
+import PublicRecordings from "./pages/PublicRecordings";
 import NotFound from "./pages/NotFound";
 import PaymentsGuard from "./components/PaymentsGuard";
 import PermissionGuard from "./components/PermissionGuard";
