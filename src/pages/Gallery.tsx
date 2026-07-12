@@ -56,12 +56,14 @@ const GalleryPage = () => {
 
   // Upload dialog state
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [mode, setMode] = useState<"forever" | "quick" | "custom">("quick");
   const [quickHours, setQuickHours] = useState<number>(24);
   const [customDateTime, setCustomDateTime] = useState<string>("");
   const [expiryAction, setExpiryAction] = useState<"hide" | "delete">("hide");
   const [uploading, setUploading] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const fetchAll = async () => {
     if (!user) return;
