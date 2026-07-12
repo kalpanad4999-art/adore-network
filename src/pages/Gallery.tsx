@@ -230,6 +230,28 @@ const GalleryPage = () => {
           </DialogHeader>
 
           <div className="space-y-4">
+            {pendingFiles.length > 0 && (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {pendingFiles.map((f, i) => (
+                  <div key={i} className="relative group">
+                    {f.type.startsWith("image/") ? (
+                      <img src={previews[i]} alt={f.name} className="aspect-square w-full object-cover rounded-md" />
+                    ) : (
+                      <video src={previews[i]} className="aspect-square w-full object-cover rounded-md bg-black" muted playsInline />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removePending(i)}
+                      className="absolute top-1 right-1 bg-background/90 rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                      aria-label="Remove"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <RadioGroup value={mode} onValueChange={(v) => setMode(v as typeof mode)} className="space-y-2">
               <label className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition ${mode === "quick" ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}>
                 <RadioGroupItem value="quick" />
