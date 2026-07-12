@@ -8,9 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Image as ImageIcon, Trash2, Upload, Eye, EyeOff, Copy, Clock, Infinity as InfinityIcon } from "lucide-react";
+import { Image as ImageIcon, Trash2, Upload, Eye, EyeOff, Copy, Clock, Infinity as InfinityIcon, QrCode, X } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNowStrict } from "date-fns";
+import ShareLinkDialog from "@/components/ShareLinkDialog";
 
 type Gallery = { id: string; title: string | null; description: string | null; media_type: "image" | "video"; storage_path: string; thumbnail_path: string | null; is_public: boolean; created_at: string; expires_at: string | null; expiry_action: "hide" | "delete" };
 
