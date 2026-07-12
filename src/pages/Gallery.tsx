@@ -145,6 +145,8 @@ const GalleryPage = () => {
     }
     setUploading(false);
     setDialogOpen(false);
+    previews.forEach((u) => URL.revokeObjectURL(u));
+    setPreviews([]);
     setPendingFiles([]);
     if (ok > 0) toast.success(`Uploaded ${ok} item${ok > 1 ? "s" : ""}`);
     fetchAll();
