@@ -323,11 +323,11 @@ const Media = () => {
     setLiveOpen(true);
   };
 
-  const copyPublicStudioLink = () => {
-    if (!workspaceId) return;
-    const url = `${window.location.origin}/studio/${workspaceId}`;
-    navigator.clipboard.writeText(url);
-    toast.success("Public studio link copied");
+  const publicRecordingsUrl = workspaceId ? `${window.location.origin}/recordings/${workspaceId}` : "";
+  const copyRecordingsLink = () => {
+    if (!publicRecordingsUrl) return;
+    navigator.clipboard.writeText(publicRecordingsUrl);
+    toast.success("Public recordings link copied");
   };
 
   return (
@@ -337,7 +337,6 @@ const Media = () => {
           <h1 className="font-display text-3xl font-bold">Classes</h1>
           <p className="text-muted-foreground mt-1">Recordings and live online classes</p>
         </div>
-        <Button variant="outline" onClick={copyPublicStudioLink}><Copy className="h-4 w-4 mr-2" />Copy public link</Button>
       </div>
 
       <Tabs defaultValue="recordings" className="w-full">
