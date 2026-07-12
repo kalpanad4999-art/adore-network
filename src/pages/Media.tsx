@@ -346,9 +346,12 @@ const Media = () => {
         </TabsList>
 
         <TabsContent value="recordings" className="space-y-4">
-          {canManage && (
-            <div className="flex justify-end gap-2 flex-wrap">
-              <input ref={recordingInputRef} type="file" accept="video/*" hidden onChange={(e) => uploadRecordingFile(e.target.files)} />
+          <div className="flex justify-end gap-2 flex-wrap">
+            <Button variant="outline" onClick={copyRecordingsLink}><Copy className="h-4 w-4 mr-2" />Copy public link</Button>
+            <Button variant="outline" onClick={() => setShareRecordingsOpen(true)} disabled={!workspaceId}><QrCode className="h-4 w-4 mr-2" />QR Code</Button>
+            {canManage && (
+              <>
+                <input ref={recordingInputRef} type="file" accept="video/mp4,video/quicktime,video/webm,video/*" hidden onChange={(e) => uploadRecordingFile(e.target.files)} />
               <Button variant="outline" onClick={() => recordingInputRef.current?.click()}><Upload className="h-4 w-4 mr-2" />Upload video</Button>
               <Dialog open={recOpen} onOpenChange={setRecOpen}>
                 <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add link</Button></DialogTrigger>
