@@ -164,11 +164,12 @@ const GalleryPage = () => {
     fetchAll();
   };
 
+  const publicGalleryUrl = workspaceId ? `${window.location.origin}/gallery/${workspaceId}` : "";
+
   const copyPublicLink = () => {
-    if (!workspaceId) return;
-    const url = `${window.location.origin}/studio/${workspaceId}`;
-    navigator.clipboard.writeText(url);
-    toast.success("Public studio link copied");
+    if (!publicGalleryUrl) return;
+    navigator.clipboard.writeText(publicGalleryUrl);
+    toast.success("Public gallery link copied");
   };
 
   const expiry = computedExpiry();
@@ -184,10 +185,12 @@ const GalleryPage = () => {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={copyPublicLink}><Copy className="h-4 w-4 mr-2" />Copy public link</Button>
-          <input ref={inputRef} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => { openDialogForFiles(e.target.files); if (inputRef.current) inputRef.current.value = ""; }} />
+          <Button variant="outline" onClick={() => setShareOpen(true)} disabled={!workspaceId}><QrCode className="h-4 w-4 mr-2" />QR Code</Button>
+          <input ref={inputRef} type="file" accept="image/*,video/mp4,video/quicktime,video/webm,video/*" multiple hidden onChange={(e) => { openDialogForFiles(e.target.files); if (inputRef.current) inputRef.current.value = ""; }} />
           <Button onClick={() => inputRef.current?.click()}><Upload className="h-4 w-4 mr-2" />Upload</Button>
         </div>
       </div>
+
 
       {items.length === 0 ? (
         <Card><CardContent className="py-16 text-center text-muted-foreground">No items yet — upload your first photo or video.</CardContent></Card>
