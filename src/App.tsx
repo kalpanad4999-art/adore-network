@@ -17,6 +17,8 @@ import Settings from "./pages/Settings";
 import Join from "./pages/Join";
 import Media from "./pages/Media";
 import Gallery from "./pages/Gallery";
+import Attendance from "./pages/Attendance";
+import BiometricSettings from "./pages/BiometricSettings";
 import PublicStudio from "./pages/PublicStudio";
 import PublicRecording from "./pages/PublicRecording";
 import PublicGallery from "./pages/PublicGallery";
@@ -58,6 +60,8 @@ const App = () => (
             <Route path="/recordings/:ownerId" element={<PublicRecordings />} />
             <Route path="/" element={<ProtectedRoute><PermissionGuard module="customers"><Customers /></PermissionGuard></ProtectedRoute>} />
             <Route path="/gallery" element={<ProtectedRoute><PermissionGuard module="gallery"><Gallery /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/attendance" element={<ProtectedRoute><PermissionGuard module="attendance"><Attendance /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/settings/biometric" element={<ProtectedRoute><BiometricSettings /></ProtectedRoute>} />
             <Route path="/media" element={<ProtectedRoute><PermissionGuard module="classes"><Media /></PermissionGuard></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute><PermissionGuard module="payments"><PaymentsGuard><Payments /></PaymentsGuard></PermissionGuard></ProtectedRoute>} />
             <Route path="/renewals" element={<ProtectedRoute><PermissionGuard module="renewals"><Renewals /></PermissionGuard></ProtectedRoute>} />
