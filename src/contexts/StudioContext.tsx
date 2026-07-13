@@ -12,11 +12,11 @@ const sha256Hex = async (input: string) => {
     .join("");
 };
 
-export type ModuleKey = "customers" | "gallery" | "classes" | "payments" | "renewals";
+export type ModuleKey = "customers" | "gallery" | "classes" | "payments" | "renewals" | "attendance";
 export type ModulePermissions = Record<ModuleKey, boolean>;
 
 const ALL_ALLOWED: ModulePermissions = {
-  customers: true, gallery: true, classes: true, payments: true, renewals: true,
+  customers: true, gallery: true, classes: true, payments: true, renewals: true, attendance: true,
 };
 
 interface StudioContextValue {
