@@ -62,7 +62,7 @@ const Attendance = () => {
     ]);
     setBatches((b.data || []) as Batch[]);
     setStudents((s.data || []) as Student[]);
-    setRecords((a.data || []) as AttendanceRow[]);
+    setRecords(((a.data as any) || []) as AttendanceRow[]);
     setLoading(false);
   };
 
