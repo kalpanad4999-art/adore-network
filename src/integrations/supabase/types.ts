@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance: {
+        Row: {
+          attendance_date: string
+          batch_id: string
+          created_at: string
+          device_id: string | null
+          id: string
+          marked_at: string
+          marked_by: string | null
+          method: string
+          notes: string | null
+          status: string
+          student_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attendance_date?: string
+          batch_id: string
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          marked_at?: string
+          marked_by?: string | null
+          method?: string
+          notes?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attendance_date?: string
+          batch_id?: string
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          marked_at?: string
+          marked_by?: string | null
+          method?: string
+          notes?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batches: {
         Row: {
           created_at: string
@@ -53,6 +116,72 @@ export type Database = {
           start_date?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      biometric_devices: {
+        Row: {
+          api_key: string | null
+          auto_sync: boolean
+          auto_sync_interval_minutes: number
+          connection_type: string
+          created_at: string
+          device_identifier: string | null
+          device_name: string
+          id: string
+          ip_address: string | null
+          is_active: boolean
+          last_connected_at: string | null
+          last_status: string
+          last_status_message: string | null
+          last_synced_at: string | null
+          password: string | null
+          port: number | null
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          auto_sync?: boolean
+          auto_sync_interval_minutes?: number
+          connection_type?: string
+          created_at?: string
+          device_identifier?: string | null
+          device_name: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          last_connected_at?: string | null
+          last_status?: string
+          last_status_message?: string | null
+          last_synced_at?: string | null
+          password?: string | null
+          port?: number | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          auto_sync?: boolean
+          auto_sync_interval_minutes?: number
+          connection_type?: string
+          created_at?: string
+          device_identifier?: string | null
+          device_name?: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean
+          last_connected_at?: string | null
+          last_status?: string
+          last_status_message?: string | null
+          last_synced_at?: string | null
+          password?: string | null
+          port?: number | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
         }
         Relationships: []
       }
