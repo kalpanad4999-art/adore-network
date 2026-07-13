@@ -86,11 +86,12 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
       if (!p) {
         setPermissions(ALL_ALLOWED); // grandfather
       } else if (!p.is_active) {
-        setPermissions({ customers: false, gallery: false, classes: false, payments: false, renewals: false });
+        setPermissions({ customers: false, gallery: false, classes: false, payments: false, renewals: false, attendance: false });
       } else {
         setPermissions({
           customers: !!p.can_customers, gallery: !!p.can_gallery, classes: !!p.can_classes,
           payments: !!p.can_payments, renewals: !!p.can_renewals,
+          attendance: !!p.can_customers || !!p.can_classes,
         });
       }
     }
