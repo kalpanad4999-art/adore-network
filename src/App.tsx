@@ -17,6 +17,8 @@ import Settings from "./pages/Settings";
 import Join from "./pages/Join";
 import Media from "./pages/Media";
 import Gallery from "./pages/Gallery";
+import Attendance from "./pages/Attendance";
+import BiometricSettings from "./pages/BiometricSettings";
 import PublicStudio from "./pages/PublicStudio";
 import PublicRecording from "./pages/PublicRecording";
 import PublicGallery from "./pages/PublicGallery";
