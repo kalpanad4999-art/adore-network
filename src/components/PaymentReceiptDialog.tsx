@@ -230,15 +230,40 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
               </table>
             </div>
 
+            {/* Offer banner */}
+            {data.discountAmount ? (
+              <div style={{ marginTop: 18, padding: "12px 16px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: 6 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#047857" }}>
+                  {data.offerCongrats || "🎉 Offer Applied"}
+                </div>
+                <div style={{ fontSize: 12, color: "#065f46", marginTop: 4 }}>
+                  {data.offerName ? `${data.offerName} · ` : ""}
+                  {data.couponCode ? `Coupon ${data.couponCode} · ` : ""}
+                  You saved ₹{discount.toLocaleString("en-IN")}
+                </div>
+              </div>
+            ) : null}
+
             {/* Totals */}
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
               <div style={{ width: 260 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13, color: "#374151" }}>
                   <span>Subtotal</span><span>₹{subtotal.toLocaleString("en-IN")}</span>
                 </div>
+                {data.discountAmount ? (
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13, color: "#047857" }}>
+                    <span>Discount{data.couponCode ? ` (${data.couponCode})` : ""}</span>
+                    <span>−₹{discount.toLocaleString("en-IN")}</span>
+                  </div>
+                ) : null}
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", fontSize: 15, fontWeight: 700, color: "#0f172a", borderTop: "2px solid #0f172a", marginTop: 6 }}>
                   <span>Grand Total</span><span>₹{total.toLocaleString("en-IN")}</span>
                 </div>
+                {data.discountAmount ? (
+                  <div style={{ fontSize: 11, color: "#047857", textAlign: "right", marginTop: 2 }}>
+                    Amount Saved: ₹{discount.toLocaleString("en-IN")}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -259,14 +284,24 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
             </div>
           </div>
 
-          <div className="flex gap-2 mt-4 justify-end">
+          <div className="flex gap-2 mt-4 justify-end flex-wrap">
             <Button variant="outline" onClick={printReceipt} disabled={working}>
-              <Printer className="h-4 w-4 mr-2" />Print Receipt
+              <Printer className="h-4 w-4 mr-2" />Print
             </Button>
-            <Button onClick={download} disabled={working}>
-              <Download className="h-4 w-4 mr-2" />{working ? "Preparing..." : "Download PDF"}
+            <Button variant="outline" onClick={download} disabled={working}>
+              <Download className="h-4 w-4 mr-2" />{working ? "…" : "PDF"}
+            </Button>
+            <Button variant="outline" onClick={downloadImage} disabled={working}>
+              <ImageIcon className="h-4 w-4 mr-2" />Image
+            </Button>
+            <Button variant="outline" onClick={shareReceipt} disabled={working}>
+              <Share2 className="h-4 w-4 mr-2" />Share
+            </Button>
+            <Button onClick={sendWhatsApp} disabled={working} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <MessageCircle className="h-4 w-4 mr-2" />WhatsApp
             </Button>
           </div>
+
         </div>
       </DialogContent>
     </Dialog>
