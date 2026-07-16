@@ -192,12 +192,23 @@ const Auth = () => {
     }
   };
 
+  const studio = useStudioMeta();
+  useEffect(() => { applyStudioBranding(studio.studioName, studio.logoUrl); }, [studio.studioName, studio.logoUrl]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md animate-fade-in">
         <div className="mb-8 text-center">
-          <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground tracking-tight">TRINETRA YOGA</h1>
+          {studio.logoUrl && (
+            <img
+              src={studio.logoUrl}
+              alt={studio.studioName}
+              className="mx-auto mb-4 h-20 w-20 rounded-2xl object-cover shadow-sm"
+            />
+          )}
+          <h1 className="font-display text-3xl sm:text-4xl font-bold text-foreground tracking-tight">{studio.studioName}</h1>
         </div>
+
 
         <Card>
           <CardHeader>
