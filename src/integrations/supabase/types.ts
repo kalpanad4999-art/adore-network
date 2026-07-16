@@ -295,6 +295,47 @@ export type Database = {
           },
         ]
       }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          offer_id: string
+          usage_count: number
+          usage_limit: number | null
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          offer_id: string
+          usage_count?: number
+          usage_limit?: number | null
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          offer_id?: string
+          usage_count?: number
+          usage_limit?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -531,6 +572,111 @@ export type Database = {
         }
         Relationships: []
       }
+      offer_redemptions: {
+        Row: {
+          coupon_id: string | null
+          discount_amount: number
+          id: string
+          offer_id: string
+          payment_id: string | null
+          redeemed_at: string
+          student_id: string | null
+          user_id: string
+        }
+        Insert: {
+          coupon_id?: string | null
+          discount_amount?: number
+          id?: string
+          offer_id: string
+          payment_id?: string | null
+          redeemed_at?: string
+          student_id?: string | null
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string | null
+          discount_amount?: number
+          id?: string
+          offer_id?: string
+          payment_id?: string | null
+          redeemed_at?: string
+          student_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_redemptions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offers: {
+        Row: {
+          conditions: Json
+          created_at: string
+          discount_amount: number
+          id: string
+          is_active: boolean
+          message: string | null
+          min_payment_amount: number
+          name: string
+          offer_type: Database["public"]["Enums"]["offer_type"]
+          updated_at: string
+          usage_count: number
+          usage_limit_per_member: number | null
+          usage_limit_total: number | null
+          user_id: string
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          conditions?: Json
+          created_at?: string
+          discount_amount?: number
+          id?: string
+          is_active?: boolean
+          message?: string | null
+          min_payment_amount?: number
+          name: string
+          offer_type?: Database["public"]["Enums"]["offer_type"]
+          updated_at?: string
+          usage_count?: number
+          usage_limit_per_member?: number | null
+          usage_limit_total?: number | null
+          user_id: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          conditions?: Json
+          created_at?: string
+          discount_amount?: number
+          id?: string
+          is_active?: boolean
+          message?: string | null
+          min_payment_amount?: number
+          name?: string
+          offer_type?: Database["public"]["Enums"]["offer_type"]
+          updated_at?: string
+          usage_count?: number
+          usage_limit_per_member?: number | null
+          usage_limit_total?: number | null
+          user_id?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: []
+      }
       payment_audit_logs: {
         Row: {
           action: string
@@ -752,7 +898,12 @@ export type Database = {
       student_payments: {
         Row: {
           amount: number
+          applied_coupon_code: string | null
+          applied_offer_id: string | null
+          applied_offer_name: string | null
+          applied_offer_type: string | null
           created_at: string
+          discount_amount: number
           duration_months: number | null
           duration_unit: string | null
           duration_value: number | null
@@ -769,7 +920,12 @@ export type Database = {
         }
         Insert: {
           amount?: number
+          applied_coupon_code?: string | null
+          applied_offer_id?: string | null
+          applied_offer_name?: string | null
+          applied_offer_type?: string | null
           created_at?: string
+          discount_amount?: number
           duration_months?: number | null
           duration_unit?: string | null
           duration_value?: number | null
@@ -786,7 +942,12 @@ export type Database = {
         }
         Update: {
           amount?: number
+          applied_coupon_code?: string | null
+          applied_offer_id?: string | null
+          applied_offer_name?: string | null
+          applied_offer_type?: string | null
           created_at?: string
+          discount_amount?: number
           duration_months?: number | null
           duration_unit?: string | null
           duration_value?: number | null
@@ -801,7 +962,15 @@ export type Database = {
           user_id?: string
           valid_until?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_payments_applied_offer_id_fkey"
+            columns: ["applied_offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       students: {
         Row: {
@@ -1080,6 +1249,7 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "staff"
+      offer_type: "birthday" | "festival" | "new_year" | "annual" | "custom"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1208,6 +1378,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "staff"],
+      offer_type: ["birthday", "festival", "new_year", "annual", "custom"],
     },
   },
 } as const
