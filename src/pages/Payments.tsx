@@ -29,6 +29,11 @@ interface Payment {
   duration_value: number | null;
   duration_unit: string | null;
   valid_until: string | null;
+  applied_offer_id?: string | null;
+  applied_offer_name?: string | null;
+  applied_offer_type?: string | null;
+  applied_coupon_code?: string | null;
+  discount_amount?: number | null;
 }
 
 const paymentMethods = ["cash", "upi", "card", "bank-transfer", "other"];
