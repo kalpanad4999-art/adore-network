@@ -118,16 +118,67 @@ const Payments = () => {
 
   const fetchAll = async () => {
     if (!user) return;
-    const [{ data: cust }, { data: pays }, { data: bat }] = await Promise.all([
+    const [{ data: cust }, { data: pays }, { data: bat }, { data: offs }, { data: cps }] = await Promise.all([
       supabase.from("students").select("id,name,phone,batch_id").eq("user_id", user.id).order("name"),
       supabase.from("student_payments").select("*").eq("user_id", user.id).order("paid_on", { ascending: false }),
       supabase.from("batches").select("id,name").eq("user_id", user.id),
+      (supabase as any).from("offers").select("*").eq("user_id", user.id).eq("is_active", true),
+      (supabase as any).from("coupons").select("*").eq("user_id", user.id).eq("is_active", true),
     ]);
     setCustomers((cust as Customer[]) || []);
     setPayments(((pays as any[]) || []) as Payment[]);
     setBatches((bat as Batch[]) || []);
+    setOffers(((offs as any[]) || []).map((o) => ({ ...o, conditions: o.conditions || {} })) as Offer[]);
+    setCoupons(((cps as any[]) || []) as Coupon[]);
   };
   useEffect(() => { fetchAll(); }, [user]);
+
+  // Eligible offers for the current form context
+  const eligibleOffers = useMemo(() => {
+    const amt = parseFloat(form.amount) || 0;
+    const cust = customers.find((c) => c.id === form.student_id);
+    const ctx = cust ? { id: cust.id, batch_id: cust.batch_id } : null;
+    return offers.filter((o) => isOfferEligible(o, ctx as any, amt, form.paid_on));
+  }, [offers, form.student_id, form.amount, form.paid_on, customers]);
+
+  const selectedOffer = useMemo(() => {
+    if (appliedCoupon) return offers.find((o) => o.id === appliedCoupon.offer_id) || null;
+    return offers.find((o) => o.id === selectedOfferId) || null;
+  }, [selectedOfferId, appliedCoupon, offers]);
+
+  const discountAmount = useMemo(() => {
+    const amt = parseFloat(form.amount) || 0;
+    if (!selectedOffer || !amt) return 0;
+    return computeDiscount(selectedOffer, amt);
+  }, [selectedOffer, form.amount]);
+
+  const finalAmount = useMemo(() => {
+    const amt = parseFloat(form.amount) || 0;
+    return Math.max(0, amt - discountAmount);
+  }, [form.amount, discountAmount]);
+
+  const applyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    const c = coupons.find((x) => x.code.toUpperCase() === code);
+    if (!c) { toast.error("Invalid coupon code"); return; }
+    if (c.usage_limit != null && c.usage_count >= c.usage_limit) { toast.error("Coupon has reached its usage limit"); return; }
+    const offer = offers.find((o) => o.id === c.offer_id);
+    if (!offer) { toast.error("Coupon's offer is not available"); return; }
+    const amt = parseFloat(form.amount) || 0;
+    const cust = customers.find((cc) => cc.id === form.student_id);
+    const ctx = cust ? { id: cust.id, batch_id: cust.batch_id } : null;
+    if (!isOfferEligible(offer, ctx as any, amt, form.paid_on)) { toast.error("Coupon is not eligible for this payment"); return; }
+    setAppliedCoupon(c);
+    setSelectedOfferId(offer.id);
+    toast.success(`Coupon applied — ₹${computeDiscount(offer, amt)} off`);
+  };
+
+  const clearOffer = () => {
+    setAppliedCoupon(null);
+    setSelectedOfferId("");
+    setCouponInput("");
+  };
 
   const batchMap = useMemo(() => {
     const m = new Map<string, string>();
