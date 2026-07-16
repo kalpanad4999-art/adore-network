@@ -224,7 +224,7 @@ const Customers = () => {
       ? await supabase.from("students").update(payload).eq("id", editingCustId)
       : await supabase.from("students").insert(payload);
     if (error) { toast.error(error.message); return; }
-    toast.success(editingCustId ? "Customer updated" : "Customer added");
+    toast.success(editingCustId ? "Member updated" : "Member added");
     setCustOpen(false); setEditingCustId(null); setActiveBatchId(null); setCustCustom({});
     fetchCustomers();
   };
@@ -238,7 +238,7 @@ const Customers = () => {
       if (payErr) throw payErr;
       const { error: custErr } = await supabase.from("students").delete().eq("id", deleteTarget.id);
       if (custErr) throw custErr;
-      toast.success("Customer deleted successfully.");
+      toast.success("Member deleted successfully.");
       setDeleteTarget(null);
       fetchCustomers();
     } catch (err: any) {
@@ -251,14 +251,14 @@ const Customers = () => {
   const moveCustomer = async (customerId: string, targetBatchId: string) => {
     const { error } = await supabase.from("students").update({ batch_id: targetBatchId }).eq("id", customerId);
     if (error) { toast.error(error.message); return; }
-    toast.success("Customer moved");
+    toast.success("Member moved");
     fetchCustomers();
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="font-display text-3xl font-bold">Customers</h1>
+        <h1 className="font-display text-3xl font-bold">Members</h1>
         <Dialog open={batchOpen} onOpenChange={(v) => { if (!v) resetBatchForm(); else setBatchOpen(true); }}>
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />Add Batch</Button>
@@ -377,7 +377,7 @@ const Customers = () => {
                       <QrCode className="h-4 w-4 mr-2" />Show QR
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => openAddCustomer(b.id)}>
-                      <UserPlus className="h-4 w-4 mr-2" />Add Customer
+                      <UserPlus className="h-4 w-4 mr-2" />Add Member
                     </Button>
                   </div>
                   {members.length === 0 ? (
@@ -476,7 +476,7 @@ const Customers = () => {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="font-display">{qrBatch?.name} — Registration QR</DialogTitle>
-            <DialogDescription>Customers scan this to fill in their details.</DialogDescription>
+            <DialogDescription>Members scan this to fill in their details.</DialogDescription>
           </DialogHeader>
           {qrBatch && (() => {
             const url = `${window.location.origin}/join/${qrBatch.public_token}`;
@@ -501,9 +501,9 @@ const Customers = () => {
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v && !deleting) setDeleteTarget(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
+            <AlertDialogTitle>Delete Member</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete this customer? This action cannot be undone.
+              Are you sure you want to delete this record? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -513,7 +513,7 @@ const Customers = () => {
               onClick={(e) => { e.preventDefault(); confirmDeleteCustomer(); }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? "Deleting..." : "Delete Customer"}
+              {deleting ? "Deleting..." : "Delete Member"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

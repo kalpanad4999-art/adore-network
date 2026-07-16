@@ -26,7 +26,7 @@ type StaffRow = {
 type Invite = { id: string; email: string; accepted_at: string | null };
 
 const MODULES: { key: ModuleKey; label: string }[] = [
-  { key: "customers", label: "Customers" },
+  { key: "customers", label: "Members" },
   { key: "gallery", label: "My Gallery" },
   { key: "classes", label: "Classes" },
   { key: "payments", label: "Payments" },
@@ -143,6 +143,7 @@ export const StaffPermissionsCard = () => {
   };
 
   const revokeInvite = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this record? This action cannot be undone.")) return;
     await supabase.from("staff_invitations").delete().eq("id", id);
     load();
   };

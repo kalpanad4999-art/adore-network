@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { ModuleKey } from "@/contexts/StudioContext";
 
 const navItems: { to: string; label: string; icon: any; module: ModuleKey | null }[] = [
-  { to: "/", label: "Customers", icon: Users, module: "customers" },
+  { to: "/", label: "Members", icon: Users, module: "customers" },
   { to: "/attendance", label: "Attendance", icon: Fingerprint, module: "attendance" },
   { to: "/gallery", label: "My Gallery", icon: ImageIcon, module: "gallery" },
   { to: "/media", label: "Classes", icon: PlayCircle, module: "classes" },
