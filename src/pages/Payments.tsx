@@ -13,7 +13,9 @@ import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight } from "lucide-rea
 import { toast } from "sonner";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import PaymentReceiptDialog, { ReceiptData } from "@/components/PaymentReceiptDialog";
-import { FileText } from "lucide-react";
+import { FileText, Tag } from "lucide-react";
+import { Offer, Coupon, OFFER_LABELS, CONGRATS, computeDiscount, isOfferEligible } from "@/lib/offers";
+import { Badge } from "@/components/ui/badge";
 
 interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
 interface Batch { id: string; name: string; }
