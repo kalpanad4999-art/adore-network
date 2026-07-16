@@ -390,6 +390,9 @@ const Payments = () => {
               <div className="space-y-2">
                 <Label>Renewal Date <span className="text-muted-foreground text-xs">(auto)</span></Label>
                 <Input type="date" value={renewalDate} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+              </div>
+
+
 
               {/* Offers & Coupon */}
               <div className="rounded-lg border p-3 space-y-3 bg-muted/20">
