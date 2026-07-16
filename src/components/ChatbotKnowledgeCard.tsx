@@ -286,16 +286,68 @@ export const ChatbotKnowledgeCard = () => {
 
   if (!isOwner) return null;
 
+  const publicChatUrl = ownerId ? `${window.location.origin}/studio/${ownerId}` : "";
+  const qrWrapRef = useRef<HTMLDivElement>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const downloadQR = () => {
+    const svg = qrWrapRef.current?.querySelector("svg");
+    if (!svg) return;
+    const xml = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([xml], { type: "image/svg+xml" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "chatbot-qr.svg";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  const shareQR = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "AI Chatbot", text: "Chat with us", url: publicChatUrl });
+      } else {
+        await navigator.clipboard.writeText(publicChatUrl);
+        toast.success("Link copied — share it anywhere");
+      }
+    } catch { /* user cancelled */ }
+  };
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Bot className="h-5 w-5 text-primary" />
-          <CardTitle className="font-display">AI Chatbot</CardTitle>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-primary" />
+              <CardTitle className="font-display">AI Chatbot</CardTitle>
+            </div>
+            <CardDescription className="mt-1">
+              Train the chatbot with your own questions and answers. Changes take effect instantly.
+            </CardDescription>
+          </div>
+          {publicChatUrl && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Input readOnly value={publicChatUrl} className="h-9 w-52 text-xs" onFocus={(e) => e.currentTarget.select()} />
+              <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(publicChatUrl); toast.success("Link copied"); }} title="Copy link">
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => window.open(publicChatUrl, "_blank")} title="Open link">
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setQrOpen(true)} title="QR code">
+                <QrCode className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="outline" onClick={downloadQR} title="Download QR">
+                <Download className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="outline" onClick={shareQR} title="Share QR">
+                <Share2 className="h-4 w-4" />
+              </Button>
+              <div ref={qrWrapRef} className="hidden">
+                <QRCodeSVG value={publicChatUrl} size={240} />
+              </div>
+            </div>
+          )}
         </div>
-        <CardDescription>
-          Train the chatbot with your own questions and answers. Changes take effect instantly.
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="kb" className="w-full">
