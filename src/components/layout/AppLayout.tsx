@@ -20,6 +20,7 @@ const navItems: { to: string; label: string; icon: any; module: ModuleKey | null
   { to: "/gallery", label: "My Gallery", icon: ImageIcon, module: "gallery" },
   { to: "/media", label: "Classes", icon: PlayCircle, module: "classes" },
   { to: "/payments", label: "Payments", icon: IndianRupee, module: "payments" },
+  { to: "/offers", label: "Offers", icon: Gift, module: "payments" },
   { to: "/renewals", label: "Renewals", icon: CalendarClock, module: "renewals" },
   { to: "/settings", label: "Settings", icon: SettingsIcon, module: null },
 ];
