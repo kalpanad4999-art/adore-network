@@ -26,7 +26,7 @@ type StaffRow = {
 type Invite = { id: string; email: string; accepted_at: string | null };
 
 const MODULES: { key: ModuleKey; label: string }[] = [
-  { key: "customers", label: "Customers" },
+  { key: "customers", label: "Members" },
   { key: "gallery", label: "My Gallery" },
   { key: "classes", label: "Classes" },
   { key: "payments", label: "Payments" },

@@ -188,7 +188,7 @@ const Attendance = () => {
   }, [filteredRecords]);
 
   const exportCsv = () => {
-    const header = ["Date", "Batch", "Student", "Status", "Method", "Marked At"];
+    const header = ["Date", "Batch", "Member", "Status", "Method", "Marked At"];
     const rows = filteredRecords.map((r) => {
       const s = students.find((x) => x.id === r.student_id);
       const b = batches.find((x) => x.id === r.batch_id);
@@ -249,7 +249,7 @@ const Attendance = () => {
           {selectedBatch && (
             <Card>
               <CardHeader className="flex-row items-center justify-between space-y-0">
-                <CardTitle>Students</CardTitle>
+                <CardTitle>Members</CardTitle>
                 {isOwner && (
                   <Button variant="outline" size="sm" onClick={() => setManualOpen(true)}>
                     Manual Mark
@@ -371,7 +371,7 @@ const Attendance = () => {
                 <thead className="text-left text-muted-foreground">
                   <tr>
                     <th className="py-2 pr-3">Date</th>
-                    <th className="py-2 pr-3">Student</th>
+                    <th className="py-2 pr-3">Member</th>
                     <th className="py-2 pr-3">Batch</th>
                     <th className="py-2 pr-3">Status</th>
                     <th className="py-2 pr-3">Method</th>
@@ -411,7 +411,7 @@ const Attendance = () => {
           <DialogHeader>
             <DialogTitle>Verify fingerprint</DialogTitle>
             <DialogDescription>
-              {selectedStudentObj?.name ?? "Student"} — place finger on the connected device.
+              {selectedStudentObj?.name ?? "Member"} — place finger on the connected device.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center py-6 gap-3">
@@ -439,7 +439,7 @@ const Attendance = () => {
             <DialogDescription>Owner override — mark a student present without fingerprint.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <Label>Student</Label>
+            <Label>Member</Label>
             <Select value={selectedStudent} onValueChange={setSelectedStudent}>
               <SelectTrigger><SelectValue placeholder="Choose student" /></SelectTrigger>
               <SelectContent>

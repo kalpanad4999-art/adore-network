@@ -254,7 +254,7 @@ const Payments = () => {
             </DialogHeader>
             <form onSubmit={addPayment} className="space-y-4">
               <div className="space-y-2">
-                <Label>Customer</Label>
+                <Label>Member</Label>
                 <Select value={form.student_id} onValueChange={(v) => setForm({ ...form, student_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
                   <SelectContent>
