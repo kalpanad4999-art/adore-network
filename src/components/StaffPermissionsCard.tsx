@@ -143,6 +143,7 @@ export const StaffPermissionsCard = () => {
   };
 
   const revokeInvite = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this record? This action cannot be undone.")) return;
     await supabase.from("staff_invitations").delete().eq("id", id);
     load();
   };
