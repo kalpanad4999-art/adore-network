@@ -390,7 +390,67 @@ const Payments = () => {
               <div className="space-y-2">
                 <Label>Renewal Date <span className="text-muted-foreground text-xs">(auto)</span></Label>
                 <Input type="date" value={renewalDate} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
+
+              {/* Offers & Coupon */}
+              <div className="rounded-lg border p-3 space-y-3 bg-muted/20">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Tag className="h-4 w-4 text-primary" /> Offers &amp; Coupon
+                </div>
+
+                {eligibleOffers.length > 0 && !appliedCoupon && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Eligible offers</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {eligibleOffers.map((o) => (
+                        <button
+                          type="button"
+                          key={o.id}
+                          onClick={() => setSelectedOfferId(selectedOfferId === o.id ? "" : o.id)}
+                          className={`text-xs px-2 py-1 rounded-full border transition ${selectedOfferId === o.id ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+                        >
+                          {OFFER_LABELS[o.offer_type]} · {o.name} · ₹{o.discount_amount}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Coupon code</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Enter coupon"
+                      disabled={!!appliedCoupon}
+                    />
+                    {appliedCoupon ? (
+                      <Button type="button" variant="outline" onClick={clearOffer}>Remove</Button>
+                    ) : (
+                      <Button type="button" variant="outline" onClick={applyCoupon}>Apply</Button>
+                    )}
+                  </div>
+                </div>
+
+                {selectedOffer && (
+                  <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300/50 p-2 text-xs">
+                    <div className="font-semibold text-emerald-700 dark:text-emerald-300">{CONGRATS[selectedOffer.offer_type]}</div>
+                    <div className="text-emerald-800 dark:text-emerald-200 mt-1">
+                      {selectedOffer.name}
+                      {appliedCoupon && <> · <code>{appliedCoupon.code}</code></>}
+                      <Badge variant="secondary" className="ml-2">−₹{discountAmount}</Badge>
+                    </div>
+                  </div>
+                )}
+
+                {form.amount && (
+                  <div className="flex items-center justify-between text-sm border-t pt-2">
+                    <span className="text-muted-foreground">Payable</span>
+                    <span className="font-semibold">₹{finalAmount.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
+
               <Button type="submit" className="w-full">Save Payment</Button>
             </form>
           </DialogContent>
