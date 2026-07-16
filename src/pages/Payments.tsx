@@ -207,11 +207,13 @@ const Payments = () => {
   const addPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    const amount = parseFloat(form.amount);
+    const originalAmount = parseFloat(form.amount);
     if (!form.student_id) { toast.error("Pick a customer"); return; }
-    if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    if (!originalAmount || originalAmount <= 0) { toast.error("Enter a valid amount"); return; }
     if (!effectiveValue) { toast.error("Enter a valid duration"); return; }
     if (!renewalDate) { toast.error("Could not calculate renewal date"); return; }
+
+    const payable = Math.max(0, originalAmount - discountAmount);
 
     const months_equiv =
       form.durationUnit === "months" ? effectiveValue :
@@ -221,7 +223,7 @@ const Payments = () => {
     const { data: inserted, error } = await supabase.from("student_payments").insert({
       student_id: form.student_id,
       user_id: user.id,
-      amount,
+      amount: payable,
       paid_on: form.paid_on,
       method: form.method,
       duration_value: effectiveValue,
@@ -229,9 +231,31 @@ const Payments = () => {
       duration_months: months_equiv,
       valid_until: renewalDate,
       reminder_sent_at: null,
+      applied_offer_id: selectedOffer?.id ?? null,
+      applied_offer_name: selectedOffer?.name ?? null,
+      applied_offer_type: selectedOffer?.offer_type ?? null,
+      applied_coupon_code: appliedCoupon?.code ?? null,
+      discount_amount: discountAmount,
     } as any).select("id").single();
     if (error) { toast.error(error.message); return; }
-    await logAudit(ownerId, "payment.created", { amount, duration_value: effectiveValue, duration_unit: form.durationUnit, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
+    await logAudit(ownerId, "payment.created", { amount: payable, discount: discountAmount, offer: selectedOffer?.name, coupon: appliedCoupon?.code, duration_value: effectiveValue, duration_unit: form.durationUnit, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
+
+    // Redemption audit + increment usage counters
+    if (selectedOffer && inserted?.id) {
+      await (supabase as any).from("offer_redemptions").insert({
+        user_id: user.id,
+        offer_id: selectedOffer.id,
+        coupon_id: appliedCoupon?.id ?? null,
+        student_id: form.student_id,
+        payment_id: inserted.id,
+        discount_amount: discountAmount,
+      });
+      await (supabase as any).from("offers").update({ usage_count: (selectedOffer.usage_count || 0) + 1 }).eq("id", selectedOffer.id);
+      if (appliedCoupon) {
+        await (supabase as any).from("coupons").update({ usage_count: (appliedCoupon.usage_count || 0) + 1 }).eq("id", appliedCoupon.id);
+      }
+    }
+
     toast.success("Payment recorded · renewal scheduled");
 
     // Prepare receipt for the just-recorded payment
@@ -246,7 +270,12 @@ const Payments = () => {
       batchName,
       planDescription: `${batchName} Membership · ${effectiveValue} ${form.durationUnit}`,
       paymentMethod: form.method,
-      amount,
+      amount: payable,
+      originalAmount,
+      discountAmount: discountAmount || undefined,
+      offerName: selectedOffer?.name,
+      offerCongrats: selectedOffer ? CONGRATS[selectedOffer.offer_type] : undefined,
+      couponCode: appliedCoupon?.code,
       durationValue: effectiveValue,
       durationUnit: form.durationUnit,
       renewalDate,
@@ -256,6 +285,7 @@ const Payments = () => {
     setReceiptOpen(true);
 
     setForm({ ...form, amount: "", durationValue: "1" });
+    clearOffer();
     setAddOpen(false);
     fetchAll();
   };
