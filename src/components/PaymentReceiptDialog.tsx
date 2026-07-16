@@ -47,8 +47,9 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
 
   if (!data) return null;
 
-  const subtotal = data.amount;
-  const total = data.amount;
+  const discount = Number(data.discountAmount || 0);
+  const subtotal = data.originalAmount != null ? Number(data.originalAmount) : Number(data.amount) + discount;
+  const total = Number(data.amount);
 
   const download = async () => {
     if (!ref.current) return;
