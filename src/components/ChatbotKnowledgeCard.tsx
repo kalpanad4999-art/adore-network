@@ -619,6 +619,22 @@ export const ChatbotKnowledgeCard = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="font-display">Chatbot QR Code</DialogTitle>
+              <DialogDescription>Scan to open the public chatbot. Always shows the current link.</DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center bg-white p-4 rounded-lg">
+              <QRCodeSVG value={publicChatUrl} size={240} />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button className="flex-1" variant="outline" onClick={downloadQR}><Download className="h-4 w-4 mr-2" />Download</Button>
+              <Button className="flex-1" variant="outline" onClick={shareQR}><Share2 className="h-4 w-4 mr-2" />Share</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
