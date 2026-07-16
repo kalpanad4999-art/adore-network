@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Printer } from "lucide-react";
+import { Download, Printer, Share2, MessageCircle, Image as ImageIcon } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
+import { waLink } from "@/lib/offers";
 
 export interface ReceiptData {
   receiptNumber: string;
@@ -14,7 +15,12 @@ export interface ReceiptData {
   batchName: string;
   planDescription: string; // membership/plan/duration description
   paymentMethod: string;
-  amount: number;
+  amount: number;          // final (payable after discount)
+  originalAmount?: number; // subtotal before discount
+  discountAmount?: number;
+  offerName?: string;
+  offerCongrats?: string;  // e.g. "🎉 Congratulations! You received a Birthday Offer"
+  couponCode?: string;
   durationValue: number;
   durationUnit: string;
   renewalDate: string;     // ISO
