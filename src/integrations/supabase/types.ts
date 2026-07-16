@@ -966,6 +966,7 @@ export type Database = {
           start_date: string
         }[]
       }
+      get_email_by_phone: { Args: { _phone: string }; Returns: string }
       get_owner_id: { Args: { _user_id: string }; Returns: string }
       get_public_gallery: {
         Args: { _owner: string }
