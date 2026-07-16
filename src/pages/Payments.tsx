@@ -91,6 +91,11 @@ const Payments = () => {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [studioAddress, setStudioAddress] = useState<string>("");
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [selectedOfferId, setSelectedOfferId] = useState<string>("");
+  const [couponInput, setCouponInput] = useState<string>("");
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [form, setForm] = useState({
     student_id: "",
     amount: "",
