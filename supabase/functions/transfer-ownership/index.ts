@@ -195,13 +195,18 @@ Deno.serve(async (req) => {
       const NEW = targetId;
 
       // Reassign business data
-      for (const table of OWNED_TABLES) {
-        const { error } = await admin.from(table).update({ user_id: NEW }).eq("user_id", OLD);
+      for (const [table, col] of OWNED_TABLES) {
+        const { error } = await admin.from(table).update({ [col]: NEW }).eq(col, OLD);
         if (error) {
-          console.error(`reassign ${table} failed`, error);
+          console.error(`reassign ${table}.${col} failed`, error);
           return json({ error: `Failed reassigning ${table}: ${error.message}` }, 500);
         }
       }
+
+      // Move staff_permissions from OLD to NEW (staff records under old owner)
+      await admin.from("staff_permissions").update({ owner_id: NEW }).eq("owner_id", OLD);
+      // Old owner had no staff_permissions row (was owner); create defaults so NEW owner controls it
+      await admin.from("staff_permissions").delete().eq("staff_user_id", OLD);
 
       // Transfer studio_settings & studio_security
       await admin.from("studio_settings").delete().eq("owner_id", NEW);
@@ -219,6 +224,12 @@ Deno.serve(async (req) => {
       // Ensure NEW is owner of self
       await admin.from("user_roles").delete().eq("user_id", NEW);
       await admin.from("user_roles").insert({ user_id: NEW, owner_id: NEW, role: "owner" });
+
+      // Force sessions to re-hydrate so permissions apply on next request.
+      // Revoking sessions signs both users out; they'll sign back in with the new role.
+      try { await admin.auth.admin.signOut(OLD); } catch (e) { console.warn("signOut OLD failed", e); }
+      try { await admin.auth.admin.signOut(NEW); } catch (e) { console.warn("signOut NEW failed", e); }
+
 
       // Audit
       const device = req.headers.get("user-agent")?.slice(0, 180) || "unknown";
