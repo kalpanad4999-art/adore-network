@@ -18,6 +18,16 @@ const OWNED_TABLES = [
   "gallery_items",
   "recordings",
   "live_classes",
+  "attendance",
+  "biometric_devices",
+  "offers",
+  "coupons",
+  "offer_redemptions",
+  "chatbot_knowledge",
+  "chatbot_pending_questions",
+  "chatbot_chat_history",
+  "settings",
+  "payment_audit_logs",
 ];
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
