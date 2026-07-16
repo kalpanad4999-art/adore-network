@@ -75,6 +75,65 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
     }
   };
 
+  const downloadImage = async () => {
+    if (!ref.current) return;
+    setWorking(true);
+    try {
+      const canvas = await html2canvas(ref.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Receipt-${data.receiptNumber}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Image saved");
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to generate image");
+    } finally { setWorking(false); }
+  };
+
+  const shareReceipt = async () => {
+    if (!ref.current) return;
+    setWorking(true);
+    try {
+      const canvas = await html2canvas(ref.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, "image/png"));
+      if (!blob) throw new Error("Failed");
+      const file = new File([blob], `Receipt-${data.receiptNumber}.png`, { type: "image/png" });
+      const shareText = `${data.offerCongrats ? data.offerCongrats + "\n" : ""}Receipt ${data.receiptNumber} — ${data.studioName}`;
+      if ((navigator as any).canShare && (navigator as any).canShare({ files: [file] })) {
+        await (navigator as any).share({ files: [file], title: "Payment Receipt", text: shareText });
+      } else {
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank");
+        toast.success("Receipt opened — save and share it");
+      }
+    } catch (e: any) {
+      if (e?.name !== "AbortError") toast.error(e?.message || "Share failed");
+    } finally { setWorking(false); }
+  };
+
+  const sendWhatsApp = () => {
+    const lines = [
+      data.offerCongrats || "",
+      `Hi ${data.customerName}, here's your payment receipt from ${data.studioName}.`,
+      `Receipt No: ${data.receiptNumber}`,
+      `Plan: ${data.planDescription}`,
+      data.discountAmount ? `Offer: ${data.offerName || "Special Offer"}` : "",
+      data.couponCode ? `Coupon: ${data.couponCode}` : "",
+      data.discountAmount ? `Discount: ₹${discount.toLocaleString("en-IN")} (You saved ₹${discount.toLocaleString("en-IN")})` : "",
+      `Amount Paid: ₹${total.toLocaleString("en-IN")}`,
+      data.renewalDate ? `Valid until: ${fmtDate(data.renewalDate)}` : "",
+      "",
+      "Thank you! 🙏",
+    ].filter(Boolean).join("\n");
+    window.open(waLink(data.customerContact, lines), "_blank");
+  };
+
+
   const printReceipt = () => {
     if (!ref.current) return;
     const html = ref.current.outerHTML;
