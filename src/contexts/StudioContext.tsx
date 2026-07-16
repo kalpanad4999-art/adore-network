@@ -146,6 +146,24 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [backgroundUrl]);
 
+  // Keep the browser tab title & favicon in sync with the studio branding
+  // so it matches across dashboard, sidebar, header, and browser tab.
+  useEffect(() => {
+    if (studioName) document.title = `${studioName} — Studio Management`;
+    if (!logoUrl) return;
+    const head = document.head;
+    head.querySelectorAll("link[rel~='icon'], link[rel='apple-touch-icon']").forEach((el) => el.remove());
+    const icon = document.createElement("link");
+    icon.rel = "icon";
+    icon.href = logoUrl;
+    head.appendChild(icon);
+    const apple = document.createElement("link");
+    apple.rel = "apple-touch-icon";
+    apple.href = logoUrl;
+    head.appendChild(apple);
+  }, [studioName, logoUrl]);
+
+
   const upsertSettings = async (patch: Record<string, any>) => {
     if (!ownerId) return;
     await supabase.from("studio_settings").upsert({

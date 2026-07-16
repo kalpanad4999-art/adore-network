@@ -1135,6 +1135,15 @@ export type Database = {
           start_date: string
         }[]
       }
+      get_default_studio_meta: {
+        Args: never
+        Returns: {
+          background_url: string
+          logo_url: string
+          owner_id: string
+          studio_name: string
+        }[]
+      }
       get_email_by_phone: { Args: { _phone: string }; Returns: string }
       get_owner_id: { Args: { _user_id: string }; Returns: string }
       get_public_gallery: {
@@ -1173,6 +1182,15 @@ export type Database = {
           recorded_on: string
           storage_path: string
           title: string
+        }[]
+      }
+      get_public_studio_meta: {
+        Args: { _owner: string }
+        Returns: {
+          background_url: string
+          logo_url: string
+          owner_id: string
+          studio_name: string
         }[]
       }
       get_recording_by_slug: {

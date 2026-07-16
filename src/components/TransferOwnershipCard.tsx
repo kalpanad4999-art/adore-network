@@ -136,8 +136,10 @@ export const TransferOwnershipCard = () => {
       });
       setConfirmOpen(false);
       setStep("done");
-      toast.success("Ownership transferred successfully");
-      await refresh();
+      toast.success("Ownership transferred. Signing you out…");
+      // Backend revoked our session; force local sign-out so the new owner
+      // can sign back in with the correct permissions immediately.
+      setTimeout(async () => { try { await signOut(); } catch { /* ignore */ } }, 1500);
     } catch (err: any) {
       toast.error(err.message);
       setConfirmOpen(false);
