@@ -47,25 +47,25 @@ const RecCard = ({ r }: { r: R }) => {
 
 const PublicStudio = () => {
   const { ownerId } = useParams<{ ownerId: string }>();
-  const [studioName, setStudioName] = useState("Studio");
+  const meta = useStudioMeta(ownerId);
   const [g, setG] = useState<G[]>([]);
   const [r, setR] = useState<R[]>([]);
   const [l, setL] = useState<L[]>([]);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => { applyStudioBranding(meta.studioName, meta.logoUrl); }, [meta.studioName, meta.logoUrl]);
+
   useEffect(() => {
     if (!ownerId) return;
     (async () => {
-      const [gr, rr, lr, sr] = await Promise.all([
+      const [gr, rr, lr] = await Promise.all([
         supabase.rpc("get_public_gallery", { _owner: ownerId }),
         supabase.rpc("get_public_recordings", { _owner: ownerId }),
         supabase.rpc("get_public_live_classes", { _owner: ownerId }),
-        supabase.from("studio_settings").select("studio_name").eq("owner_id", ownerId).maybeSingle(),
       ]);
       setG((gr.data as G[]) || []);
       setR((rr.data as R[]) || []);
       setL((lr.data as L[]) || []);
-      if (sr.data?.studio_name) setStudioName(sr.data.studio_name);
       setLoading(false);
     })();
   }, [ownerId]);
@@ -75,9 +75,13 @@ const PublicStudio = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b py-6 px-4 text-center">
-        <h1 className="font-display text-4xl">{studioName}</h1>
+        {meta.logoUrl && (
+          <img src={meta.logoUrl} alt={meta.studioName} className="mx-auto mb-3 h-16 w-16 rounded-2xl object-cover shadow-sm" />
+        )}
+        <h1 className="font-display text-4xl">{meta.studioName}</h1>
         <p className="text-muted-foreground mt-1">Gallery · Recordings · Live Classes</p>
       </header>
+
       <main className="max-w-5xl mx-auto p-4 md:p-8">
         <Tabs defaultValue="gallery">
           <TabsList className="grid w-full grid-cols-3 max-w-md mx-auto">
