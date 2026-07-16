@@ -21,7 +21,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Bot, Plus, Search, Pencil, Trash2, Download, Upload, MessageSquare, HelpCircle, Send, Loader2 } from "lucide-react";
+import { Bot, Plus, Search, Pencil, Trash2, Download, Upload, MessageSquare, HelpCircle, Send, Loader2, Copy, ExternalLink, QrCode, Share2 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
 const CATEGORIES = [
