@@ -8,26 +8,27 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const OWNED_TABLES = [
-  "students",
-  "batches",
-  "student_payments",
-  "expenses",
-  "instructors",
-  "locations",
-  "gallery_items",
-  "recordings",
-  "live_classes",
-  "attendance",
-  "biometric_devices",
-  "offers",
-  "coupons",
-  "offer_redemptions",
-  "chatbot_knowledge",
-  "chatbot_pending_questions",
-  "chatbot_chat_history",
-  "settings",
-  "payment_audit_logs",
+// Tables whose rows belong to a studio owner. Second field is the FK column
+// used on that table — most legacy tables use `user_id`, newer ones use `owner_id`.
+const OWNED_TABLES: Array<[string, "user_id" | "owner_id"]> = [
+  ["students", "user_id"],
+  ["batches", "user_id"],
+  ["student_payments", "user_id"],
+  ["expenses", "user_id"],
+  ["instructors", "user_id"],
+  ["locations", "user_id"],
+  ["gallery_items", "user_id"],
+  ["recordings", "user_id"],
+  ["live_classes", "user_id"],
+  ["attendance", "user_id"],
+  ["biometric_devices", "user_id"],
+  ["offers", "user_id"],
+  ["coupons", "user_id"],
+  ["offer_redemptions", "user_id"],
+  ["chatbot_knowledge", "owner_id"],
+  ["chatbot_pending_questions", "owner_id"],
+  ["chatbot_chat_history", "owner_id"],
+  ["payment_audit_logs", "owner_id"],
 ];
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
