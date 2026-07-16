@@ -19,6 +19,7 @@ import Media from "./pages/Media";
 import Gallery from "./pages/Gallery";
 import Attendance from "./pages/Attendance";
 import BiometricSettings from "./pages/BiometricSettings";
+import Offers from "./pages/Offers";
 import PublicStudio from "./pages/PublicStudio";
 import PublicRecording from "./pages/PublicRecording";
 import PublicGallery from "./pages/PublicGallery";
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/media" element={<ProtectedRoute><PermissionGuard module="classes"><Media /></PermissionGuard></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute><PermissionGuard module="payments"><PaymentsGuard><Payments /></PaymentsGuard></PermissionGuard></ProtectedRoute>} />
             <Route path="/renewals" element={<ProtectedRoute><PermissionGuard module="renewals"><Renewals /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/offers" element={<ProtectedRoute><PermissionGuard module="payments"><Offers /></PermissionGuard></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/students" element={<Navigate to="/" replace />} />
             <Route path="/classes" element={<Navigate to="/media" replace />} />

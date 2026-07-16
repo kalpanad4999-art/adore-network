@@ -13,7 +13,9 @@ import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight } from "lucide-rea
 import { toast } from "sonner";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import PaymentReceiptDialog, { ReceiptData } from "@/components/PaymentReceiptDialog";
-import { FileText } from "lucide-react";
+import { FileText, Tag } from "lucide-react";
+import { Offer, Coupon, OFFER_LABELS, CONGRATS, computeDiscount, isOfferEligible } from "@/lib/offers";
+import { Badge } from "@/components/ui/badge";
 
 interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
 interface Batch { id: string; name: string; }
@@ -27,6 +29,11 @@ interface Payment {
   duration_value: number | null;
   duration_unit: string | null;
   valid_until: string | null;
+  applied_offer_id?: string | null;
+  applied_offer_name?: string | null;
+  applied_offer_type?: string | null;
+  applied_coupon_code?: string | null;
+  discount_amount?: number | null;
 }
 
 const paymentMethods = ["cash", "upi", "card", "bank-transfer", "other"];
@@ -89,6 +96,11 @@ const Payments = () => {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [studioAddress, setStudioAddress] = useState<string>("");
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [selectedOfferId, setSelectedOfferId] = useState<string>("");
+  const [couponInput, setCouponInput] = useState<string>("");
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [form, setForm] = useState({
     student_id: "",
     amount: "",
@@ -111,16 +123,67 @@ const Payments = () => {
 
   const fetchAll = async () => {
     if (!user) return;
-    const [{ data: cust }, { data: pays }, { data: bat }] = await Promise.all([
+    const [{ data: cust }, { data: pays }, { data: bat }, { data: offs }, { data: cps }] = await Promise.all([
       supabase.from("students").select("id,name,phone,batch_id").eq("user_id", user.id).order("name"),
       supabase.from("student_payments").select("*").eq("user_id", user.id).order("paid_on", { ascending: false }),
       supabase.from("batches").select("id,name").eq("user_id", user.id),
+      (supabase as any).from("offers").select("*").eq("user_id", user.id).eq("is_active", true),
+      (supabase as any).from("coupons").select("*").eq("user_id", user.id).eq("is_active", true),
     ]);
     setCustomers((cust as Customer[]) || []);
     setPayments(((pays as any[]) || []) as Payment[]);
     setBatches((bat as Batch[]) || []);
+    setOffers(((offs as any[]) || []).map((o) => ({ ...o, conditions: o.conditions || {} })) as Offer[]);
+    setCoupons(((cps as any[]) || []) as Coupon[]);
   };
   useEffect(() => { fetchAll(); }, [user]);
+
+  // Eligible offers for the current form context
+  const eligibleOffers = useMemo(() => {
+    const amt = parseFloat(form.amount) || 0;
+    const cust = customers.find((c) => c.id === form.student_id);
+    const ctx = cust ? { id: cust.id, batch_id: cust.batch_id } : null;
+    return offers.filter((o) => isOfferEligible(o, ctx as any, amt, form.paid_on));
+  }, [offers, form.student_id, form.amount, form.paid_on, customers]);
+
+  const selectedOffer = useMemo(() => {
+    if (appliedCoupon) return offers.find((o) => o.id === appliedCoupon.offer_id) || null;
+    return offers.find((o) => o.id === selectedOfferId) || null;
+  }, [selectedOfferId, appliedCoupon, offers]);
+
+  const discountAmount = useMemo(() => {
+    const amt = parseFloat(form.amount) || 0;
+    if (!selectedOffer || !amt) return 0;
+    return computeDiscount(selectedOffer, amt);
+  }, [selectedOffer, form.amount]);
+
+  const finalAmount = useMemo(() => {
+    const amt = parseFloat(form.amount) || 0;
+    return Math.max(0, amt - discountAmount);
+  }, [form.amount, discountAmount]);
+
+  const applyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    const c = coupons.find((x) => x.code.toUpperCase() === code);
+    if (!c) { toast.error("Invalid coupon code"); return; }
+    if (c.usage_limit != null && c.usage_count >= c.usage_limit) { toast.error("Coupon has reached its usage limit"); return; }
+    const offer = offers.find((o) => o.id === c.offer_id);
+    if (!offer) { toast.error("Coupon's offer is not available"); return; }
+    const amt = parseFloat(form.amount) || 0;
+    const cust = customers.find((cc) => cc.id === form.student_id);
+    const ctx = cust ? { id: cust.id, batch_id: cust.batch_id } : null;
+    if (!isOfferEligible(offer, ctx as any, amt, form.paid_on)) { toast.error("Coupon is not eligible for this payment"); return; }
+    setAppliedCoupon(c);
+    setSelectedOfferId(offer.id);
+    toast.success(`Coupon applied — ₹${computeDiscount(offer, amt)} off`);
+  };
+
+  const clearOffer = () => {
+    setAppliedCoupon(null);
+    setSelectedOfferId("");
+    setCouponInput("");
+  };
 
   const batchMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -149,11 +212,13 @@ const Payments = () => {
   const addPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    const amount = parseFloat(form.amount);
+    const originalAmount = parseFloat(form.amount);
     if (!form.student_id) { toast.error("Pick a customer"); return; }
-    if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    if (!originalAmount || originalAmount <= 0) { toast.error("Enter a valid amount"); return; }
     if (!effectiveValue) { toast.error("Enter a valid duration"); return; }
     if (!renewalDate) { toast.error("Could not calculate renewal date"); return; }
+
+    const payable = Math.max(0, originalAmount - discountAmount);
 
     const months_equiv =
       form.durationUnit === "months" ? effectiveValue :
@@ -163,7 +228,7 @@ const Payments = () => {
     const { data: inserted, error } = await supabase.from("student_payments").insert({
       student_id: form.student_id,
       user_id: user.id,
-      amount,
+      amount: payable,
       paid_on: form.paid_on,
       method: form.method,
       duration_value: effectiveValue,
@@ -171,9 +236,31 @@ const Payments = () => {
       duration_months: months_equiv,
       valid_until: renewalDate,
       reminder_sent_at: null,
+      applied_offer_id: selectedOffer?.id ?? null,
+      applied_offer_name: selectedOffer?.name ?? null,
+      applied_offer_type: selectedOffer?.offer_type ?? null,
+      applied_coupon_code: appliedCoupon?.code ?? null,
+      discount_amount: discountAmount,
     } as any).select("id").single();
     if (error) { toast.error(error.message); return; }
-    await logAudit(ownerId, "payment.created", { amount, duration_value: effectiveValue, duration_unit: form.durationUnit, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
+    await logAudit(ownerId, "payment.created", { amount: payable, discount: discountAmount, offer: selectedOffer?.name, coupon: appliedCoupon?.code, duration_value: effectiveValue, duration_unit: form.durationUnit, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
+
+    // Redemption audit + increment usage counters
+    if (selectedOffer && inserted?.id) {
+      await (supabase as any).from("offer_redemptions").insert({
+        user_id: user.id,
+        offer_id: selectedOffer.id,
+        coupon_id: appliedCoupon?.id ?? null,
+        student_id: form.student_id,
+        payment_id: inserted.id,
+        discount_amount: discountAmount,
+      });
+      await (supabase as any).from("offers").update({ usage_count: (selectedOffer.usage_count || 0) + 1 }).eq("id", selectedOffer.id);
+      if (appliedCoupon) {
+        await (supabase as any).from("coupons").update({ usage_count: (appliedCoupon.usage_count || 0) + 1 }).eq("id", appliedCoupon.id);
+      }
+    }
+
     toast.success("Payment recorded · renewal scheduled");
 
     // Prepare receipt for the just-recorded payment
@@ -188,7 +275,12 @@ const Payments = () => {
       batchName,
       planDescription: `${batchName} Membership · ${effectiveValue} ${form.durationUnit}`,
       paymentMethod: form.method,
-      amount,
+      amount: payable,
+      originalAmount,
+      discountAmount: discountAmount || undefined,
+      offerName: selectedOffer?.name,
+      offerCongrats: selectedOffer ? CONGRATS[selectedOffer.offer_type] : undefined,
+      couponCode: appliedCoupon?.code,
       durationValue: effectiveValue,
       durationUnit: form.durationUnit,
       renewalDate,
@@ -198,6 +290,7 @@ const Payments = () => {
     setReceiptOpen(true);
 
     setForm({ ...form, amount: "", durationValue: "1" });
+    clearOffer();
     setAddOpen(false);
     fetchAll();
   };
@@ -303,6 +396,69 @@ const Payments = () => {
                 <Label>Renewal Date <span className="text-muted-foreground text-xs">(auto)</span></Label>
                 <Input type="date" value={renewalDate} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
               </div>
+
+
+
+              {/* Offers & Coupon */}
+              <div className="rounded-lg border p-3 space-y-3 bg-muted/20">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Tag className="h-4 w-4 text-primary" /> Offers &amp; Coupon
+                </div>
+
+                {eligibleOffers.length > 0 && !appliedCoupon && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Eligible offers</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {eligibleOffers.map((o) => (
+                        <button
+                          type="button"
+                          key={o.id}
+                          onClick={() => setSelectedOfferId(selectedOfferId === o.id ? "" : o.id)}
+                          className={`text-xs px-2 py-1 rounded-full border transition ${selectedOfferId === o.id ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+                        >
+                          {OFFER_LABELS[o.offer_type]} · {o.name} · ₹{o.discount_amount}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Coupon code</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Enter coupon"
+                      disabled={!!appliedCoupon}
+                    />
+                    {appliedCoupon ? (
+                      <Button type="button" variant="outline" onClick={clearOffer}>Remove</Button>
+                    ) : (
+                      <Button type="button" variant="outline" onClick={applyCoupon}>Apply</Button>
+                    )}
+                  </div>
+                </div>
+
+                {selectedOffer && (
+                  <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300/50 p-2 text-xs">
+                    <div className="font-semibold text-emerald-700 dark:text-emerald-300">{CONGRATS[selectedOffer.offer_type]}</div>
+                    <div className="text-emerald-800 dark:text-emerald-200 mt-1">
+                      {selectedOffer.name}
+                      {appliedCoupon && <> · <code>{appliedCoupon.code}</code></>}
+                      <Badge variant="secondary" className="ml-2">−₹{discountAmount}</Badge>
+                    </div>
+                  </div>
+                )}
+
+                {form.amount && (
+                  <div className="flex items-center justify-between text-sm border-t pt-2">
+                    <span className="text-muted-foreground">Payable</span>
+                    <span className="font-semibold">₹{finalAmount.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+
               <Button type="submit" className="w-full">Save Payment</Button>
             </form>
           </DialogContent>
@@ -428,6 +584,11 @@ const Payments = () => {
                                       planDescription: `${batchName} Membership · ${val} ${unit}`,
                                       paymentMethod: p.method,
                                       amount: Number(p.amount),
+                                      originalAmount: Number(p.amount) + Number(p.discount_amount || 0),
+                                      discountAmount: p.discount_amount ? Number(p.discount_amount) : undefined,
+                                      offerName: p.applied_offer_name || undefined,
+                                      offerCongrats: p.applied_offer_type ? CONGRATS[p.applied_offer_type as keyof typeof CONGRATS] : undefined,
+                                      couponCode: p.applied_coupon_code || undefined,
                                       durationValue: val,
                                       durationUnit: unit,
                                       renewalDate: p.valid_until || "",

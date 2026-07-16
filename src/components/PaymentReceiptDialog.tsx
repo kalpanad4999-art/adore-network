@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Printer } from "lucide-react";
+import { Download, Printer, Share2, MessageCircle, Image as ImageIcon } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
+import { waLink } from "@/lib/offers";
 
 export interface ReceiptData {
   receiptNumber: string;
@@ -14,7 +15,12 @@ export interface ReceiptData {
   batchName: string;
   planDescription: string; // membership/plan/duration description
   paymentMethod: string;
-  amount: number;
+  amount: number;          // final (payable after discount)
+  originalAmount?: number; // subtotal before discount
+  discountAmount?: number;
+  offerName?: string;
+  offerCongrats?: string;  // e.g. "🎉 Congratulations! You received a Birthday Offer"
+  couponCode?: string;
   durationValue: number;
   durationUnit: string;
   renewalDate: string;     // ISO
@@ -41,8 +47,9 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
 
   if (!data) return null;
 
-  const subtotal = data.amount;
-  const total = data.amount;
+  const discount = Number(data.discountAmount || 0);
+  const subtotal = data.originalAmount != null ? Number(data.originalAmount) : Number(data.amount) + discount;
+  const total = Number(data.amount);
 
   const download = async () => {
     if (!ref.current) return;
@@ -67,6 +74,65 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
       setWorking(false);
     }
   };
+
+  const downloadImage = async () => {
+    if (!ref.current) return;
+    setWorking(true);
+    try {
+      const canvas = await html2canvas(ref.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Receipt-${data.receiptNumber}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Image saved");
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to generate image");
+    } finally { setWorking(false); }
+  };
+
+  const shareReceipt = async () => {
+    if (!ref.current) return;
+    setWorking(true);
+    try {
+      const canvas = await html2canvas(ref.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, "image/png"));
+      if (!blob) throw new Error("Failed");
+      const file = new File([blob], `Receipt-${data.receiptNumber}.png`, { type: "image/png" });
+      const shareText = `${data.offerCongrats ? data.offerCongrats + "\n" : ""}Receipt ${data.receiptNumber} — ${data.studioName}`;
+      if ((navigator as any).canShare && (navigator as any).canShare({ files: [file] })) {
+        await (navigator as any).share({ files: [file], title: "Payment Receipt", text: shareText });
+      } else {
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank");
+        toast.success("Receipt opened — save and share it");
+      }
+    } catch (e: any) {
+      if (e?.name !== "AbortError") toast.error(e?.message || "Share failed");
+    } finally { setWorking(false); }
+  };
+
+  const sendWhatsApp = () => {
+    const lines = [
+      data.offerCongrats || "",
+      `Hi ${data.customerName}, here's your payment receipt from ${data.studioName}.`,
+      `Receipt No: ${data.receiptNumber}`,
+      `Plan: ${data.planDescription}`,
+      data.discountAmount ? `Offer: ${data.offerName || "Special Offer"}` : "",
+      data.couponCode ? `Coupon: ${data.couponCode}` : "",
+      data.discountAmount ? `Discount: ₹${discount.toLocaleString("en-IN")} (You saved ₹${discount.toLocaleString("en-IN")})` : "",
+      `Amount Paid: ₹${total.toLocaleString("en-IN")}`,
+      data.renewalDate ? `Valid until: ${fmtDate(data.renewalDate)}` : "",
+      "",
+      "Thank you! 🙏",
+    ].filter(Boolean).join("\n");
+    window.open(waLink(data.customerContact, lines), "_blank");
+  };
+
 
   const printReceipt = () => {
     if (!ref.current) return;
@@ -164,15 +230,40 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
               </table>
             </div>
 
+            {/* Offer banner */}
+            {data.discountAmount ? (
+              <div style={{ marginTop: 18, padding: "12px 16px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: 6 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#047857" }}>
+                  {data.offerCongrats || "🎉 Offer Applied"}
+                </div>
+                <div style={{ fontSize: 12, color: "#065f46", marginTop: 4 }}>
+                  {data.offerName ? `${data.offerName} · ` : ""}
+                  {data.couponCode ? `Coupon ${data.couponCode} · ` : ""}
+                  You saved ₹{discount.toLocaleString("en-IN")}
+                </div>
+              </div>
+            ) : null}
+
             {/* Totals */}
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
               <div style={{ width: 260 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13, color: "#374151" }}>
                   <span>Subtotal</span><span>₹{subtotal.toLocaleString("en-IN")}</span>
                 </div>
+                {data.discountAmount ? (
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13, color: "#047857" }}>
+                    <span>Discount{data.couponCode ? ` (${data.couponCode})` : ""}</span>
+                    <span>−₹{discount.toLocaleString("en-IN")}</span>
+                  </div>
+                ) : null}
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", fontSize: 15, fontWeight: 700, color: "#0f172a", borderTop: "2px solid #0f172a", marginTop: 6 }}>
                   <span>Grand Total</span><span>₹{total.toLocaleString("en-IN")}</span>
                 </div>
+                {data.discountAmount ? (
+                  <div style={{ fontSize: 11, color: "#047857", textAlign: "right", marginTop: 2 }}>
+                    Amount Saved: ₹{discount.toLocaleString("en-IN")}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -193,14 +284,24 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
             </div>
           </div>
 
-          <div className="flex gap-2 mt-4 justify-end">
+          <div className="flex gap-2 mt-4 justify-end flex-wrap">
             <Button variant="outline" onClick={printReceipt} disabled={working}>
-              <Printer className="h-4 w-4 mr-2" />Print Receipt
+              <Printer className="h-4 w-4 mr-2" />Print
             </Button>
-            <Button onClick={download} disabled={working}>
-              <Download className="h-4 w-4 mr-2" />{working ? "Preparing..." : "Download PDF"}
+            <Button variant="outline" onClick={download} disabled={working}>
+              <Download className="h-4 w-4 mr-2" />{working ? "…" : "PDF"}
+            </Button>
+            <Button variant="outline" onClick={downloadImage} disabled={working}>
+              <ImageIcon className="h-4 w-4 mr-2" />Image
+            </Button>
+            <Button variant="outline" onClick={shareReceipt} disabled={working}>
+              <Share2 className="h-4 w-4 mr-2" />Share
+            </Button>
+            <Button onClick={sendWhatsApp} disabled={working} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <MessageCircle className="h-4 w-4 mr-2" />WhatsApp
             </Button>
           </div>
+
         </div>
       </DialogContent>
     </Dialog>
