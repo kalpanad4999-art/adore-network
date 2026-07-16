@@ -68,6 +68,7 @@ const App = () => (
             <Route path="/renewals" element={<ProtectedRoute><PermissionGuard module="renewals"><Renewals /></PermissionGuard></ProtectedRoute>} />
             <Route path="/offers" element={<ProtectedRoute><PermissionGuard module="payments"><Offers /></PermissionGuard></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/:section" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/students" element={<Navigate to="/" replace />} />
             <Route path="/classes" element={<Navigate to="/media" replace />} />
             <Route path="*" element={<NotFound />} />
