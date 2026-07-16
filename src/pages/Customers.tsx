@@ -503,7 +503,7 @@ const Customers = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Member</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete this customer? This action cannot be undone.
+              Are you sure you want to delete this record? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
