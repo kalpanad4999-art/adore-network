@@ -67,10 +67,20 @@ const Attendance = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [queueCount, setQueueCount] = useState(readQueue().length);
+  const [deleteTarget, setDeleteTarget] = useState<AttendanceRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteSettingsOpen, setDeleteSettingsOpen] = useState(false);
+  const [autoDeleteDays, setAutoDeleteDays] = useState<AutoDeleteDays>(readAutoDeleteDays());
 
   const loadData = async () => {
     if (!ownerId) return;
     setLoading(true);
+    // Auto-delete sweep — removes only attendance records older than the configured window.
+    const days = readAutoDeleteDays();
+    if (days > 0) {
+      const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+      await supabase.from("attendance" as any).delete().eq("user_id", ownerId).lt("attendance_date", cutoff);
+    }
     const [b, s, a] = await Promise.all([
       supabase.from("batches").select("id,name").eq("user_id", ownerId).order("name"),
       supabase.from("students").select("id,name,batch_id,email,phone").eq("user_id", ownerId).order("name"),
