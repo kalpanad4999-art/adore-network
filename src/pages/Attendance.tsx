@@ -227,6 +227,23 @@ const Attendance = () => {
     URL.revokeObjectURL(url);
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget || !ownerId) return;
+    setDeleting(true);
+    const { error } = await supabase.from("attendance" as any).delete().eq("id", deleteTarget.id).eq("user_id", ownerId);
+    setDeleting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Attendance record deleted");
+    setDeleteTarget(null);
+    loadData();
+  };
+
+  const saveAutoDelete = (v: AutoDeleteDays) => {
+    setAutoDeleteDays(v);
+    localStorage.setItem(AUTO_DELETE_KEY, String(v));
+    toast.success(v === 0 ? "Auto delete disabled" : `Auto delete set to ${AUTO_DELETE_OPTIONS.find((o) => o.value === v)?.label}`);
+  };
+
   const selectedStudentObj = students.find((s) => s.id === selectedStudent);
 
   return (
@@ -236,8 +253,16 @@ const Attendance = () => {
           <h1 className="font-display text-3xl">Attendance</h1>
           <p className="text-sm text-muted-foreground">Mark and track attendance batch-wise. Fingerprint-ready.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {queueCount > 0 && <Badge variant="secondary">{queueCount} queued (offline)</Badge>}
+          {isOwner && autoDeleteDays > 0 && (
+            <Badge variant="outline">Auto delete: {AUTO_DELETE_OPTIONS.find((o) => o.value === autoDeleteDays)?.label}</Badge>
+          )}
+          {isOwner && (
+            <Button variant="outline" size="sm" onClick={() => setDeleteSettingsOpen(true)}>
+              <Settings2 className="h-4 w-4 mr-2" /> Delete Settings
+            </Button>
+          )}
           {isOwner && (
             <Button asChild variant="outline" size="sm">
               <Link to="/settings/biometric"><Cog className="h-4 w-4 mr-2" /> Biometric Device</Link>
@@ -245,6 +270,7 @@ const Attendance = () => {
           )}
         </div>
       </div>
+
 
       <Tabs defaultValue="mark" className="w-full">
         <TabsList>
