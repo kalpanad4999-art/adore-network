@@ -9,11 +9,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Fingerprint, CheckCircle2, XCircle, Search, Download, Printer, Cog, Loader2 } from "lucide-react";
+import { Fingerprint, CheckCircle2, XCircle, Search, Download, Printer, Cog, Loader2, Trash2, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { verifyBiometric } from "@/lib/biometric";
+
+const AUTO_DELETE_KEY = "attendance_auto_delete_days_v1";
+type AutoDeleteDays = 0 | 30 | 60 | 90 | 180 | 365;
+const AUTO_DELETE_OPTIONS: { value: AutoDeleteDays; label: string }[] = [
+  { value: 0, label: "Never" },
+  { value: 30, label: "30 days" },
+  { value: 60, label: "60 days" },
+  { value: 90, label: "90 days" },
+  { value: 180, label: "180 days" },
+  { value: 365, label: "1 year" },
+];
+const readAutoDeleteDays = (): AutoDeleteDays => {
+  const n = Number(localStorage.getItem(AUTO_DELETE_KEY) || 0);
+  return (AUTO_DELETE_OPTIONS.find((o) => o.value === n)?.value ?? 0) as AutoDeleteDays;
+};
 
 type Batch = { id: string; name: string };
 type Student = { id: string; name: string; batch_id: string | null; email: string | null; phone: string | null };
