@@ -428,6 +428,7 @@ const Attendance = () => {
                     <th className="py-2 pr-3">Status</th>
                     <th className="py-2 pr-3">Method</th>
                     <th className="py-2 pr-3">Marked at</th>
+                    {isOwner && <th className="py-2 pr-3 text-right">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -444,6 +445,13 @@ const Attendance = () => {
                         </td>
                         <td className="py-2 pr-3 text-xs text-muted-foreground">{r.method}</td>
                         <td className="py-2 pr-3 text-xs">{new Date(r.marked_at).toLocaleString()}</td>
+                        {isOwner && (
+                          <td className="py-2 pr-3 text-right">
+                            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(r)} aria-label="Delete attendance">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
