@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import StudioBrand from "./StudioBrand";
 import SupportChatWidget from "@/components/SupportChatWidget";
 import { toast } from "sonner";
+import { useWallpaper } from "@/hooks/useWallpaper";
 
 import { ModuleKey } from "@/contexts/StudioContext";
 
