@@ -31,6 +31,13 @@ const SECTIONS: Section[] = [
     render: () => <AppearanceCard />,
   },
   {
+    slug: "wallpaper",
+    title: "Wallpaper",
+    subtitle: "Choose an image from gallery or set a background color",
+    icon: Wallpaper,
+    render: () => <WallpaperCard />,
+  },
+  {
     slug: "app-lock",
     title: "App Lock",
     subtitle: "Set, change, enable or disable your PIN",
