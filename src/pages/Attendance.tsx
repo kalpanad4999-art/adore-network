@@ -515,6 +515,55 @@ const Attendance = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Manual delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete attendance record?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this attendance record? This action cannot be undone.
+              {deleteTarget && (
+                <span className="block mt-2 text-foreground">
+                  {students.find((s) => s.id === deleteTarget.student_id)?.name ?? "Member"} · {deleteTarget.attendance_date}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={deleting} onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Auto delete settings */}
+      <Dialog open={deleteSettingsOpen} onOpenChange={setDeleteSettingsOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Attendance Settings</DialogTitle>
+            <DialogDescription>
+              Auto delete removes only attendance records older than the selected period. Member details are never affected.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Auto delete period</Label>
+            <Select value={String(autoDeleteDays)} onValueChange={(v) => saveAutoDelete(Number(v) as AutoDeleteDays)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {AUTO_DELETE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setDeleteSettingsOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
