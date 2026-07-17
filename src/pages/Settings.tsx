@@ -3,11 +3,12 @@ import { useStudio } from "@/contexts/StudioContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Palette, Lock, ShieldCheck, Users, Bot, UserCog, ChevronRight, ArrowLeft,
+  Palette, Lock, ShieldCheck, Users, Bot, UserCog, ChevronRight, ArrowLeft, Wallpaper,
 } from "lucide-react";
 import AppearanceCard from "@/components/settings/AppearanceCard";
 import AppLockCard from "@/components/settings/AppLockCard";
 import SecurityCard from "@/components/settings/SecurityCard";
+import WallpaperCard from "@/components/settings/WallpaperCard";
 import { StaffPermissionsCard } from "@/components/StaffPermissionsCard";
 import { ChatbotKnowledgeCard } from "@/components/ChatbotKnowledgeCard";
 import { TransferOwnershipCard } from "@/components/TransferOwnershipCard";
