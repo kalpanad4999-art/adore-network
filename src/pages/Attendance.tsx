@@ -456,7 +456,7 @@ const Attendance = () => {
                     );
                   })}
                   {filteredRecords.length === 0 && !loading && (
-                    <tr><td colSpan={6} className="py-6 text-center text-muted-foreground">No records.</td></tr>
+                    <tr><td colSpan={isOwner ? 7 : 6} className="py-6 text-center text-muted-foreground">No records.</td></tr>
                   )}
                 </tbody>
               </table>
