@@ -9,11 +9,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Fingerprint, CheckCircle2, XCircle, Search, Download, Printer, Cog, Loader2 } from "lucide-react";
+import { Fingerprint, CheckCircle2, XCircle, Search, Download, Printer, Cog, Loader2, Trash2, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { verifyBiometric } from "@/lib/biometric";
+
+const AUTO_DELETE_KEY = "attendance_auto_delete_days_v1";
+type AutoDeleteDays = 0 | 30 | 60 | 90 | 180 | 365;
+const AUTO_DELETE_OPTIONS: { value: AutoDeleteDays; label: string }[] = [
+  { value: 0, label: "Never" },
+  { value: 30, label: "30 days" },
+  { value: 60, label: "60 days" },
+  { value: 90, label: "90 days" },
+  { value: 180, label: "180 days" },
+  { value: 365, label: "1 year" },
+];
+const readAutoDeleteDays = (): AutoDeleteDays => {
+  const n = Number(localStorage.getItem(AUTO_DELETE_KEY) || 0);
+  return (AUTO_DELETE_OPTIONS.find((o) => o.value === n)?.value ?? 0) as AutoDeleteDays;
+};
 
 type Batch = { id: string; name: string };
 type Student = { id: string; name: string; batch_id: string | null; email: string | null; phone: string | null };
@@ -51,10 +67,20 @@ const Attendance = () => {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [queueCount, setQueueCount] = useState(readQueue().length);
+  const [deleteTarget, setDeleteTarget] = useState<AttendanceRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteSettingsOpen, setDeleteSettingsOpen] = useState(false);
+  const [autoDeleteDays, setAutoDeleteDays] = useState<AutoDeleteDays>(readAutoDeleteDays());
 
   const loadData = async () => {
     if (!ownerId) return;
     setLoading(true);
+    // Auto-delete sweep — removes only attendance records older than the configured window.
+    const days = readAutoDeleteDays();
+    if (days > 0) {
+      const cutoff = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+      await supabase.from("attendance" as any).delete().eq("user_id", ownerId).lt("attendance_date", cutoff);
+    }
     const [b, s, a] = await Promise.all([
       supabase.from("batches").select("id,name").eq("user_id", ownerId).order("name"),
       supabase.from("students").select("id,name,batch_id,email,phone").eq("user_id", ownerId).order("name"),
@@ -201,6 +227,23 @@ const Attendance = () => {
     URL.revokeObjectURL(url);
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget || !ownerId) return;
+    setDeleting(true);
+    const { error } = await supabase.from("attendance" as any).delete().eq("id", deleteTarget.id).eq("user_id", ownerId);
+    setDeleting(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Attendance record deleted");
+    setDeleteTarget(null);
+    loadData();
+  };
+
+  const saveAutoDelete = (v: AutoDeleteDays) => {
+    setAutoDeleteDays(v);
+    localStorage.setItem(AUTO_DELETE_KEY, String(v));
+    toast.success(v === 0 ? "Auto delete disabled" : `Auto delete set to ${AUTO_DELETE_OPTIONS.find((o) => o.value === v)?.label}`);
+  };
+
   const selectedStudentObj = students.find((s) => s.id === selectedStudent);
 
   return (
@@ -210,8 +253,16 @@ const Attendance = () => {
           <h1 className="font-display text-3xl">Attendance</h1>
           <p className="text-sm text-muted-foreground">Mark and track attendance batch-wise. Fingerprint-ready.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {queueCount > 0 && <Badge variant="secondary">{queueCount} queued (offline)</Badge>}
+          {isOwner && autoDeleteDays > 0 && (
+            <Badge variant="outline">Auto delete: {AUTO_DELETE_OPTIONS.find((o) => o.value === autoDeleteDays)?.label}</Badge>
+          )}
+          {isOwner && (
+            <Button variant="outline" size="sm" onClick={() => setDeleteSettingsOpen(true)}>
+              <Settings2 className="h-4 w-4 mr-2" /> Delete Settings
+            </Button>
+          )}
           {isOwner && (
             <Button asChild variant="outline" size="sm">
               <Link to="/settings/biometric"><Cog className="h-4 w-4 mr-2" /> Biometric Device</Link>
@@ -219,6 +270,7 @@ const Attendance = () => {
           )}
         </div>
       </div>
+
 
       <Tabs defaultValue="mark" className="w-full">
         <TabsList>
@@ -376,6 +428,7 @@ const Attendance = () => {
                     <th className="py-2 pr-3">Status</th>
                     <th className="py-2 pr-3">Method</th>
                     <th className="py-2 pr-3">Marked at</th>
+                    {isOwner && <th className="py-2 pr-3 text-right">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -392,11 +445,18 @@ const Attendance = () => {
                         </td>
                         <td className="py-2 pr-3 text-xs text-muted-foreground">{r.method}</td>
                         <td className="py-2 pr-3 text-xs">{new Date(r.marked_at).toLocaleString()}</td>
+                        {isOwner && (
+                          <td className="py-2 pr-3 text-right">
+                            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(r)} aria-label="Delete attendance">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
                   {filteredRecords.length === 0 && !loading && (
-                    <tr><td colSpan={6} className="py-6 text-center text-muted-foreground">No records.</td></tr>
+                    <tr><td colSpan={isOwner ? 7 : 6} className="py-6 text-center text-muted-foreground">No records.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -452,6 +512,55 @@ const Attendance = () => {
             <Button onClick={async () => { if (selectedStudent) { await markPresent(selectedStudent, "manual"); setManualOpen(false); } }}>
               Mark Present
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete attendance record?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this attendance record? This action cannot be undone.
+              {deleteTarget && (
+                <span className="block mt-2 text-foreground">
+                  {students.find((s) => s.id === deleteTarget.student_id)?.name ?? "Member"} · {deleteTarget.attendance_date}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={deleting} onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Auto delete settings */}
+      <Dialog open={deleteSettingsOpen} onOpenChange={setDeleteSettingsOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Attendance Settings</DialogTitle>
+            <DialogDescription>
+              Auto delete removes only attendance records older than the selected period. Member details are never affected.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Auto delete period</Label>
+            <Select value={String(autoDeleteDays)} onValueChange={(v) => saveAutoDelete(Number(v) as AutoDeleteDays)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {AUTO_DELETE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setDeleteSettingsOpen(false)}>Done</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import StudioBrand from "./StudioBrand";
 import SupportChatWidget from "@/components/SupportChatWidget";
 import { toast } from "sonner";
+import { useWallpaper } from "@/hooks/useWallpaper";
 
 import { ModuleKey } from "@/contexts/StudioContext";
 
@@ -45,9 +46,19 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const visibleNav = navItems.filter((n) => isOwner || n.module === null || permissions[n.module]);
+  const wp = useWallpaper();
+
+  const wallpaperActive = wp.mode !== "none";
+  const rootStyle: React.CSSProperties =
+    wp.mode === "image" && wp.image
+      ? { backgroundImage: `url(${wp.image})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }
+      : wp.mode === "color" && wp.color
+      ? { background: wp.color }
+      : {};
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className={`flex min-h-screen ${wallpaperActive ? "" : "bg-background"}`} style={rootStyle}>
+
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-border bg-sidebar">
         <div className="p-6">
