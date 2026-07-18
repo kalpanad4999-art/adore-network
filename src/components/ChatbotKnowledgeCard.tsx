@@ -286,7 +286,7 @@ export const ChatbotKnowledgeCard = () => {
 
   if (!isOwner) return null;
 
-  const publicChatUrl = ownerId ? `${window.location.origin}/studio/${ownerId}` : "";
+  const publicChatUrl = ownerId ? `${window.location.origin}/chat/${ownerId}` : "";
   const qrWrapRef = useRef<HTMLDivElement>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const downloadQR = () => {
