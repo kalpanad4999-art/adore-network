@@ -61,6 +61,7 @@ const App = () => (
             <Route path="/r/:slug" element={<PublicRecording />} />
             <Route path="/gallery/:ownerId" element={<PublicGallery />} />
             <Route path="/recordings/:ownerId" element={<PublicRecordings />} />
+            <Route path="/chat/:ownerId" element={<PublicChat />} />
             <Route path="/" element={<ProtectedRoute><PermissionGuard module="customers"><Customers /></PermissionGuard></ProtectedRoute>} />
             <Route path="/gallery" element={<ProtectedRoute><PermissionGuard module="gallery"><Gallery /></PermissionGuard></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute><PermissionGuard module="attendance"><Attendance /></PermissionGuard></ProtectedRoute>} />
