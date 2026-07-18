@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import StudioBrand from "./StudioBrand";
+
 import SupportChatWidget from "@/components/SupportChatWidget";
 import { toast } from "sonner";
 import { useWallpaper } from "@/hooks/useWallpaper";
