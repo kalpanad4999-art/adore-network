@@ -8,7 +8,9 @@ type Msg = { role: "user" | "assistant"; content: string };
 interface Props {
   ownerId?: string;
   batchToken?: string;
+  autoOpen?: boolean;
 }
+
 
 const WELCOME: Msg = {
   role: "assistant",
@@ -27,8 +29,9 @@ const QUICK_ACTIONS = [
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
-const SupportChatWidget = ({ ownerId, batchToken }: Props) => {
-  const [open, setOpen] = useState(false);
+const SupportChatWidget = ({ ownerId, batchToken, autoOpen = false }: Props) => {
+  const [open, setOpen] = useState(autoOpen);
+
   const [minimized, setMinimized] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([WELCOME]);
   const [input, setInput] = useState("");
