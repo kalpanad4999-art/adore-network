@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import StudioBrand from "./StudioBrand";
+
 import SupportChatWidget from "@/components/SupportChatWidget";
 import { toast } from "sonner";
 import { useWallpaper } from "@/hooks/useWallpaper";
@@ -61,9 +61,8 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
 
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-border bg-sidebar">
-        <div className="p-6">
-          <StudioBrand />
-        </div>
+        <div className="p-6" />
+
         <nav className="flex-1 px-3 space-y-1">
           {visibleNav.map((item) => {
             const isActive = location.pathname === item.to;
@@ -98,10 +97,10 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           <aside className="fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-border animate-fade-in">
-            <div className="flex items-center justify-between p-6">
-              <StudioBrand compact />
-              <button onClick={() => setSidebarOpen(false)}><X className="h-5 w-5" /></button>
+            <div className="flex items-center justify-end p-4">
+              <button onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X className="h-5 w-5" /></button>
             </div>
+
             <nav className="px-3 space-y-1">
               {visibleNav.map((item) => {
                 const isActive = location.pathname === item.to;
