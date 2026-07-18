@@ -97,10 +97,10 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           <aside className="fixed left-0 top-0 h-full w-64 bg-sidebar border-r border-border animate-fade-in">
-            <div className="flex items-center justify-between p-6">
-              <StudioBrand compact />
-              <button onClick={() => setSidebarOpen(false)}><X className="h-5 w-5" /></button>
+            <div className="flex items-center justify-end p-4">
+              <button onClick={() => setSidebarOpen(false)} aria-label="Close menu"><X className="h-5 w-5" /></button>
             </div>
+
             <nav className="px-3 space-y-1">
               {visibleNav.map((item) => {
                 const isActive = location.pathname === item.to;
