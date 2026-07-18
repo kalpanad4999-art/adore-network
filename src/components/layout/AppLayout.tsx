@@ -61,9 +61,8 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
 
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r border-border bg-sidebar">
-        <div className="p-6">
-          <StudioBrand />
-        </div>
+        <div className="p-6" />
+
         <nav className="flex-1 px-3 space-y-1">
           {visibleNav.map((item) => {
             const isActive = location.pathname === item.to;
