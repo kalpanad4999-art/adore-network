@@ -12,7 +12,7 @@ const PublicChat = () => {
   useEffect(() => {
     if (!ownerId) return;
     (async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("studio_settings")
         .select("studio_name, logo_url")
         .eq("user_id", ownerId)
@@ -20,6 +20,7 @@ const PublicChat = () => {
       if (data?.studio_name) setStudioName(data.studio_name);
       if (data?.logo_url) setLogo(data.logo_url);
       document.title = `${data?.studio_name || "Trinetra Yoga"} · Chat`;
+
     })();
   }, [ownerId]);
 
