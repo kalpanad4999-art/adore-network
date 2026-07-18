@@ -8,7 +8,9 @@ type Msg = { role: "user" | "assistant"; content: string };
 interface Props {
   ownerId?: string;
   batchToken?: string;
+  autoOpen?: boolean;
 }
+
 
 const WELCOME: Msg = {
   role: "assistant",
