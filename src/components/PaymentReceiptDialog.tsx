@@ -65,7 +65,7 @@ interface Props {
   data: ReceiptData | null;
 }
 
-const LOGO_URL = (typeof window !== "undefined" ? window.location.origin : "") + logoAsset.url;
+
 
 const fmtDate = (iso: string) => {
   if (!iso) return "—";
