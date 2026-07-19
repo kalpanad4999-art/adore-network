@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Printer, Share2, MessageCircle, Image as ImageIcon } from "lucide-react";
@@ -7,6 +7,35 @@ import html2canvas from "html2canvas";
 import { toast } from "sonner";
 import { waLink } from "@/lib/offers";
 import logoAsset from "@/assets/trinetra-logo.jpg.asset.json";
+
+const LOGO_REMOTE_URL = (typeof window !== "undefined" ? window.location.origin : "") + logoAsset.url;
+// Cache the base64-encoded logo across dialog opens so it renders offline & after hosting.
+let LOGO_DATA_URL_CACHE: string | null = null;
+const loadLogoDataUrl = async (): Promise<string> => {
+  if (LOGO_DATA_URL_CACHE) return LOGO_DATA_URL_CACHE;
+  try {
+    const cached = typeof localStorage !== "undefined" ? localStorage.getItem("trinetra_logo_dataurl_v1") : null;
+    if (cached && cached.startsWith("data:")) { LOGO_DATA_URL_CACHE = cached; return cached; }
+  } catch {}
+  for (const src of [logoAsset.url, LOGO_REMOTE_URL]) {
+    try {
+      const res = await fetch(src, { cache: "force-cache" });
+      if (!res.ok) continue;
+      const blob = await res.blob();
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onerror = () => reject(new Error("read failed"));
+        r.onload = () => resolve(String(r.result));
+        r.readAsDataURL(blob);
+      });
+      LOGO_DATA_URL_CACHE = dataUrl;
+      try { localStorage.setItem("trinetra_logo_dataurl_v1", dataUrl); } catch {}
+      return dataUrl;
+    } catch { /* try next */ }
+  }
+  return LOGO_REMOTE_URL;
+};
+
 
 export interface ReceiptData {
   receiptNumber: string;
@@ -36,7 +65,7 @@ interface Props {
   data: ReceiptData | null;
 }
 
-const LOGO_URL = (typeof window !== "undefined" ? window.location.origin : "") + logoAsset.url;
+
 
 const fmtDate = (iso: string) => {
   if (!iso) return "—";
@@ -48,6 +77,8 @@ const fmtDate = (iso: string) => {
 const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
   const [working, setWorking] = useState(false);
+  const [logoSrc, setLogoSrc] = useState<string>(LOGO_REMOTE_URL);
+  useEffect(() => { let ok = true; loadLogoDataUrl().then((u) => { if (ok) setLogoSrc(u); }); return () => { ok = false; }; }, []);
 
   if (!data) return null;
 
@@ -58,7 +89,12 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
 
   const snapshot = async (): Promise<HTMLCanvasElement> => {
     if (!ref.current) throw new Error("Receipt not ready");
-    return await html2canvas(ref.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true, allowTaint: true });
+    // Make sure the embedded logo is a data URL before rendering, so it never
+    // shows blank offline or on the hosted app.
+    if (!logoSrc.startsWith("data:")) {
+      try { const u = await loadLogoDataUrl(); if (u.startsWith("data:")) setLogoSrc(u); await new Promise((r) => setTimeout(r, 60)); } catch {}
+    }
+    return await html2canvas(ref.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true, allowTaint: true, imageTimeout: 8000 });
   };
 
   const download = async () => {
@@ -162,7 +198,7 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
         a.download = `Receipt-${data.receiptNumber}.png`;
         a.click();
         URL.revokeObjectURL(url);
-        toast.success("Receipt saved — attach it in WhatsApp");
+        toast.success("Receipt image saved — attach it in the WhatsApp chat that just opened");
       }
       window.open(waLink(data.customerContact, shareText), "_blank");
     } catch (e: any) {
@@ -227,7 +263,7 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
             <div style={{ background: INK, color: "#fff", padding: "22px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                 <div style={{ width: 68, height: 68, borderRadius: 10, background: "#fff", padding: 4, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                  <img src={LOGO_URL} alt="Logo" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} />
+                  <img src={logoSrc} alt="Logo" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} />
                 </div>
                 <div>
                   <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 26, fontWeight: 700, letterSpacing: 1.5, lineHeight: 1 }}>
