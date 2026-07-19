@@ -162,21 +162,68 @@ const Payments = () => {
     return Math.max(0, amt - discountAmount);
   }, [form.amount, discountAmount]);
 
-  const applyCoupon = () => {
+  const [couponApplying, setCouponApplying] = useState(false);
+  const applyCoupon = async () => {
     const code = couponInput.trim().toUpperCase();
-    if (!code) return;
-    const c = coupons.find((x) => x.code.toUpperCase() === code);
-    if (!c) { toast.error("Invalid coupon code"); return; }
-    if (c.usage_limit != null && c.usage_count >= c.usage_limit) { toast.error("Coupon has reached its usage limit"); return; }
-    const offer = offers.find((o) => o.id === c.offer_id);
-    if (!offer) { toast.error("Coupon's offer is not available"); return; }
-    const amt = parseFloat(form.amount) || 0;
-    const cust = customers.find((cc) => cc.id === form.student_id);
-    const ctx = cust ? { id: cust.id, batch_id: cust.batch_id } : null;
-    if (!isOfferEligible(offer, ctx as any, amt, form.paid_on)) { toast.error("Coupon is not eligible for this payment"); return; }
-    setAppliedCoupon(c);
-    setSelectedOfferId(offer.id);
-    toast.success(`Coupon applied — ₹${computeDiscount(offer, amt)} off`);
+    if (!code) { toast.error("Enter a coupon code"); return; }
+    if (!user) return;
+    setCouponApplying(true);
+    try {
+      // Always validate against the database for the latest state.
+      const { data: cRow, error: cErr } = await (supabase as any)
+        .from("coupons")
+        .select("*")
+        .eq("user_id", user.id)
+        .ilike("code", code)
+        .maybeSingle();
+      if (cErr || !cRow) { toast.error("Invalid coupon code"); return; }
+      const c = cRow as Coupon;
+      if (!c.is_active) { toast.error("This coupon is no longer active"); return; }
+      if (c.usage_limit != null && c.usage_count >= c.usage_limit) {
+        toast.error("Coupon usage limit reached"); return;
+      }
+
+      const { data: oRow, error: oErr } = await (supabase as any)
+        .from("offers").select("*").eq("id", c.offer_id).maybeSingle();
+      if (oErr || !oRow) { toast.error("Coupon's offer is not available"); return; }
+      const offer = { ...oRow, conditions: oRow.conditions || {} } as Offer;
+
+      if (!offer.is_active) { toast.error("This offer is no longer active"); return; }
+      const today = form.paid_on;
+      if (offer.valid_from && today < offer.valid_from) {
+        toast.error(`Coupon is not yet active (starts ${offer.valid_from})`); return;
+      }
+      if (offer.valid_to && today > offer.valid_to) {
+        toast.error("Coupon has expired"); return;
+      }
+      if (offer.usage_limit_total != null && offer.usage_count >= offer.usage_limit_total) {
+        toast.error("Coupon usage limit reached"); return;
+      }
+
+      const amt = parseFloat(form.amount) || 0;
+      if (!amt) { toast.error("Enter payment amount before applying a coupon"); return; }
+      if (offer.min_payment_amount && amt < offer.min_payment_amount) {
+        toast.error(`Minimum payment ₹${offer.min_payment_amount} required for this coupon`); return;
+      }
+
+      const cust = customers.find((cc) => cc.id === form.student_id);
+      if (!cust) { toast.error("Select a member before applying a coupon"); return; }
+      const ctx = { id: cust.id, batch_id: cust.batch_id };
+      if (!isOfferEligible(offer, ctx as any, amt, form.paid_on)) {
+        toast.error("Coupon is not eligible for this member"); return;
+      }
+
+      // Refresh in-memory offer list so downstream discount calc uses fresh data.
+      setOffers((prev) => {
+        const rest = prev.filter((o) => o.id !== offer.id);
+        return [...rest, offer];
+      });
+      setAppliedCoupon(c);
+      setSelectedOfferId(offer.id);
+      toast.success(`Coupon applied — ₹${computeDiscount(offer, amt)} off`);
+    } finally {
+      setCouponApplying(false);
+    }
   };
 
   const clearOffer = () => {
