@@ -77,6 +77,8 @@ const fmtDate = (iso: string) => {
 const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
   const [working, setWorking] = useState(false);
+  const [logoSrc, setLogoSrc] = useState<string>(LOGO_REMOTE_URL);
+  useEffect(() => { let ok = true; loadLogoDataUrl().then((u) => { if (ok) setLogoSrc(u); }); return () => { ok = false; }; }, []);
 
   if (!data) return null;
 
