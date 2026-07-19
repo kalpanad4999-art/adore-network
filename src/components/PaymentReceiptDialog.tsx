@@ -198,7 +198,7 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
         a.download = `Receipt-${data.receiptNumber}.png`;
         a.click();
         URL.revokeObjectURL(url);
-        toast.success("Receipt saved — attach it in WhatsApp");
+        toast.success("Receipt image saved — attach it in the WhatsApp chat that just opened");
       }
       window.open(waLink(data.customerContact, shareText), "_blank");
     } catch (e: any) {
