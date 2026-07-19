@@ -482,7 +482,7 @@ const Payments = () => {
                     {appliedCoupon ? (
                       <Button type="button" variant="outline" onClick={clearOffer}>Remove</Button>
                     ) : (
-                      <Button type="button" variant="outline" onClick={applyCoupon}>Apply</Button>
+                      <Button type="button" variant="outline" onClick={applyCoupon} disabled={couponApplying || !couponInput.trim()}>{couponApplying ? "Checking…" : "Apply"}</Button>
                     )}
                   </div>
                 </div>
