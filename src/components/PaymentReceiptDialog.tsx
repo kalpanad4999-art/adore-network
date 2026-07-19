@@ -258,7 +258,7 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
             <div style={{ background: INK, color: "#fff", padding: "22px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                 <div style={{ width: 68, height: 68, borderRadius: 10, background: "#fff", padding: 4, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                  <img src={LOGO_URL} alt="Logo" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} />
+                  <img src={logoSrc} alt="Logo" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} />
                 </div>
                 <div>
                   <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 26, fontWeight: 700, letterSpacing: 1.5, lineHeight: 1 }}>
