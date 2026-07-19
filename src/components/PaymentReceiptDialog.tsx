@@ -89,7 +89,12 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
 
   const snapshot = async (): Promise<HTMLCanvasElement> => {
     if (!ref.current) throw new Error("Receipt not ready");
-    return await html2canvas(ref.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true, allowTaint: true });
+    // Make sure the embedded logo is a data URL before rendering, so it never
+    // shows blank offline or on the hosted app.
+    if (!logoSrc.startsWith("data:")) {
+      try { const u = await loadLogoDataUrl(); if (u.startsWith("data:")) setLogoSrc(u); await new Promise((r) => setTimeout(r, 60)); } catch {}
+    }
+    return await html2canvas(ref.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true, allowTaint: true, imageTimeout: 8000 });
   };
 
   const download = async () => {
