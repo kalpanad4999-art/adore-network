@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Printer, Share2, MessageCircle, Image as ImageIcon } from "lucide-react";
@@ -7,6 +7,35 @@ import html2canvas from "html2canvas";
 import { toast } from "sonner";
 import { waLink } from "@/lib/offers";
 import logoAsset from "@/assets/trinetra-logo.jpg.asset.json";
+
+const LOGO_REMOTE_URL = (typeof window !== "undefined" ? window.location.origin : "") + logoAsset.url;
+// Cache the base64-encoded logo across dialog opens so it renders offline & after hosting.
+let LOGO_DATA_URL_CACHE: string | null = null;
+const loadLogoDataUrl = async (): Promise<string> => {
+  if (LOGO_DATA_URL_CACHE) return LOGO_DATA_URL_CACHE;
+  try {
+    const cached = typeof localStorage !== "undefined" ? localStorage.getItem("trinetra_logo_dataurl_v1") : null;
+    if (cached && cached.startsWith("data:")) { LOGO_DATA_URL_CACHE = cached; return cached; }
+  } catch {}
+  for (const src of [logoAsset.url, LOGO_REMOTE_URL]) {
+    try {
+      const res = await fetch(src, { cache: "force-cache" });
+      if (!res.ok) continue;
+      const blob = await res.blob();
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onerror = () => reject(new Error("read failed"));
+        r.onload = () => resolve(String(r.result));
+        r.readAsDataURL(blob);
+      });
+      LOGO_DATA_URL_CACHE = dataUrl;
+      try { localStorage.setItem("trinetra_logo_dataurl_v1", dataUrl); } catch {}
+      return dataUrl;
+    } catch { /* try next */ }
+  }
+  return LOGO_REMOTE_URL;
+};
+
 
 export interface ReceiptData {
   receiptNumber: string;
