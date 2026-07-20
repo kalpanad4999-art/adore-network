@@ -291,7 +291,8 @@ const Payments = () => {
 
     const { data: inserted, error } = await supabase.from("student_payments").insert({
       student_id: form.student_id,
-      user_id: user.id,
+      user_id: workspaceId,
+
       amount: payable,
       paid_on: form.paid_on,
       method: form.method,
