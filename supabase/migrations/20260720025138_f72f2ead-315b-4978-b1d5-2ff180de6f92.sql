@@ -1,0 +1,19 @@
+ALTER TABLE public.students REPLICA IDENTITY FULL;
+ALTER TABLE public.batches REPLICA IDENTITY FULL;
+ALTER TABLE public.student_payments REPLICA IDENTITY FULL;
+ALTER TABLE public.offers REPLICA IDENTITY FULL;
+ALTER TABLE public.coupons REPLICA IDENTITY FULL;
+ALTER TABLE public.gallery_items REPLICA IDENTITY FULL;
+ALTER TABLE public.recordings REPLICA IDENTITY FULL;
+ALTER TABLE public.live_classes REPLICA IDENTITY FULL;
+ALTER TABLE public.attendance REPLICA IDENTITY FULL;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.students;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.batches;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.student_payments;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.offers;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.coupons;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.gallery_items;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.recordings;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.live_classes;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.attendance;
