@@ -190,18 +190,31 @@ const Media = () => {
   const [shareRecordingsOpen, setShareRecordingsOpen] = useState(false);
 
   const fetchAll = async () => {
-    if (!user) return;
+    if (!workspaceId) return;
     // Trigger lifecycle processing to keep views fresh (harmless if nothing to do)
     supabase.functions.invoke("process-live-classes").catch(() => {});
     const [r, l] = await Promise.all([
-      supabase.from("recordings").select("*").order("created_at", { ascending: false }),
-      supabase.from("live_classes").select("*").order("scheduled_at", { ascending: true }),
+      supabase.from("recordings").select("*").eq("user_id", workspaceId).order("created_at", { ascending: false }),
+      supabase.from("live_classes").select("*").eq("user_id", workspaceId).order("scheduled_at", { ascending: true }),
     ]);
     setRecordings(((r.data as any) || []) as Recording[]);
     setLive(((l.data as any) || []) as Live[]);
   };
 
-  useEffect(() => { fetchAll(); const t = setInterval(fetchAll, 60_000); return () => clearInterval(t); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { fetchAll(); const t = setInterval(fetchAll, 60_000); return () => clearInterval(t); /* eslint-disable-next-line */ }, [workspaceId]);
+
+  // Realtime sync across owner and staff on the same workspace.
+  useEffect(() => {
+    if (!workspaceId) return;
+    const ch = supabase
+      .channel(`media-sync-${workspaceId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "recordings", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "live_classes", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
+
 
   // Recordings
   const uploadRecordingFile = async (files: FileList | null) => {
