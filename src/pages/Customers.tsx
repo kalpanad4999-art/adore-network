@@ -119,7 +119,7 @@ const Customers = () => {
   // ---------- Batch CRUD ----------
   const submitBatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!workspaceId) return;
     const name = batchForm.name.trim();
     if (!name) { toast.error("Name required"); return; }
     const required_fields = Array.from(new Set(["name", ...batchForm.required_fields]));
@@ -128,7 +128,8 @@ const Customers = () => {
       .filter((f) => f.name.length > 0);
     if (cleaned_custom.some((f) => f.name.length > 60)) { toast.error("Custom field names must be 60 characters or less"); return; }
     const payload = {
-      user_id: user.id,
+      user_id: workspaceId,
+
       name,
       description: batchForm.description.trim() || null,
       start_date: batchForm.start_date || null,
