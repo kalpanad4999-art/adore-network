@@ -313,7 +313,7 @@ const Payments = () => {
     // Redemption audit + increment usage counters
     if (selectedOffer && inserted?.id) {
       await (supabase as any).from("offer_redemptions").insert({
-        user_id: user.id,
+        user_id: workspaceId,
         offer_id: selectedOffer.id,
         coupon_id: appliedCoupon?.id ?? null,
         student_id: form.student_id,
