@@ -208,7 +208,7 @@ const Customers = () => {
 
   const submitCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !activeBatchId) return;
+    if (!workspaceId || !activeBatchId) return;
     if (custForm.phone && !phoneRegex.test(custForm.phone.trim())) { toast.error("Enter a valid phone"); return; }
     const heightNum = custForm.height ? Number(custForm.height) : null;
     const weightNum = custForm.weight ? Number(custForm.weight) : null;
@@ -223,7 +223,8 @@ const Customers = () => {
       if (v) customDataClean[f.id] = v.slice(0, 500);
     }
     const payload = {
-      user_id: user.id,
+      user_id: workspaceId,
+
       batch_id: activeBatchId,
       name: custForm.name.trim(),
       email: custForm.email.trim() || null,
