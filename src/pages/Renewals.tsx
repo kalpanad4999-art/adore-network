@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStudio } from "@/contexts/StudioContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Send, RefreshCw, CalendarClock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { MessageCircle, Send, RefreshCw, CalendarClock, AlertTriangle, CheckCircle2, Users } from "lucide-react";
 import { toast } from "sonner";
 
-interface Customer { id: string; name: string; phone: string | null; }
+interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
+interface Batch { id: string; name: string; }
+
 interface Payment {
   id: string;
   student_id: string;
