@@ -142,7 +142,14 @@ const Renewals = () => {
     return () => clearTimeout(t);
   }, [fetchAll]);
 
+  const batchMap = useMemo(() => {
+    const m = new Map<string, string>();
+    batches.forEach((b) => m.set(b.id, b.name));
+    return m;
+  }, [batches]);
+
   const renewals: Renewal[] = useMemo(() => {
+
     const byCustomer = new Map<string, Payment[]>();
     payments.forEach((p) => {
       if (!byCustomer.has(p.student_id)) byCustomer.set(p.student_id, []);
