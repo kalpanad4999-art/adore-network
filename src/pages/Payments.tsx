@@ -182,16 +182,17 @@ const Payments = () => {
   const applyCoupon = async () => {
     const code = couponInput.trim().toUpperCase();
     if (!code) { toast.error("Enter a coupon code"); return; }
-    if (!user) return;
+    if (!workspaceId) return;
     setCouponApplying(true);
     try {
       // Always validate against the database for the latest state.
       const { data: cRow, error: cErr } = await (supabase as any)
         .from("coupons")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", workspaceId)
         .ilike("code", code)
         .maybeSingle();
+
       if (cErr || !cRow) { toast.error("Invalid coupon code"); return; }
       const c = cRow as Coupon;
       if (!c.is_active) { toast.error("This coupon is no longer active"); return; }
