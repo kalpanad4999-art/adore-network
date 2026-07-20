@@ -155,7 +155,8 @@ const Offers = () => {
       custom_rule: form.cond_custom_rule.trim() || null,
     };
     const payload: any = {
-      user_id: user.id,
+      user_id: workspaceId,
+
       name: form.name.trim(),
       offer_type: form.offer_type,
       message: form.message.trim() || null,
