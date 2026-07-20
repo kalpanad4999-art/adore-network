@@ -184,7 +184,7 @@ const Offers = () => {
     if (offerId && form.coupon_code.trim()) {
       const code = form.coupon_code.trim().toUpperCase();
       const { error: ce } = await (supabase as any).from("coupons").insert({
-        user_id: user.id,
+        user_id: workspaceId,
         offer_id: offerId,
         code,
         usage_limit: form.coupon_limit ? parseInt(form.coupon_limit) : null,
