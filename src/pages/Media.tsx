@@ -227,7 +227,7 @@ const Media = () => {
     toast.loading("Uploading...", { id: "rec-up" });
     const { error: upErr } = await supabase.storage.from("studio-recordings").upload(path, file, { contentType: file.type });
     if (upErr) { toast.error(upErr.message, { id: "rec-up" }); return; }
-    const { error } = await supabase.from("recordings").insert({ user_id: user.id, title: file.name, storage_path: path });
+    const { error } = await supabase.from("recordings").insert({ user_id: workspaceId, title: file.name, storage_path: path });
     toast.dismiss("rec-up");
     if (error) toast.error(error.message); else toast.success("Recording added");
     fetchAll();
@@ -240,7 +240,7 @@ const Media = () => {
     if (!title) { toast.error("Title required"); return; }
     if (!recForm.external_url.trim()) { toast.error("URL required"); return; }
     const { error } = await supabase.from("recordings").insert({
-      user_id: user.id, title, description: recForm.description.trim() || null,
+      user_id: workspaceId, title, description: recForm.description.trim() || null,
       external_url: recForm.external_url.trim(),
       duration_minutes: recForm.duration_minutes ? Number(recForm.duration_minutes) : null,
       recorded_on: recForm.recorded_on || null,
@@ -277,7 +277,7 @@ const Media = () => {
       : null;
 
     const payload: any = {
-      user_id: user.id, title, description: liveForm.description.trim() || null,
+      user_id: workspaceId, title, description: liveForm.description.trim() || null,
       scheduled_at: new Date(liveForm.scheduled_at).toISOString(),
       duration_minutes: Number(liveForm.duration_minutes) || 60,
       meeting_url: liveForm.meeting_url.trim(),
