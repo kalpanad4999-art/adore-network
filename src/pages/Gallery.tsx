@@ -151,7 +151,7 @@ const GalleryPage = () => {
       const { error: upErr } = await supabase.storage.from("studio-gallery").upload(path, file, { contentType: file.type });
       if (upErr) { toast.error(upErr.message); continue; }
       const { error } = await supabase.from("gallery_items").insert({
-        user_id: user.id,
+        user_id: workspaceId,
         media_type: isImage ? "image" : "video",
         storage_path: path,
         title: file.name,
