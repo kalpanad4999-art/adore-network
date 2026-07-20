@@ -601,8 +601,14 @@ const Payments = () => {
                       {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
                       <div className="min-w-0">
                         <h3 className="font-semibold truncate">{c.name}</h3>
-                        <p className="text-xs text-muted-foreground">{list.length} payment{list.length === 1 ? "" : "s"}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <Badge variant="secondary" className="text-[10px] font-medium">
+                            {c.batch_id ? (batchMap.get(c.batch_id) || "No Batch Assigned") : "No Batch Assigned"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">{list.length} payment{list.length === 1 ? "" : "s"}</span>
+                        </div>
                       </div>
+
                     </div>
                     <span className="font-display font-bold text-lg shrink-0">₹{total.toLocaleString()}</span>
                   </button>
