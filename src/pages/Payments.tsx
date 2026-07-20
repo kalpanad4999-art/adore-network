@@ -275,7 +275,7 @@ const Payments = () => {
 
   const addPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!workspaceId) return;
     const originalAmount = parseFloat(form.amount);
     if (!form.student_id) { toast.error("Pick a customer"); return; }
     if (!originalAmount || originalAmount <= 0) { toast.error("Enter a valid amount"); return; }
