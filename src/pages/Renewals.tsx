@@ -329,9 +329,13 @@ const Renewals = () => {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {r.customer.phone || "No phone"}
-                    {r.latest?.duration_months ? ` · ${r.latest.duration_months} mo plan` : ""}
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
+                    <Badge variant="secondary" className="text-[10px] font-medium gap-1">
+                      <Users className="h-3 w-3" />
+                      {r.customer.batch_id ? (batchMap.get(r.customer.batch_id) || "No Batch Assigned") : "No Batch Assigned"}
+                    </Badge>
+                    <span>{r.customer.phone || "No phone"}</span>
+                    {r.latest?.duration_months ? <span>· {r.latest.duration_months} mo plan</span> : null}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {r.renewalDate
@@ -339,6 +343,7 @@ const Renewals = () => {
                       : "No active membership"}
                   </p>
                 </div>
+
                 {(() => {
                   const waUrl = buildWaUrl(r);
                   const disabled = !waUrl;
