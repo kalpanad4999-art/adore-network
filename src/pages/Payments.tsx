@@ -87,6 +87,7 @@ const startOfRange = (key: RangeKey): Date | null => {
 const Payments = () => {
   const { user } = useAuth();
   const { ownerId, studioName } = useStudio();
+  const workspaceId = ownerId ?? user?.id ?? null;
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -122,13 +123,13 @@ const Payments = () => {
   );
 
   const fetchAll = async () => {
-    if (!user) return;
+    if (!workspaceId) return;
     const [{ data: cust }, { data: pays }, { data: bat }, { data: offs }, { data: cps }] = await Promise.all([
-      supabase.from("students").select("id,name,phone,batch_id").eq("user_id", user.id).order("name"),
-      supabase.from("student_payments").select("*").eq("user_id", user.id).order("paid_on", { ascending: false }),
-      supabase.from("batches").select("id,name").eq("user_id", user.id),
-      (supabase as any).from("offers").select("*").eq("user_id", user.id).eq("is_active", true),
-      (supabase as any).from("coupons").select("*").eq("user_id", user.id).eq("is_active", true),
+      supabase.from("students").select("id,name,phone,batch_id").eq("user_id", workspaceId).order("name"),
+      supabase.from("student_payments").select("*").eq("user_id", workspaceId).order("paid_on", { ascending: false }),
+      supabase.from("batches").select("id,name").eq("user_id", workspaceId),
+      (supabase as any).from("offers").select("*").eq("user_id", workspaceId).eq("is_active", true),
+      (supabase as any).from("coupons").select("*").eq("user_id", workspaceId).eq("is_active", true),
     ]);
     setCustomers((cust as Customer[]) || []);
     setPayments(((pays as any[]) || []) as Payment[]);
@@ -136,7 +137,22 @@ const Payments = () => {
     setOffers(((offs as any[]) || []).map((o) => ({ ...o, conditions: o.conditions || {} })) as Offer[]);
     setCoupons(((cps as any[]) || []) as Coupon[]);
   };
-  useEffect(() => { fetchAll(); }, [user]);
+  useEffect(() => { fetchAll(); }, [workspaceId]);
+
+  // Realtime sync: reload when any shared table for this workspace changes.
+  useEffect(() => {
+    if (!workspaceId) return;
+    const ch = supabase
+      .channel(`payments-sync-${workspaceId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "student_payments", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "batches", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "offers", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "coupons", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [workspaceId]);
+
 
   // Eligible offers for the current form context
   const eligibleOffers = useMemo(() => {
