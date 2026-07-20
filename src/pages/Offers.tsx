@@ -140,7 +140,7 @@ const Offers = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!workspaceId) return;
     if (!form.name.trim()) { toast.error("Offer name is required"); return; }
     const discount = parseFloat(form.discount_amount);
     if (!discount || discount <= 0) { toast.error("Enter a valid discount amount"); return; }
