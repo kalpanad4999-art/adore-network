@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStudio } from "@/contexts/StudioContext";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +52,8 @@ const emptyForm = {
 
 const Offers = () => {
   const { user } = useAuth();
+  const { ownerId } = useStudio();
+  const workspaceId = ownerId ?? user?.id ?? null;
   const [offers, setOffers] = useState<Offer[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string; phone: string | null; batch_id: string | null }[]>([]);
@@ -65,13 +69,13 @@ const Offers = () => {
   const [sendMemberIds, setSendMemberIds] = useState<string[]>([]);
 
   const fetchAll = async () => {
-    if (!user) return;
+    if (!workspaceId) return;
     setLoading(true);
     const [{ data: offs }, { data: cps }, { data: mem }, { data: bat }] = await Promise.all([
-      (supabase as any).from("offers").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      (supabase as any).from("coupons").select("*").eq("user_id", user.id),
-      supabase.from("students").select("id,name,phone,batch_id").eq("user_id", user.id).order("name"),
-      supabase.from("batches").select("id,name").eq("user_id", user.id).order("name"),
+      (supabase as any).from("offers").select("*").eq("user_id", workspaceId).order("created_at", { ascending: false }),
+      (supabase as any).from("coupons").select("*").eq("user_id", workspaceId),
+      supabase.from("students").select("id,name,phone,batch_id").eq("user_id", workspaceId).order("name"),
+      supabase.from("batches").select("id,name").eq("user_id", workspaceId).order("name"),
     ]);
     setOffers(((offs as any[]) || []).map((o) => ({ ...o, conditions: o.conditions || {} })) as Offer[]);
     setCoupons(((cps as any[]) || []) as Coupon[]);
@@ -79,7 +83,19 @@ const Offers = () => {
     setBatches((bat as any[]) || []);
     setLoading(false);
   };
-  useEffect(() => { fetchAll(); }, [user]);
+  useEffect(() => { fetchAll(); }, [workspaceId]);
+
+  // Realtime sync across owner and staff on the same workspace.
+  useEffect(() => {
+    if (!workspaceId) return;
+    const ch = supabase
+      .channel(`offers-sync-${workspaceId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "offers", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "coupons", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [workspaceId]);
+
 
   const couponsByOffer = useMemo(() => {
     const m = new Map<string, Coupon[]>();
@@ -124,7 +140,7 @@ const Offers = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!workspaceId) return;
     if (!form.name.trim()) { toast.error("Offer name is required"); return; }
     const discount = parseFloat(form.discount_amount);
     if (!discount || discount <= 0) { toast.error("Enter a valid discount amount"); return; }
@@ -139,7 +155,8 @@ const Offers = () => {
       custom_rule: form.cond_custom_rule.trim() || null,
     };
     const payload: any = {
-      user_id: user.id,
+      user_id: workspaceId,
+
       name: form.name.trim(),
       offer_type: form.offer_type,
       message: form.message.trim() || null,
@@ -167,7 +184,7 @@ const Offers = () => {
     if (offerId && form.coupon_code.trim()) {
       const code = form.coupon_code.trim().toUpperCase();
       const { error: ce } = await (supabase as any).from("coupons").insert({
-        user_id: user.id,
+        user_id: workspaceId,
         offer_id: offerId,
         code,
         usage_limit: form.coupon_limit ? parseInt(form.coupon_limit) : null,
@@ -200,7 +217,7 @@ const Offers = () => {
     const code = window.prompt("Coupon code (letters/numbers)")?.trim().toUpperCase();
     if (!code) return;
     const { error } = await (supabase as any).from("coupons").insert({
-      user_id: user!.id, offer_id: offer.id, code, is_active: true,
+      user_id: workspaceId, offer_id: offer.id, code, is_active: true,
     });
     if (error) return toast.error(error.code === "23505" ? "That code already exists" : error.message);
     toast.success("Coupon added");

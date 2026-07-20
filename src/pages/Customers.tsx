@@ -58,7 +58,8 @@ const phoneRegex = /^[+\d][\d\s\-()]{6,19}$/;
 
 const Customers = () => {
   const { user } = useAuth();
-  const { isOwner } = useStudio();
+  const { isOwner, ownerId } = useStudio();
+  const workspaceId = ownerId ?? user?.id ?? null;
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
@@ -80,18 +81,30 @@ const Customers = () => {
   const [qrBatch, setQrBatch] = useState<Batch | null>(null);
 
   const fetchCustomers = async () => {
-    if (!user) return;
-    const { data } = await supabase.from("students").select("id,name,email,phone,address,notes,height_cm,weight_kg,batch_id,custom_data").eq("user_id", user.id).order("name");
+    if (!workspaceId) return;
+    const { data } = await supabase.from("students").select("id,name,email,phone,address,notes,height_cm,weight_kg,batch_id,custom_data").eq("user_id", workspaceId).order("name");
     const rows = (data || []).map((c: any) => ({ ...c, custom_data: (c.custom_data && typeof c.custom_data === "object") ? c.custom_data : {} })) as Customer[];
     setCustomers(rows);
   };
   const fetchBatches = async () => {
-    if (!user) return;
-    const { data } = await supabase.from("batches").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    if (!workspaceId) return;
+    const { data } = await supabase.from("batches").select("*").eq("user_id", workspaceId).order("created_at", { ascending: false });
     const rows = (data || []).map((b: any) => ({ ...b, custom_fields: Array.isArray(b.custom_fields) ? b.custom_fields : [] })) as Batch[];
     setBatches(rows);
   };
-  useEffect(() => { fetchCustomers(); fetchBatches(); }, [user]);
+  useEffect(() => { fetchCustomers(); fetchBatches(); }, [workspaceId]);
+
+  // Realtime sync across all authorized users on the same workspace.
+  useEffect(() => {
+    if (!workspaceId) return;
+    const ch = supabase
+      .channel(`customers-sync-${workspaceId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `user_id=eq.${workspaceId}` }, () => fetchCustomers())
+      .on("postgres_changes", { event: "*", schema: "public", table: "batches", filter: `user_id=eq.${workspaceId}` }, () => fetchBatches())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [workspaceId]);
+
 
   const customersByBatch = useMemo(() => {
     const m = new Map<string, Customer[]>();
@@ -106,7 +119,7 @@ const Customers = () => {
   // ---------- Batch CRUD ----------
   const submitBatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!workspaceId) return;
     const name = batchForm.name.trim();
     if (!name) { toast.error("Name required"); return; }
     const required_fields = Array.from(new Set(["name", ...batchForm.required_fields]));
@@ -115,7 +128,8 @@ const Customers = () => {
       .filter((f) => f.name.length > 0);
     if (cleaned_custom.some((f) => f.name.length > 60)) { toast.error("Custom field names must be 60 characters or less"); return; }
     const payload = {
-      user_id: user.id,
+      user_id: workspaceId,
+
       name,
       description: batchForm.description.trim() || null,
       start_date: batchForm.start_date || null,
@@ -194,7 +208,7 @@ const Customers = () => {
 
   const submitCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !activeBatchId) return;
+    if (!workspaceId || !activeBatchId) return;
     if (custForm.phone && !phoneRegex.test(custForm.phone.trim())) { toast.error("Enter a valid phone"); return; }
     const heightNum = custForm.height ? Number(custForm.height) : null;
     const weightNum = custForm.weight ? Number(custForm.weight) : null;
@@ -209,7 +223,8 @@ const Customers = () => {
       if (v) customDataClean[f.id] = v.slice(0, 500);
     }
     const payload = {
-      user_id: user.id,
+      user_id: workspaceId,
+
       batch_id: activeBatchId,
       name: custForm.name.trim(),
       email: custForm.email.trim() || null,

@@ -87,6 +87,7 @@ const startOfRange = (key: RangeKey): Date | null => {
 const Payments = () => {
   const { user } = useAuth();
   const { ownerId, studioName } = useStudio();
+  const workspaceId = ownerId ?? user?.id ?? null;
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -122,13 +123,13 @@ const Payments = () => {
   );
 
   const fetchAll = async () => {
-    if (!user) return;
+    if (!workspaceId) return;
     const [{ data: cust }, { data: pays }, { data: bat }, { data: offs }, { data: cps }] = await Promise.all([
-      supabase.from("students").select("id,name,phone,batch_id").eq("user_id", user.id).order("name"),
-      supabase.from("student_payments").select("*").eq("user_id", user.id).order("paid_on", { ascending: false }),
-      supabase.from("batches").select("id,name").eq("user_id", user.id),
-      (supabase as any).from("offers").select("*").eq("user_id", user.id).eq("is_active", true),
-      (supabase as any).from("coupons").select("*").eq("user_id", user.id).eq("is_active", true),
+      supabase.from("students").select("id,name,phone,batch_id").eq("user_id", workspaceId).order("name"),
+      supabase.from("student_payments").select("*").eq("user_id", workspaceId).order("paid_on", { ascending: false }),
+      supabase.from("batches").select("id,name").eq("user_id", workspaceId),
+      (supabase as any).from("offers").select("*").eq("user_id", workspaceId).eq("is_active", true),
+      (supabase as any).from("coupons").select("*").eq("user_id", workspaceId).eq("is_active", true),
     ]);
     setCustomers((cust as Customer[]) || []);
     setPayments(((pays as any[]) || []) as Payment[]);
@@ -136,7 +137,22 @@ const Payments = () => {
     setOffers(((offs as any[]) || []).map((o) => ({ ...o, conditions: o.conditions || {} })) as Offer[]);
     setCoupons(((cps as any[]) || []) as Coupon[]);
   };
-  useEffect(() => { fetchAll(); }, [user]);
+  useEffect(() => { fetchAll(); }, [workspaceId]);
+
+  // Realtime sync: reload when any shared table for this workspace changes.
+  useEffect(() => {
+    if (!workspaceId) return;
+    const ch = supabase
+      .channel(`payments-sync-${workspaceId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "student_payments", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "batches", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "offers", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "coupons", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [workspaceId]);
+
 
   // Eligible offers for the current form context
   const eligibleOffers = useMemo(() => {
@@ -166,16 +182,17 @@ const Payments = () => {
   const applyCoupon = async () => {
     const code = couponInput.trim().toUpperCase();
     if (!code) { toast.error("Enter a coupon code"); return; }
-    if (!user) return;
+    if (!workspaceId) return;
     setCouponApplying(true);
     try {
       // Always validate against the database for the latest state.
       const { data: cRow, error: cErr } = await (supabase as any)
         .from("coupons")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", workspaceId)
         .ilike("code", code)
         .maybeSingle();
+
       if (cErr || !cRow) { toast.error("Invalid coupon code"); return; }
       const c = cRow as Coupon;
       if (!c.is_active) { toast.error("This coupon is no longer active"); return; }
@@ -258,7 +275,7 @@ const Payments = () => {
 
   const addPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!workspaceId) return;
     const originalAmount = parseFloat(form.amount);
     if (!form.student_id) { toast.error("Pick a customer"); return; }
     if (!originalAmount || originalAmount <= 0) { toast.error("Enter a valid amount"); return; }
@@ -274,7 +291,8 @@ const Payments = () => {
 
     const { data: inserted, error } = await supabase.from("student_payments").insert({
       student_id: form.student_id,
-      user_id: user.id,
+      user_id: workspaceId,
+
       amount: payable,
       paid_on: form.paid_on,
       method: form.method,
@@ -295,7 +313,7 @@ const Payments = () => {
     // Redemption audit + increment usage counters
     if (selectedOffer && inserted?.id) {
       await (supabase as any).from("offer_redemptions").insert({
-        user_id: user.id,
+        user_id: workspaceId,
         offer_id: selectedOffer.id,
         coupon_id: appliedCoupon?.id ?? null,
         student_id: form.student_id,
@@ -583,8 +601,14 @@ const Payments = () => {
                       {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
                       <div className="min-w-0">
                         <h3 className="font-semibold truncate">{c.name}</h3>
-                        <p className="text-xs text-muted-foreground">{list.length} payment{list.length === 1 ? "" : "s"}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <Badge variant="secondary" className="text-[10px] font-medium">
+                            {c.batch_id ? (batchMap.get(c.batch_id) || "No Batch Assigned") : "No Batch Assigned"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">{list.length} payment{list.length === 1 ? "" : "s"}</span>
+                        </div>
                       </div>
+
                     </div>
                     <span className="font-display font-bold text-lg shrink-0">₹{total.toLocaleString()}</span>
                   </button>

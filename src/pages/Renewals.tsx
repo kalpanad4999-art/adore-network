@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStudio } from "@/contexts/StudioContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Send, RefreshCw, CalendarClock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { MessageCircle, Send, RefreshCw, CalendarClock, AlertTriangle, CheckCircle2, Users } from "lucide-react";
 import { toast } from "sonner";
 
-interface Customer { id: string; name: string; phone: string | null; }
+interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
+interface Batch { id: string; name: string; }
+
 interface Payment {
   id: string;
   student_id: string;
@@ -86,36 +90,43 @@ const sanitizePhone = (phone: string | null) => (phone || "").replace(/[^0-9]/g,
 
 const Renewals = () => {
   const { user } = useAuth();
+  const { ownerId } = useStudio();
+  const workspaceId = ownerId ?? user?.id ?? null;
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
-    if (!user) return;
+    if (!workspaceId) return;
     setLoading(true);
-    const [{ data: cust }, { data: pays }] = await Promise.all([
-      supabase.from("students").select("id,name,phone").eq("user_id", user.id).order("name"),
-      supabase.from("student_payments").select("*").eq("user_id", user.id).order("paid_on", { ascending: false }),
+    const [{ data: cust }, { data: pays }, { data: bat }] = await Promise.all([
+      supabase.from("students").select("id,name,phone,batch_id").eq("user_id", workspaceId).order("name"),
+      supabase.from("student_payments").select("*").eq("user_id", workspaceId).order("paid_on", { ascending: false }),
+      supabase.from("batches").select("id,name").eq("user_id", workspaceId).order("name"),
     ]);
     setCustomers((cust as Customer[]) || []);
     setPayments(((pays as any[]) || []) as Payment[]);
+    setBatches((bat as Batch[]) || []);
     setLoading(false);
-  }, [user]);
+  }, [workspaceId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // Realtime: recalc when payments change
+  // Realtime: recalc when payments, students, or batches change
   useEffect(() => {
-    if (!user) return;
+    if (!workspaceId) return;
     const ch = supabase
-      .channel("renewals-payments")
-      .on("postgres_changes", { event: "*", schema: "public", table: "student_payments", filter: `user_id=eq.${user.id}` }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `user_id=eq.${user.id}` }, () => fetchAll())
+      .channel(`renewals-sync-${workspaceId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "student_payments", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "batches", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user, fetchAll]);
+  }, [workspaceId, fetchAll]);
+
 
   // Daily refresh at 12:00 AM
   useEffect(() => {
@@ -131,7 +142,14 @@ const Renewals = () => {
     return () => clearTimeout(t);
   }, [fetchAll]);
 
+  const batchMap = useMemo(() => {
+    const m = new Map<string, string>();
+    batches.forEach((b) => m.set(b.id, b.name));
+    return m;
+  }, [batches]);
+
   const renewals: Renewal[] = useMemo(() => {
+
     const byCustomer = new Map<string, Payment[]>();
     payments.forEach((p) => {
       if (!byCustomer.has(p.student_id)) byCustomer.set(p.student_id, []);
@@ -311,9 +329,13 @@ const Renewals = () => {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {r.customer.phone || "No phone"}
-                    {r.latest?.duration_months ? ` · ${r.latest.duration_months} mo plan` : ""}
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5 flex-wrap">
+                    <Badge variant="secondary" className="text-[10px] font-medium gap-1">
+                      <Users className="h-3 w-3" />
+                      {r.customer.batch_id ? (batchMap.get(r.customer.batch_id) || "No Batch Assigned") : "No Batch Assigned"}
+                    </Badge>
+                    <span>{r.customer.phone || "No phone"}</span>
+                    {r.latest?.duration_months ? <span>· {r.latest.duration_months} mo plan</span> : null}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {r.renewalDate
@@ -321,6 +343,7 @@ const Renewals = () => {
                       : "No active membership"}
                   </p>
                 </div>
+
                 {(() => {
                   const waUrl = buildWaUrl(r);
                   const disabled = !waUrl;

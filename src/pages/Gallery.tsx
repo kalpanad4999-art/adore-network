@@ -66,10 +66,16 @@ const GalleryPage = () => {
   const [shareOpen, setShareOpen] = useState(false);
 
   const fetchAll = async () => {
-    if (!user) return;
-    // Run cleanup then fetch
-    await supabase.rpc("cleanup_expired_gallery", { _owner: user.id });
-    const { data } = await supabase.from("gallery_items").select("*").order("created_at", { ascending: false });
+    if (!workspaceId) return;
+    // Only the owner can clean up expired gallery items.
+    if (user?.id === workspaceId) {
+      await supabase.rpc("cleanup_expired_gallery", { _owner: workspaceId });
+    }
+    const { data } = await supabase
+      .from("gallery_items")
+      .select("*")
+      .eq("user_id", workspaceId)
+      .order("created_at", { ascending: false });
     setItems((data as Gallery[]) || []);
   };
 
@@ -78,7 +84,19 @@ const GalleryPage = () => {
     const iv = setInterval(fetchAll, 60_000); // hourly-ish refresh for expirations
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [workspaceId]);
+
+  // Realtime sync across owner and staff on the same workspace.
+  useEffect(() => {
+    if (!workspaceId) return;
+    const ch = supabase
+      .channel(`gallery-sync-${workspaceId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "gallery_items", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
+
 
   const openDialogForFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -133,7 +151,7 @@ const GalleryPage = () => {
       const { error: upErr } = await supabase.storage.from("studio-gallery").upload(path, file, { contentType: file.type });
       if (upErr) { toast.error(upErr.message); continue; }
       const { error } = await supabase.from("gallery_items").insert({
-        user_id: user.id,
+        user_id: workspaceId,
         media_type: isImage ? "image" : "video",
         storage_path: path,
         title: file.name,

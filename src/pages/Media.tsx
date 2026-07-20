@@ -190,18 +190,31 @@ const Media = () => {
   const [shareRecordingsOpen, setShareRecordingsOpen] = useState(false);
 
   const fetchAll = async () => {
-    if (!user) return;
+    if (!workspaceId) return;
     // Trigger lifecycle processing to keep views fresh (harmless if nothing to do)
     supabase.functions.invoke("process-live-classes").catch(() => {});
     const [r, l] = await Promise.all([
-      supabase.from("recordings").select("*").order("created_at", { ascending: false }),
-      supabase.from("live_classes").select("*").order("scheduled_at", { ascending: true }),
+      supabase.from("recordings").select("*").eq("user_id", workspaceId).order("created_at", { ascending: false }),
+      supabase.from("live_classes").select("*").eq("user_id", workspaceId).order("scheduled_at", { ascending: true }),
     ]);
     setRecordings(((r.data as any) || []) as Recording[]);
     setLive(((l.data as any) || []) as Live[]);
   };
 
-  useEffect(() => { fetchAll(); const t = setInterval(fetchAll, 60_000); return () => clearInterval(t); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { fetchAll(); const t = setInterval(fetchAll, 60_000); return () => clearInterval(t); /* eslint-disable-next-line */ }, [workspaceId]);
+
+  // Realtime sync across owner and staff on the same workspace.
+  useEffect(() => {
+    if (!workspaceId) return;
+    const ch = supabase
+      .channel(`media-sync-${workspaceId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "recordings", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "live_classes", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
+
 
   // Recordings
   const uploadRecordingFile = async (files: FileList | null) => {
@@ -214,7 +227,7 @@ const Media = () => {
     toast.loading("Uploading...", { id: "rec-up" });
     const { error: upErr } = await supabase.storage.from("studio-recordings").upload(path, file, { contentType: file.type });
     if (upErr) { toast.error(upErr.message, { id: "rec-up" }); return; }
-    const { error } = await supabase.from("recordings").insert({ user_id: user.id, title: file.name, storage_path: path });
+    const { error } = await supabase.from("recordings").insert({ user_id: workspaceId, title: file.name, storage_path: path });
     toast.dismiss("rec-up");
     if (error) toast.error(error.message); else toast.success("Recording added");
     fetchAll();
@@ -227,7 +240,7 @@ const Media = () => {
     if (!title) { toast.error("Title required"); return; }
     if (!recForm.external_url.trim()) { toast.error("URL required"); return; }
     const { error } = await supabase.from("recordings").insert({
-      user_id: user.id, title, description: recForm.description.trim() || null,
+      user_id: workspaceId, title, description: recForm.description.trim() || null,
       external_url: recForm.external_url.trim(),
       duration_minutes: recForm.duration_minutes ? Number(recForm.duration_minutes) : null,
       recorded_on: recForm.recorded_on || null,
@@ -264,7 +277,7 @@ const Media = () => {
       : null;
 
     const payload: any = {
-      user_id: user.id, title, description: liveForm.description.trim() || null,
+      user_id: workspaceId, title, description: liveForm.description.trim() || null,
       scheduled_at: new Date(liveForm.scheduled_at).toISOString(),
       duration_minutes: Number(liveForm.duration_minutes) || 60,
       meeting_url: liveForm.meeting_url.trim(),
