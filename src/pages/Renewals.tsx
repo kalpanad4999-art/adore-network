@@ -90,36 +90,43 @@ const sanitizePhone = (phone: string | null) => (phone || "").replace(/[^0-9]/g,
 
 const Renewals = () => {
   const { user } = useAuth();
+  const { ownerId } = useStudio();
+  const workspaceId = ownerId ?? user?.id ?? null;
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
-    if (!user) return;
+    if (!workspaceId) return;
     setLoading(true);
-    const [{ data: cust }, { data: pays }] = await Promise.all([
-      supabase.from("students").select("id,name,phone").eq("user_id", user.id).order("name"),
-      supabase.from("student_payments").select("*").eq("user_id", user.id).order("paid_on", { ascending: false }),
+    const [{ data: cust }, { data: pays }, { data: bat }] = await Promise.all([
+      supabase.from("students").select("id,name,phone,batch_id").eq("user_id", workspaceId).order("name"),
+      supabase.from("student_payments").select("*").eq("user_id", workspaceId).order("paid_on", { ascending: false }),
+      supabase.from("batches").select("id,name").eq("user_id", workspaceId).order("name"),
     ]);
     setCustomers((cust as Customer[]) || []);
     setPayments(((pays as any[]) || []) as Payment[]);
+    setBatches((bat as Batch[]) || []);
     setLoading(false);
-  }, [user]);
+  }, [workspaceId]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // Realtime: recalc when payments change
+  // Realtime: recalc when payments, students, or batches change
   useEffect(() => {
-    if (!user) return;
+    if (!workspaceId) return;
     const ch = supabase
-      .channel("renewals-payments")
-      .on("postgres_changes", { event: "*", schema: "public", table: "student_payments", filter: `user_id=eq.${user.id}` }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `user_id=eq.${user.id}` }, () => fetchAll())
+      .channel(`renewals-sync-${workspaceId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "student_payments", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "batches", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user, fetchAll]);
+  }, [workspaceId, fetchAll]);
+
 
   // Daily refresh at 12:00 AM
   useEffect(() => {
