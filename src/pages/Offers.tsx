@@ -217,7 +217,7 @@ const Offers = () => {
     const code = window.prompt("Coupon code (letters/numbers)")?.trim().toUpperCase();
     if (!code) return;
     const { error } = await (supabase as any).from("coupons").insert({
-      user_id: user!.id, offer_id: offer.id, code, is_active: true,
+      user_id: workspaceId, offer_id: offer.id, code, is_active: true,
     });
     if (error) return toast.error(error.code === "23505" ? "That code already exists" : error.message);
     toast.success("Coupon added");
