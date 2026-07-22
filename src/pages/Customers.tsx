@@ -17,6 +17,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import CustomerDetailsTable from "@/components/CustomerDetailsTable";
+
 
 interface Customer {
   id: string;
