@@ -400,51 +400,15 @@ const Customers = () => {
                   {members.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic text-center py-4">No customers in this batch yet.</p>
                   ) : (
-                    <div className="grid gap-2">
-                      {members.map((c) => (
-                        <div key={c.id} className="flex items-center justify-between gap-3 p-3 rounded-md bg-muted/40 border border-border">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium truncate">{c.name}</h4>
-                            <p className="text-sm text-muted-foreground truncate">
-                              {c.phone || "—"}{c.email ? ` · ${c.email}` : ""}
-                            </p>
-                            {(c.height_cm || c.weight_kg) && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {c.height_cm ? `${c.height_cm} cm` : ""}{c.height_cm && c.weight_kg ? " · " : ""}{c.weight_kg ? `${c.weight_kg} kg` : ""}
-                              </p>
-                            )}
-                            {c.address && <p className="text-xs text-muted-foreground truncate mt-0.5">{c.address}</p>}
-                            {b.custom_fields?.filter((f) => f.enabled !== false).map((f) => {
-                              const v = c.custom_data?.[f.id];
-                              if (!v) return null;
-                              return <p key={f.id} className="text-xs text-muted-foreground mt-0.5 truncate"><span className="font-medium text-foreground/80">{f.name}:</span> {v}</p>;
-                            })}
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button title="Move to another batch" className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><ArrowRightLeft className="h-4 w-4" /></button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Move to batch</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {batches.filter((tb) => tb.id !== c.batch_id).length === 0 ? (
-                                  <DropdownMenuItem disabled>No other batches</DropdownMenuItem>
-                                ) : (
-                                  batches.filter((tb) => tb.id !== c.batch_id).map((tb) => (
-                                    <DropdownMenuItem key={tb.id} onClick={() => moveCustomer(c.id, tb.id)}>{tb.name}</DropdownMenuItem>
-                                  ))
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            <button onClick={() => editCustomer(c)} className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
-                            {isOwner && (
-                              <button onClick={() => setDeleteTarget(c)} title="Delete customer" className="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <CustomerDetailsTable
+                      batch={b}
+                      rows={members}
+                      allBatches={batches.map((x) => ({ id: x.id, name: x.name }))}
+                      canDelete={isOwner}
+                      onEdit={editCustomer}
+                      onDelete={(r) => setDeleteTarget(r)}
+                      onMove={moveCustomer}
+                    />
                   )}
                 </AccordionContent>
               </AccordionItem>
@@ -452,6 +416,7 @@ const Customers = () => {
           })}
         </Accordion>
       )}
+
 
       {/* Customer dialog */}
       <Dialog open={custOpen} onOpenChange={(v) => { if (!v) { setCustOpen(false); setEditingCustId(null); setActiveBatchId(null); setCustCustom({}); } }}>
