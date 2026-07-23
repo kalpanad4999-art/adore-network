@@ -95,7 +95,17 @@ export const StaffPermissionsCard = () => {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [ownerId]);
+  useEffect(() => {
+    load();
+    if (!ownerId) return;
+    const channel = supabase
+      .channel(`staff-mgmt-${ownerId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles", filter: `owner_id=eq.${ownerId}` }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "staff_permissions", filter: `owner_id=eq.${ownerId}` }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "staff_invitations", filter: `owner_id=eq.${ownerId}` }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [ownerId]);
 
   if (!isOwner) return null;
 
