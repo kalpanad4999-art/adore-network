@@ -3,7 +3,7 @@ import { useStudio } from "@/contexts/StudioContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Palette, Lock, ShieldCheck, Users, Bot, UserCog, ChevronRight, ArrowLeft, Wallpaper,
+  Palette, Lock, ShieldCheck, Users, Bot, Crown, ChevronRight, ArrowLeft, Wallpaper,
 } from "lucide-react";
 import AppearanceCard from "@/components/settings/AppearanceCard";
 import AppLockCard from "@/components/settings/AppLockCard";
@@ -11,7 +11,7 @@ import SecurityCard from "@/components/settings/SecurityCard";
 import WallpaperCard from "@/components/settings/WallpaperCard";
 import { StaffPermissionsCard } from "@/components/StaffPermissionsCard";
 import { ChatbotKnowledgeCard } from "@/components/ChatbotKnowledgeCard";
-import { TransferOwnershipCard } from "@/components/TransferOwnershipCard";
+import { OwnerInfoCard } from "@/components/OwnerInfoCard";
 
 type Section = {
   slug: string;
@@ -70,12 +70,12 @@ const SECTIONS: Section[] = [
     render: () => <ChatbotKnowledgeCard />,
   },
   {
-    slug: "transfer",
-    title: "Transfer Ownership",
-    subtitle: "Verify, choose new owner, confirm transfer",
-    icon: UserCog,
+    slug: "owner",
+    title: "Owner",
+    subtitle: "View the permanent studio owner account",
+    icon: Crown,
     ownerOnly: true,
-    render: () => <TransferOwnershipCard />,
+    render: () => <OwnerInfoCard />,
   },
 ];
 
