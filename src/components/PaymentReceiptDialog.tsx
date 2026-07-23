@@ -259,24 +259,26 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
               boxSizing: "border-box",
             }}
           >
-            {/* Header band */}
-            <div style={{ background: INK, color: "#fff", padding: "22px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <div style={{ width: 68, height: 68, borderRadius: 10, background: "#fff", padding: 4, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                  <img src={logoSrc} alt="Logo" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 6 }} />
-                </div>
-                <div>
-                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 26, fontWeight: 700, letterSpacing: 1.5, lineHeight: 1 }}>
-                    {data.studioName || "TRINETRA YOGA"}
-                  </div>
-                  <div style={{ fontSize: 11, color: GOLD, marginTop: 6, fontStyle: "italic", letterSpacing: 0.5 }}>
-                    listen to and respect your body
-                  </div>
-                </div>
+            {/* Header band — centered studio name, no logo */}
+            <div style={{ background: INK, color: "#fff", padding: "28px 32px", textAlign: "center" }}>
+              <div
+                style={{
+                  fontFamily: "'Cormorant Garamond', Georgia, serif",
+                  fontSize: 44,
+                  fontWeight: 700,
+                  letterSpacing: 4,
+                  lineHeight: 1.05,
+                  textTransform: "uppercase",
+                }}
+              >
+                {data.studioName || "TRINETRA YOGA"}
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 24, fontWeight: 600, letterSpacing: 6, color: GOLD }}>RECEIPT</div>
-                <div style={{ fontSize: 11, marginTop: 6, opacity: 0.85 }}>#{data.receiptNumber}</div>
+              <div style={{ fontSize: 12, color: GOLD, marginTop: 10, fontStyle: "italic", letterSpacing: 1 }}>
+                listen to and respect your body
+              </div>
+              <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
+                <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 20, fontWeight: 600, letterSpacing: 6, color: GOLD }}>RECEIPT</div>
+                <div style={{ fontSize: 11, opacity: 0.85 }}>#{data.receiptNumber}</div>
                 <div style={{ fontSize: 11, opacity: 0.85 }}>{fmtDate(data.dateIssued)}</div>
               </div>
             </div>
