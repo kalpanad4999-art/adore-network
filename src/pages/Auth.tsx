@@ -55,6 +55,12 @@ const Auth = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showResend, setShowResend] = useState(false);
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && user) navigate("/", { replace: true });
+  }, [user, authLoading, navigate]);
+
 
   const resolveEmailFromIdentifier = async (raw: string): Promise<string | null> => {
     const v = raw.trim();
