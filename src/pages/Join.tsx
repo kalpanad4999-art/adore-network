@@ -225,14 +225,24 @@ const Join = () => {
               </div>
             ))}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
-              <a
-                href="https://youtube.com/@clearpictures8918?si=NEN__ftlagnEfnpV"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-display text-lg text-primary hover:underline"
-              >
-                Follow us on YouTube
-              </a>
+              <div className="flex flex-col gap-2">
+                <a
+                  href="https://youtube.com/@clearpictures8918?si=NEN__ftlagnEfnpV"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-display text-lg text-primary hover:underline"
+                >
+                  Follow us on YouTube
+                </a>
+                <a
+                  href="https://g.page/r/CeeEQEv48JHpEAE/review"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-display text-lg text-primary hover:underline"
+                >
+                  ⭐ Click here for Google Reviews
+                </a>
+              </div>
               <Button
                 type="submit"
                 disabled={submitting}
