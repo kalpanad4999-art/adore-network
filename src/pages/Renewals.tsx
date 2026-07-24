@@ -84,7 +84,7 @@ const filters: { key: FilterKey; label: string }[] = [
 ];
 
 const buildMessage = (name: string, renewalDate: string) =>
-  `Hello ${name},\n\nYour membership at ${STUDIO_NAME} will expire on ${new Date(renewalDate).toLocaleDateString()}.\n\nPlease renew your membership before the expiry date to continue uninterrupted access to classes.\n\nThank you,\n${STUDIO_NAME}`;
+  `Hello ${name},\n\nJust a quick reminder that your Trinetra Yoga membership expires on ${new Date(renewalDate).toLocaleDateString()}.\n\nTo continue enjoying uninterrupted access to classes, please renew before the expiry date.\n\nIF YOU HAVE ALREADY PAID, PLEASE IGNORE THIS MESSAGE.\n\nThank you,\n\nTeam Trinetra Yoga`;
 
 const sanitizePhone = (phone: string | null) => (phone || "").replace(/[^0-9]/g, "");
 
