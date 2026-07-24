@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, X, Minus, Send, Loader2 } from "lucide-react";
+import { X, Minus, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import chatbotAvatarAsset from "@/assets/chatbot-avatar.png.asset.json";
+
+const CHATBOT_AVATAR = chatbotAvatarAsset.url;
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -113,9 +116,9 @@ const SupportChatWidget = ({ ownerId, batchToken, autoOpen = false }: Props) => 
       <button
         onClick={() => { setOpen(true); setMinimized(false); }}
         aria-label="Open support chat"
-        className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 transition-transform"
+        className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full overflow-hidden shadow-lg shadow-primary/30 ring-2 ring-primary/20 hover:scale-105 transition-transform bg-background"
       >
-        <MessageCircle className="h-6 w-6" />
+        <img src={CHATBOT_AVATAR} alt="Trinetra Yoga assistant" className="h-full w-full object-cover" loading="lazy" width={56} height={56} />
         {unread > 0 && (
           <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
             {unread}
@@ -133,8 +136,8 @@ const SupportChatWidget = ({ ownerId, batchToken, autoOpen = false }: Props) => 
     >
       <header className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground shrink-0">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-primary-foreground/15 flex items-center justify-center">
-            <MessageCircle className="h-4 w-4" />
+          <div className="h-8 w-8 rounded-full overflow-hidden bg-primary-foreground/15 ring-1 ring-primary-foreground/30">
+            <img src={CHATBOT_AVATAR} alt="Trinetra Yoga assistant" className="h-full w-full object-cover" loading="lazy" width={32} height={32} />
           </div>
           <div>
             <p className="font-display text-sm leading-tight">Trinetra Yoga Support</p>

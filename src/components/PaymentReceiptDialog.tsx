@@ -5,7 +5,7 @@ import { Download, Printer, Share2, MessageCircle, Image as ImageIcon } from "lu
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
-import { waLink } from "@/lib/offers";
+
 import logoAsset from "@/assets/trinetra-logo.jpg.asset.json";
 
 const LOGO_REMOTE_URL = (typeof window !== "undefined" ? window.location.origin : "") + logoAsset.url;
@@ -178,29 +178,36 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
   const sendWhatsApp = async () => {
     setWorking(true);
     try {
+      const rawPhone = (data.customerContact || "").replace(/[^0-9]/g, "");
+      if (!rawPhone) {
+        toast.error("This member has no registered phone number. Please add one to send via WhatsApp.");
+        return;
+      }
+      // Normalize to E.164-ish digits (India default) so wa.me targets the member directly.
+      const phoneDigits = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
+
       const canvas = await snapshot();
       const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, "image/png"));
       const shareText = buildShareText(hasOffer);
+
+      // Auto-download the receipt image so the user can attach it in the WhatsApp chat
+      // that opens next. We deliberately skip navigator.share here because it forces a
+      // contact picker instead of using the member's registered number.
       if (blob) {
-        const file = new File([blob], `Receipt-${data.receiptNumber}.png`, { type: "image/png" });
-        if ((navigator as any).canShare && (navigator as any).canShare({ files: [file] })) {
-          try {
-            await (navigator as any).share({ files: [file], title: "Payment Receipt", text: shareText });
-            return;
-          } catch (err: any) {
-            if (err?.name === "AbortError") return;
-          }
-        }
-        // Fallback: download image so user can attach it, then open WhatsApp with text.
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
         a.download = `Receipt-${data.receiptNumber}.png`;
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
-        toast.success("Receipt image saved — attach it in the WhatsApp chat that just opened");
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
       }
-      window.open(waLink(data.customerContact, shareText), "_blank");
+
+      // Open WhatsApp addressed to the member's number with full details (incl. offer).
+      const waUrl = `https://wa.me/${phoneDigits}?text=${encodeURIComponent(shareText)}`;
+      window.open(waUrl, "_blank");
+      toast.success(`Receipt saved. WhatsApp opened for ${data.customerName} — tap 📎 and attach the downloaded receipt.`);
     } catch (e: any) {
       toast.error(e?.message || "WhatsApp failed");
     } finally { setWorking(false); }
