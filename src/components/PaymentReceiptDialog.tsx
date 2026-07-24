@@ -5,7 +5,7 @@ import { Download, Printer, Share2, MessageCircle, Image as ImageIcon } from "lu
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
-import { waLink } from "@/lib/offers";
+
 import logoAsset from "@/assets/trinetra-logo.jpg.asset.json";
 
 const LOGO_REMOTE_URL = (typeof window !== "undefined" ? window.location.origin : "") + logoAsset.url;
