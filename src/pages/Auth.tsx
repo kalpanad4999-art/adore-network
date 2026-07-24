@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStudioMeta, applyStudioBranding } from "@/hooks/useStudioMeta";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
