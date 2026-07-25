@@ -102,6 +102,7 @@ const Payments = () => {
   const [selectedOfferId, setSelectedOfferId] = useState<string>("");
   const [couponInput, setCouponInput] = useState<string>("");
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [filterBatchId, setFilterBatchId] = useState<string>("");
   const [form, setForm] = useState({
     student_id: "",
     amount: "",
