@@ -256,6 +256,13 @@ const Payments = () => {
     return m;
   }, [batches]);
 
+  const visibleCustomers = useMemo(() => {
+    if (!filterBatchId) return [];
+    if (filterBatchId === "__all__") return customers;
+    if (filterBatchId === "__none__") return customers.filter((c) => !c.batch_id);
+    return customers.filter((c) => c.batch_id === filterBatchId);
+  }, [customers, filterBatchId]);
+
   const selectedCustomer = customers.find((c) => c.id === form.student_id);
   const selectedBatchName = selectedCustomer?.batch_id ? (batchMap.get(selectedCustomer.batch_id) || "No Batch Assigned") : "No Batch Assigned";
 
