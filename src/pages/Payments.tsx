@@ -593,11 +593,39 @@ const Payments = () => {
         </CardContent>
       </Card>
 
+      {/* Batch filter */}
+      <Card>
+        <CardContent className="p-4 flex items-center gap-3 flex-wrap">
+          <Label className="text-sm font-medium shrink-0">Filter by Batch</Label>
+          <Select value={filterBatchId} onValueChange={setFilterBatchId}>
+            <SelectTrigger className="w-full sm:w-[260px]">
+              <SelectValue placeholder="Select a batch to view payments" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Batches</SelectItem>
+              {batches.map((b) => (
+                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+              ))}
+              <SelectItem value="__none__">No Batch Assigned</SelectItem>
+            </SelectContent>
+          </Select>
+          {filterBatchId && (
+            <span className="text-xs text-muted-foreground ml-auto">
+              {visibleCustomers.length} member{visibleCustomers.length === 1 ? "" : "s"}
+            </span>
+          )}
+        </CardContent>
+      </Card>
+
       {customers.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">Add customers first to record payments.</CardContent></Card>
+      ) : !filterBatchId ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">Select a batch above to view payment records.</CardContent></Card>
+      ) : visibleCustomers.length === 0 ? (
+        <Card><CardContent className="py-12 text-center text-muted-foreground">No members in this batch.</CardContent></Card>
       ) : (
         <div className="grid gap-3">
-          {customers.map((c) => {
+          {visibleCustomers.map((c) => {
             const list = grouped.get(c.id) || [];
             const total = list.reduce((s, p) => s + Number(p.amount), 0);
             const isOpen = expanded.has(c.id);
