@@ -669,6 +669,15 @@ const Payments = () => {
                       {list.length === 0 ? (
                         <p className="p-4 text-sm text-muted-foreground italic text-center">No payments yet.</p>
                       ) : (
+                        <>
+                        <div className="flex justify-end p-2 px-4 bg-muted/30">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteAllMemberPayments(c.id, c.name); }}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 px-2.5 py-1.5 rounded-md"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Delete All Payments
+                          </button>
+                        </div>
                         <div className="divide-y divide-border">
                           {list.map((p) => (
                             <div key={p.id} className="flex items-center justify-between gap-3 p-3 px-4">
