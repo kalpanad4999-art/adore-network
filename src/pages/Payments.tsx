@@ -374,6 +374,22 @@ const Payments = () => {
     toast.success("Removed"); fetchAll();
   };
 
+  const deleteAllMemberPayments = async (memberId: string, memberName: string) => {
+    const ok = window.confirm(
+      "Are you sure you want to permanently delete all payment records for this Member? This action cannot be undone."
+    );
+    if (!ok) return;
+    const { error, count } = await supabase
+      .from("student_payments")
+      .delete({ count: "exact" })
+      .eq("user_id", workspaceId)
+      .eq("student_id", memberId);
+    if (error) { toast.error(error.message); return; }
+    await logAudit(ownerId, "payment.bulk_deleted", { member_id: memberId, member_name: memberName, count: count ?? 0 }, { type: "student", id: memberId });
+    toast.success(`Deleted ${count ?? 0} payment${count === 1 ? "" : "s"} for ${memberName}`);
+    fetchAll();
+  };
+
   const grandTotal = payments.reduce((s, p) => s + Number(p.amount), 0);
 
   // Income Overview chart data
@@ -653,6 +669,15 @@ const Payments = () => {
                       {list.length === 0 ? (
                         <p className="p-4 text-sm text-muted-foreground italic text-center">No payments yet.</p>
                       ) : (
+                        <>
+                        <div className="flex justify-end p-2 px-4 bg-muted/30">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteAllMemberPayments(c.id, c.name); }}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 px-2.5 py-1.5 rounded-md"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Delete All Payments
+                          </button>
+                        </div>
                         <div className="divide-y divide-border">
                           {list.map((p) => (
                             <div key={p.id} className="flex items-center justify-between gap-3 p-3 px-4">
@@ -715,6 +740,7 @@ const Payments = () => {
                             </div>
                           ))}
                         </div>
+                        </>
                       )}
                     </div>
                   )}
