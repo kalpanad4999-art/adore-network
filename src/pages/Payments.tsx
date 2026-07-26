@@ -740,6 +740,7 @@ const Payments = () => {
                             </div>
                           ))}
                         </div>
+                        </>
                       )}
                     </div>
                   )}
