@@ -38,6 +38,7 @@ interface StudioContextValue {
   setBackgroundFromUrl: (url: string) => Promise<void>;
   removeBackground: () => Promise<void>;
   setPaymentsPassword: (pin: string | null, currentPassword?: string) => Promise<void>;
+  resetPaymentsPasswordWithAccount: (accountPassword: string, newPin: string | null) => Promise<void>;
   verifyPaymentsPin: (pin: string) => Promise<boolean>;
   enableBiometric: () => Promise<void>;
   disableBiometric: () => Promise<void>;
