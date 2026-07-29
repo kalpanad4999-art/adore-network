@@ -826,7 +826,30 @@ const Payments = () => {
           })}
         </div>
       )}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o && !deleting) setDeleteTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete all payments</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete all payment records for {deleteTarget?.name}? This action cannot be undone. The member profile and all other data stay untouched.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-sm text-muted-foreground">
+            {deleteTarget ? `${buildExportRows(deleteTarget.id).count} payment record(s) will be removed.` : null}
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button disabled={deleting} onClick={() => runDeleteAll(true)}>
+              <FileText className="h-4 w-4 mr-2" /> Export & Delete (PDF + Excel)
+            </Button>
+            <Button variant="destructive" disabled={deleting} onClick={() => runDeleteAll(false)}>
+              <Trash2 className="h-4 w-4 mr-2" /> Delete Only
+            </Button>
+            <Button variant="outline" disabled={deleting} onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <PaymentReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} data={receiptData} />
+
     </div>
   );
 };
