@@ -322,7 +322,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
       biometricEnabled, biometricCredentialId,
       ownerId, isOwner, permissions, loading, refresh,
       updateName, uploadLogo, uploadBackground, setBackgroundFromUrl, removeBackground,
-      setPaymentsPassword, verifyPaymentsPin,
+      setPaymentsPassword, resetPaymentsPasswordWithAccount, verifyPaymentsPin,
       enableBiometric, disableBiometric, verifyBiometricUnlock,
       setAppLockPin, verifyAppLockPin,
     }}>
