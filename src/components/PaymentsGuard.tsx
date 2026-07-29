@@ -1,11 +1,14 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useStudio } from "@/contexts/StudioContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Lock, Fingerprint } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Lock, Fingerprint, KeyRound } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
 const SESSION_KEY = "trinetra-payments-unlocked-at";
 const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
@@ -19,7 +22,8 @@ const isStillUnlocked = () => {
 };
 
 const PaymentsGuard = ({ children }: { children: ReactNode }) => {
-  const { paymentsPinSet, verifyPaymentsPin, biometricEnabled, verifyBiometricUnlock, loading } = useStudio();
+  const { paymentsPinSet, verifyPaymentsPin, biometricEnabled, verifyBiometricUnlock, resetPaymentsPasswordWithAccount, loading } = useStudio();
+  const { user } = useAuth();
   const location = useLocation();
   const [unlocked, setUnlocked] = useState<boolean>(() => isStillUnlocked());
   const [password, setPassword] = useState("");
@@ -27,6 +31,17 @@ const PaymentsGuard = ({ children }: { children: ReactNode }) => {
   const [busy, setBusy] = useState(false);
   const [bioBusy, setBioBusy] = useState(false);
   const timerRef = useRef<number | null>(null);
+
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [acctEmail, setAcctEmail] = useState("");
+  const [acctPassword, setAcctPassword] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    if (user?.email) setAcctEmail(user.email);
+  }, [user?.email]);
+
 
   // Clear when leaving payments area
   useEffect(() => {
