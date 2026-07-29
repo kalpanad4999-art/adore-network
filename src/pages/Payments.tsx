@@ -748,7 +748,7 @@ const Payments = () => {
                         <>
                         <div className="flex justify-end p-2 px-4 bg-muted/30">
                           <button
-                            onClick={(e) => { e.stopPropagation(); deleteAllMemberPayments(c.id, c.name); }}
+                            onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: c.id, name: c.name }); }}
                             className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 px-2.5 py-1.5 rounded-md"
                           >
                             <Trash2 className="h-3.5 w-3.5" /> Delete All Payments
