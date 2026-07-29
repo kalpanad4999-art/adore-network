@@ -374,21 +374,97 @@ const Payments = () => {
     toast.success("Removed"); fetchAll();
   };
 
-  const deleteAllMemberPayments = async (memberId: string, memberName: string) => {
-    const ok = window.confirm(
-      "Are you sure you want to permanently delete all payment records for this Member? This action cannot be undone."
-    );
-    if (!ok) return;
-    const { error, count } = await supabase
-      .from("student_payments")
-      .delete({ count: "exact" })
-      .eq("user_id", workspaceId)
-      .eq("student_id", memberId);
-    if (error) { toast.error(error.message); return; }
-    await logAudit(ownerId, "payment.bulk_deleted", { member_id: memberId, member_name: memberName, count: count ?? 0 }, { type: "student", id: memberId });
-    toast.success(`Deleted ${count ?? 0} payment${count === 1 ? "" : "s"} for ${memberName}`);
-    fetchAll();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const buildExportRows = (memberId: string) => {
+    const rows = payments.filter((p) => p.student_id === memberId)
+      .sort((a, b) => a.paid_on.localeCompare(b.paid_on));
+    const header = ["Date", "Amount (Rs)", "Discount (Rs)", "Method", "Duration", "Valid Until", "Offer", "Coupon"];
+    const body = rows.map((p) => [
+      p.paid_on,
+      String(Number(p.amount)),
+      String(Number(p.discount_amount || 0)),
+      p.method || "",
+      p.duration_value && p.duration_unit ? `${p.duration_value} ${p.duration_unit}` : (p.duration_months ? `${p.duration_months} months` : ""),
+      p.valid_until || "",
+      p.applied_offer_name || "",
+      p.applied_coupon_code || "",
+    ]);
+    const total = rows.reduce((s, p) => s + Number(p.amount), 0);
+    return { header, body, total, count: rows.length };
   };
+
+  const exportMemberPayments = async (memberId: string, memberName: string) => {
+    const { header, body, total } = buildExportRows(memberId);
+    const safeName = memberName.replace(/[^\w\-]+/g, "_");
+    const stamp = new Date().toISOString().slice(0, 10);
+
+    // CSV
+    const esc = (v: string) => `"${(v ?? "").replace(/"/g, '""')}"`;
+    const csv = [header, ...body, ["Total", String(total), "", "", "", "", "", ""]]
+      .map((r) => r.map(esc).join(",")).join("\n");
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${safeName}-payments-${stamp}.csv`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
+
+    // XLSX
+    const XLSX = await import("xlsx");
+    const ws = XLSX.utils.aoa_to_sheet([header, ...body, ["Total", total]]);
+    ws["!cols"] = header.map(() => ({ wch: 16 }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Payments");
+    XLSX.writeFile(wb, `${safeName}-payments-${stamp}.xlsx`);
+
+    // PDF
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    doc.setFontSize(16);
+    doc.text(`${studioName || "Trinetra Yoga"} — Payment History`, 40, 32);
+    doc.setFontSize(11);
+    doc.text(`Member: ${memberName}   |   Generated: ${stamp}   |   Total: Rs ${total.toLocaleString()}`, 40, 50);
+    autoTable(doc, {
+      head: [header], body, startY: 64,
+      styles: { fontSize: 9, cellPadding: 4, overflow: "linebreak" },
+      headStyles: { fillColor: [34, 60, 55], textColor: 255 },
+      margin: { left: 24, right: 24 },
+    });
+    doc.save(`${safeName}-payments-${stamp}.pdf`);
+  };
+
+  const runDeleteAll = async (withExport: boolean) => {
+    if (!deleteTarget) return;
+    const { id: memberId, name: memberName } = deleteTarget;
+    setDeleting(true);
+    try {
+      if (withExport) {
+        try {
+          await exportMemberPayments(memberId, memberName);
+        } catch (e: any) {
+          toast.error("Export failed — deletion cancelled");
+          setDeleting(false);
+          return;
+        }
+      }
+      const { error, count } = await supabase
+        .from("student_payments")
+        .delete({ count: "exact" })
+        .eq("user_id", workspaceId)
+        .eq("student_id", memberId);
+      if (error) { toast.error(error.message); return; }
+      await logAudit(ownerId, "payment.bulk_deleted", { member_id: memberId, member_name: memberName, count: count ?? 0, exported: withExport }, { type: "student", id: memberId });
+      toast.success(`${withExport ? "Exported and deleted" : "Deleted"} ${count ?? 0} payment${count === 1 ? "" : "s"} for ${memberName}`);
+      setDeleteTarget(null);
+      fetchAll();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
 
   const grandTotal = payments.reduce((s, p) => s + Number(p.amount), 0);
 
@@ -672,7 +748,7 @@ const Payments = () => {
                         <>
                         <div className="flex justify-end p-2 px-4 bg-muted/30">
                           <button
-                            onClick={(e) => { e.stopPropagation(); deleteAllMemberPayments(c.id, c.name); }}
+                            onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: c.id, name: c.name }); }}
                             className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 px-2.5 py-1.5 rounded-md"
                           >
                             <Trash2 className="h-3.5 w-3.5" /> Delete All Payments
@@ -750,7 +826,30 @@ const Payments = () => {
           })}
         </div>
       )}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o && !deleting) setDeleteTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete all payments</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete all payment records for {deleteTarget?.name}? This action cannot be undone. The member profile and all other data stay untouched.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-sm text-muted-foreground">
+            {deleteTarget ? `${buildExportRows(deleteTarget.id).count} payment record(s) will be removed.` : null}
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button disabled={deleting} onClick={() => runDeleteAll(true)}>
+              <FileText className="h-4 w-4 mr-2" /> Export & Delete (PDF + Excel)
+            </Button>
+            <Button variant="destructive" disabled={deleting} onClick={() => runDeleteAll(false)}>
+              <Trash2 className="h-4 w-4 mr-2" /> Delete Only
+            </Button>
+            <Button variant="outline" disabled={deleting} onClick={() => setDeleteTarget(null)}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <PaymentReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} data={receiptData} />
+
     </div>
   );
 };
