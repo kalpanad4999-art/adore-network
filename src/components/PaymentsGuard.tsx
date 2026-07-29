@@ -175,12 +175,65 @@ const PaymentsGuard = ({ children }: { children: ReactNode }) => {
             <Button type="submit" className="w-full" disabled={busy || password.length < 4}>
               {busy ? "Checking…" : "Unlock"}
             </Button>
+            <Button type="button" variant="outline" className="w-full gap-2" onClick={() => setForgotOpen(true)}>
+              <KeyRound className="h-4 w-4" /> Forgot password?
+            </Button>
           </form>
           <p className="mt-4 text-xs text-center text-muted-foreground">
             Auto-locks after 10 minutes of access.
           </p>
         </CardContent>
       </Card>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display">Reset Payment Lock</DialogTitle>
+            <DialogDescription>
+              Confirm your login email and account password. Leave the new password blank to remove the Payment Lock.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgot} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Login email</Label>
+              <Input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={acctEmail}
+                onChange={(e) => setAcctEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Account password</Label>
+              <Input
+                type="password"
+                autoComplete="current-password"
+                value={acctPassword}
+                onChange={(e) => setAcctPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>New Payment Lock password (optional)</Label>
+              <Input
+                type="password"
+                autoComplete="new-password"
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value)}
+                placeholder="Leave blank to remove lock"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setForgotOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={resetting || acctPassword.length < 4 || !acctEmail}>
+                {resetting ? "Verifying…" : "Verify & Reset"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
