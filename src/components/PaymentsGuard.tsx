@@ -113,6 +113,32 @@ const PaymentsGuard = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPin && newPin.length < 4) {
+      toast.error("New Payment Lock password must be at least 4 characters");
+      return;
+    }
+    if (acctEmail.trim().toLowerCase() !== (user?.email || "").toLowerCase()) {
+      toast.error("Email does not match the signed-in account");
+      return;
+    }
+    setResetting(true);
+    try {
+      await resetPaymentsPasswordWithAccount(acctPassword, newPin || null);
+      sessionStorage.setItem(SESSION_KEY, String(Date.now()));
+      setUnlocked(true);
+      setForgotOpen(false);
+      setAcctPassword(""); setNewPin(""); setError("");
+      toast.success(newPin ? "Payment Lock password reset" : "Payment Lock removed. You can set a new one in Settings.");
+    } catch (err: any) {
+      toast.error(err?.message || "Incorrect account password");
+    } finally {
+      setResetting(false);
+    }
+  };
+
+
   return (
     <div className="flex items-center justify-center min-h-[60vh] px-4">
       <Card className="max-w-md w-full">
