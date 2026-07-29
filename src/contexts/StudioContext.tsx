@@ -38,6 +38,7 @@ interface StudioContextValue {
   setBackgroundFromUrl: (url: string) => Promise<void>;
   removeBackground: () => Promise<void>;
   setPaymentsPassword: (pin: string | null, currentPassword?: string) => Promise<void>;
+  resetPaymentsPasswordWithAccount: (accountPassword: string, newPin: string | null) => Promise<void>;
   verifyPaymentsPin: (pin: string) => Promise<boolean>;
   enableBiometric: () => Promise<void>;
   disableBiometric: () => Promise<void>;
@@ -249,6 +250,26 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     if (!hash) { setBiometricEnabled(false); setBiometricCredentialId(null); }
     await logAudit(ownerId, pin ? (paymentsPinHash ? "payment_lock.password_changed" : "payment_lock.enabled") : "payment_lock.disabled");
   };
+  const resetPaymentsPasswordWithAccount = async (accountPassword: string, newPin: string | null) => {
+    if (!isOwner) throw new Error("Only the Owner can reset the Payment Lock");
+    if (!user?.email) throw new Error("No signed-in account found");
+    const { error } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: accountPassword,
+    });
+    if (error) throw new Error("Incorrect account password");
+    const hash = newPin ? await sha256Hex(newPin) : null;
+    const patch: Record<string, any> = { payments_pin_hash: hash };
+    if (!hash) {
+      patch.webauthn_enabled = false;
+      patch.webauthn_credential_id = null;
+    }
+    await upsertSecurity(patch);
+    setPaymentsPinHash(hash);
+    if (!hash) { setBiometricEnabled(false); setBiometricCredentialId(null); }
+    await logAudit(ownerId, newPin ? "payment_lock.password_reset_via_account" : "payment_lock.disabled_via_account");
+  };
+
   const verifyPaymentsPin = async (pin: string) => {
     if (!paymentsPinHash) return false;
     const ok = (await sha256Hex(pin)) === paymentsPinHash;
@@ -301,7 +322,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
       biometricEnabled, biometricCredentialId,
       ownerId, isOwner, permissions, loading, refresh,
       updateName, uploadLogo, uploadBackground, setBackgroundFromUrl, removeBackground,
-      setPaymentsPassword, verifyPaymentsPin,
+      setPaymentsPassword, resetPaymentsPasswordWithAccount, verifyPaymentsPin,
       enableBiometric, disableBiometric, verifyBiometricUnlock,
       setAppLockPin, verifyAppLockPin,
     }}>

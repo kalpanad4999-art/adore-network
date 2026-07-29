@@ -1,11 +1,14 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useStudio } from "@/contexts/StudioContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Lock, Fingerprint } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Lock, Fingerprint, KeyRound } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
 const SESSION_KEY = "trinetra-payments-unlocked-at";
 const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
@@ -19,7 +22,8 @@ const isStillUnlocked = () => {
 };
 
 const PaymentsGuard = ({ children }: { children: ReactNode }) => {
-  const { paymentsPinSet, verifyPaymentsPin, biometricEnabled, verifyBiometricUnlock, loading } = useStudio();
+  const { paymentsPinSet, verifyPaymentsPin, biometricEnabled, verifyBiometricUnlock, resetPaymentsPasswordWithAccount, loading } = useStudio();
+  const { user } = useAuth();
   const location = useLocation();
   const [unlocked, setUnlocked] = useState<boolean>(() => isStillUnlocked());
   const [password, setPassword] = useState("");
@@ -27,6 +31,17 @@ const PaymentsGuard = ({ children }: { children: ReactNode }) => {
   const [busy, setBusy] = useState(false);
   const [bioBusy, setBioBusy] = useState(false);
   const timerRef = useRef<number | null>(null);
+
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [acctEmail, setAcctEmail] = useState("");
+  const [acctPassword, setAcctPassword] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [resetting, setResetting] = useState(false);
+
+  useEffect(() => {
+    if (user?.email) setAcctEmail(user.email);
+  }, [user?.email]);
+
 
   // Clear when leaving payments area
   useEffect(() => {
@@ -98,6 +113,32 @@ const PaymentsGuard = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPin && newPin.length < 4) {
+      toast.error("New Payment Lock password must be at least 4 characters");
+      return;
+    }
+    if (acctEmail.trim().toLowerCase() !== (user?.email || "").toLowerCase()) {
+      toast.error("Email does not match the signed-in account");
+      return;
+    }
+    setResetting(true);
+    try {
+      await resetPaymentsPasswordWithAccount(acctPassword, newPin || null);
+      sessionStorage.setItem(SESSION_KEY, String(Date.now()));
+      setUnlocked(true);
+      setForgotOpen(false);
+      setAcctPassword(""); setNewPin(""); setError("");
+      toast.success(newPin ? "Payment Lock password reset" : "Payment Lock removed. You can set a new one in Settings.");
+    } catch (err: any) {
+      toast.error(err?.message || "Incorrect account password");
+    } finally {
+      setResetting(false);
+    }
+  };
+
+
   return (
     <div className="flex items-center justify-center min-h-[60vh] px-4">
       <Card className="max-w-md w-full">
@@ -134,12 +175,65 @@ const PaymentsGuard = ({ children }: { children: ReactNode }) => {
             <Button type="submit" className="w-full" disabled={busy || password.length < 4}>
               {busy ? "Checking…" : "Unlock"}
             </Button>
+            <Button type="button" variant="outline" className="w-full gap-2" onClick={() => setForgotOpen(true)}>
+              <KeyRound className="h-4 w-4" /> Forgot password?
+            </Button>
           </form>
           <p className="mt-4 text-xs text-center text-muted-foreground">
             Auto-locks after 10 minutes of access.
           </p>
         </CardContent>
       </Card>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display">Reset Payment Lock</DialogTitle>
+            <DialogDescription>
+              Confirm your login email and account password. Leave the new password blank to remove the Payment Lock.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgot} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Login email</Label>
+              <Input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={acctEmail}
+                onChange={(e) => setAcctEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Account password</Label>
+              <Input
+                type="password"
+                autoComplete="current-password"
+                value={acctPassword}
+                onChange={(e) => setAcctPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>New Payment Lock password (optional)</Label>
+              <Input
+                type="password"
+                autoComplete="new-password"
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value)}
+                placeholder="Leave blank to remove lock"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setForgotOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={resetting || acctPassword.length < 4 || !acctEmail}>
+                {resetting ? "Verifying…" : "Verify & Reset"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
