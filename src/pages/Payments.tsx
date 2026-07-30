@@ -103,6 +103,9 @@ const Payments = () => {
   const [couponInput, setCouponInput] = useState<string>("");
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [filterBatchId, setFilterBatchId] = useState<string>("");
+  // Members whose payment entry was fully removed from the Payments section.
+  // Purely a Payments-section view state — the member profile itself is untouched.
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({
     student_id: "",
     amount: "",
@@ -139,6 +142,32 @@ const Payments = () => {
     setCoupons(((cps as any[]) || []) as Coupon[]);
   };
   useEffect(() => { fetchAll(); }, [workspaceId]);
+
+  const removedKey = workspaceId ? `payments-removed-members-${workspaceId}` : null;
+  useEffect(() => {
+    if (!removedKey) return;
+    try {
+      const raw = localStorage.getItem(removedKey);
+      setRemovedIds(new Set(raw ? (JSON.parse(raw) as string[]) : []));
+    } catch { setRemovedIds(new Set()); }
+  }, [removedKey]);
+
+  const persistRemoved = (next: Set<string>) => {
+    setRemovedIds(next);
+    if (removedKey) {
+      try { localStorage.setItem(removedKey, JSON.stringify([...next])); } catch { /* ignore */ }
+    }
+  };
+
+  // A member reappears in Payments as soon as a new payment is recorded for them.
+  useEffect(() => {
+    if (removedIds.size === 0) return;
+    const withPayments = new Set(payments.map((p) => p.student_id));
+    const next = new Set([...removedIds].filter((id) => !withPayments.has(id)));
+    if (next.size !== removedIds.size) persistRemoved(next);
+  }, [payments]);
+
+
 
   // Realtime sync: reload when any shared table for this workspace changes.
   useEffect(() => {
@@ -258,10 +287,11 @@ const Payments = () => {
 
   const visibleCustomers = useMemo(() => {
     if (!filterBatchId) return [];
-    if (filterBatchId === "__all__") return customers;
-    if (filterBatchId === "__none__") return customers.filter((c) => !c.batch_id);
-    return customers.filter((c) => c.batch_id === filterBatchId);
-  }, [customers, filterBatchId]);
+    const base = customers.filter((c) => !removedIds.has(c.id));
+    if (filterBatchId === "__all__") return base;
+    if (filterBatchId === "__none__") return base.filter((c) => !c.batch_id);
+    return base.filter((c) => c.batch_id === filterBatchId);
+  }, [customers, filterBatchId, removedIds]);
 
   const selectedCustomer = customers.find((c) => c.id === form.student_id);
   const selectedBatchName = selectedCustomer?.batch_id ? (batchMap.get(selectedCustomer.batch_id) || "No Batch Assigned") : "No Batch Assigned";
@@ -456,8 +486,11 @@ const Payments = () => {
         .eq("user_id", workspaceId)
         .eq("student_id", memberId);
       if (error) { toast.error(error.message); return; }
-      await logAudit(ownerId, "payment.bulk_deleted", { member_id: memberId, member_name: memberName, count: count ?? 0, exported: withExport }, { type: "student", id: memberId });
-      toast.success(`${withExport ? "Exported and deleted" : "Deleted"} ${count ?? 0} payment${count === 1 ? "" : "s"} for ${memberName}`);
+      // Remove the whole member entry from the Payments section view.
+      const next = new Set(removedIds); next.add(memberId); persistRemoved(next);
+      setExpanded((prev) => { const n = new Set(prev); n.delete(memberId); return n; });
+      await logAudit(ownerId, "payment.bulk_deleted", { member_id: memberId, member_name: memberName, count: count ?? 0, exported: withExport, entry_removed: true }, { type: "student", id: memberId });
+      toast.success(`${withExport ? "Exported and removed" : "Removed"} ${memberName} from Payments (${count ?? 0} record${count === 1 ? "" : "s"})`);
       setDeleteTarget(null);
       fetchAll();
     } finally {
@@ -829,9 +862,9 @@ const Payments = () => {
       <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o && !deleting) setDeleteTarget(null); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete all payments</DialogTitle>
+            <DialogTitle>Delete member entry from Payments</DialogTitle>
             <DialogDescription>
-              Are you sure you want to permanently delete all payment records for {deleteTarget?.name}? This action cannot be undone. The member profile and all other data stay untouched.
+              This permanently deletes all payment records and receipts for {deleteTarget?.name} and removes their entry from the Payments list. This action cannot be undone. The member profile and all other modules stay untouched.
             </DialogDescription>
           </DialogHeader>
           <div className="text-sm text-muted-foreground">
