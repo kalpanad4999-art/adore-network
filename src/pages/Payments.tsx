@@ -143,6 +143,32 @@ const Payments = () => {
   };
   useEffect(() => { fetchAll(); }, [workspaceId]);
 
+  const removedKey = workspaceId ? `payments-removed-members-${workspaceId}` : null;
+  useEffect(() => {
+    if (!removedKey) return;
+    try {
+      const raw = localStorage.getItem(removedKey);
+      setRemovedIds(new Set(raw ? (JSON.parse(raw) as string[]) : []));
+    } catch { setRemovedIds(new Set()); }
+  }, [removedKey]);
+
+  const persistRemoved = (next: Set<string>) => {
+    setRemovedIds(next);
+    if (removedKey) {
+      try { localStorage.setItem(removedKey, JSON.stringify([...next])); } catch { /* ignore */ }
+    }
+  };
+
+  // A member reappears in Payments as soon as a new payment is recorded for them.
+  useEffect(() => {
+    if (removedIds.size === 0) return;
+    const withPayments = new Set(payments.map((p) => p.student_id));
+    const next = new Set([...removedIds].filter((id) => !withPayments.has(id)));
+    if (next.size !== removedIds.size) persistRemoved(next);
+  }, [payments]);
+
+
+
   // Realtime sync: reload when any shared table for this workspace changes.
   useEffect(() => {
     if (!workspaceId) return;
