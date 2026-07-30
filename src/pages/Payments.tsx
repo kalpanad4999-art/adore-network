@@ -486,8 +486,11 @@ const Payments = () => {
         .eq("user_id", workspaceId)
         .eq("student_id", memberId);
       if (error) { toast.error(error.message); return; }
-      await logAudit(ownerId, "payment.bulk_deleted", { member_id: memberId, member_name: memberName, count: count ?? 0, exported: withExport }, { type: "student", id: memberId });
-      toast.success(`${withExport ? "Exported and deleted" : "Deleted"} ${count ?? 0} payment${count === 1 ? "" : "s"} for ${memberName}`);
+      // Remove the whole member entry from the Payments section view.
+      const next = new Set(removedIds); next.add(memberId); persistRemoved(next);
+      setExpanded((prev) => { const n = new Set(prev); n.delete(memberId); return n; });
+      await logAudit(ownerId, "payment.bulk_deleted", { member_id: memberId, member_name: memberName, count: count ?? 0, exported: withExport, entry_removed: true }, { type: "student", id: memberId });
+      toast.success(`${withExport ? "Exported and removed" : "Removed"} ${memberName} from Payments (${count ?? 0} record${count === 1 ? "" : "s"})`);
       setDeleteTarget(null);
       fetchAll();
     } finally {
