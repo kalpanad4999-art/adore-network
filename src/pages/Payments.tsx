@@ -287,10 +287,11 @@ const Payments = () => {
 
   const visibleCustomers = useMemo(() => {
     if (!filterBatchId) return [];
-    if (filterBatchId === "__all__") return customers;
-    if (filterBatchId === "__none__") return customers.filter((c) => !c.batch_id);
-    return customers.filter((c) => c.batch_id === filterBatchId);
-  }, [customers, filterBatchId]);
+    const base = customers.filter((c) => !removedIds.has(c.id));
+    if (filterBatchId === "__all__") return base;
+    if (filterBatchId === "__none__") return base.filter((c) => !c.batch_id);
+    return base.filter((c) => c.batch_id === filterBatchId);
+  }, [customers, filterBatchId, removedIds]);
 
   const selectedCustomer = customers.find((c) => c.id === form.student_id);
   const selectedBatchName = selectedCustomer?.batch_id ? (batchMap.get(selectedCustomer.batch_id) || "No Batch Assigned") : "No Batch Assigned";
