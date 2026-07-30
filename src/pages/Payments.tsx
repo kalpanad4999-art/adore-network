@@ -103,6 +103,9 @@ const Payments = () => {
   const [couponInput, setCouponInput] = useState<string>("");
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [filterBatchId, setFilterBatchId] = useState<string>("");
+  // Members whose payment entry was fully removed from the Payments section.
+  // Purely a Payments-section view state — the member profile itself is untouched.
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({
     student_id: "",
     amount: "",
