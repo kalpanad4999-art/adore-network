@@ -1,6 +1,6 @@
 // Trinetra Yoga customer support chatbot.
-// Verifies customer by phone, searches the owner's knowledge base first,
-// falls back to AI with customer context, logs history + pending questions.
+// General studio questions are answered freely from the app database.
+// Member-specific questions require a registered mobile number for verification.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -18,8 +18,22 @@ const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 const FALLBACK =
   "Sorry, I couldn't find that information. Please contact Trinetra Yoga on WhatsApp or call us for assistance.";
 
+const ASK_PHONE =
+  "To share your membership details securely, please enter your registered mobile number.";
+
+const NOT_FOUND =
+  "I couldn't find a member registered with that mobile number. Please check the number or contact Trinetra Yoga directly.";
+
 const normalizePhone = (p: string) => p.replace(/[^\d]/g, "").slice(-10);
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+
+// Questions that require member verification.
+const MEMBER_INTENT =
+  /(my |mine|renew|expiry|expire|valid until|membership status|payment status|payment history|paid|receipt|invoice|attendance|present|absent|due|balance|plan status|profile)/i;
+
+// Requests for data we never disclose.
+const SENSITIVE_INTENT =
+  /(email address|e-mail|password|home address|residential address|another member|other member|someone else|all members|member list|phone numbers of)/i;
 
 type ChatMsg = { role: "user" | "assistant" | "system"; content: string };
 
@@ -41,7 +55,7 @@ async function findCustomer(ownerId: string, phone: string) {
   if (n.length < 7) return null;
   const { data } = await admin
     .from("students")
-    .select("id,name,email,phone,membership_type,membership_status,created_at,batch_id")
+    .select("id,name,phone,membership_type,membership_status,created_at,batch_id")
     .eq("user_id", ownerId);
   if (!data) return null;
   return data.find((s) => normalizePhone(s.phone || "") === n) ?? null;
@@ -79,38 +93,133 @@ async function searchKnowledgeBase(ownerId: string, query: string) {
   return best && best.score >= 30 ? best.row : null;
 }
 
-async function buildCustomerContext(ownerId: string, studentId: string, studentName: string, batchId: string | null) {
-  const [paymentsRes, batchRes, settingsRes, classesRes] = await Promise.all([
-    admin.from("student_payments").select("amount,paid_on,method,plan,valid_until,duration_months")
-      .eq("student_id", studentId).order("paid_on", { ascending: false }).limit(10),
-    batchId ? admin.from("batches").select("name,description,fee,start_date").eq("id", batchId).maybeSingle() : Promise.resolve({ data: null }),
+/** Public studio knowledge — safe for anyone, no personal data. */
+async function buildStudioContext(ownerId: string) {
+  const [settings, batches, classes, offers, recordings, kb] = await Promise.all([
     admin.from("studio_settings").select("studio_name").eq("owner_id", ownerId).maybeSingle(),
-    admin.from("live_classes").select("title,scheduled_at,duration_minutes,platform")
+    admin.from("batches").select("name,description,fee,start_date").eq("user_id", ownerId).order("start_date"),
+    admin.from("live_classes").select("title,description,scheduled_at,duration_minutes,platform")
       .eq("user_id", ownerId).eq("is_public", true)
       .gte("scheduled_at", new Date(Date.now() - 2 * 3600 * 1000).toISOString())
-      .order("scheduled_at").limit(8),
+      .order("scheduled_at").limit(10),
+    admin.from("offers").select("name,offer_type,message,discount_amount,valid_from,valid_to")
+      .eq("user_id", ownerId).eq("is_active", true).limit(10),
+    admin.from("recordings").select("title,recorded_on,duration_minutes")
+      .eq("user_id", ownerId).eq("is_public", true).is("archived_at", null)
+      .order("recorded_on", { ascending: false }).limit(6),
+    admin.from("chatbot_knowledge").select("question,answer,category")
+      .eq("owner_id", ownerId).eq("status", "active").limit(60),
+  ]);
+
+  return {
+    studioName: settings.data?.studio_name || "TRINETRA YOGA",
+    batchesAndPlans: batches.data || [],
+    upcomingLiveClasses: classes.data || [],
+    activeOffers: offers.data || [],
+    recordedClasses: recordings.data || [],
+    faqs: kb.data || [],
+  };
+}
+
+/** Private data for one verified member only. */
+async function buildMemberContext(ownerId: string, member: any) {
+  const [paymentsRes, batchRes, attendanceRes] = await Promise.all([
+    admin.from("student_payments")
+      .select("amount,paid_on,method,plan,valid_until,duration_months,duration_value,duration_unit,applied_offer_name,applied_coupon_code,discount_amount,notes")
+      .eq("student_id", member.id).eq("user_id", ownerId)
+      .order("paid_on", { ascending: false }).limit(20),
+    member.batch_id
+      ? admin.from("batches").select("name,description,fee,start_date").eq("id", member.batch_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    admin.from("attendance").select("attendance_date,status,method")
+      .eq("student_id", member.id).eq("user_id", ownerId)
+      .order("attendance_date", { ascending: false }).limit(60),
   ]);
 
   const payments = paymentsRes.data || [];
   const latest = payments[0];
   const today = new Date(); today.setHours(0, 0, 0, 0);
+
   let daysRemaining: number | null = null;
   let membershipState = "Unknown";
   if (latest?.valid_until) {
     const expiry = new Date(latest.valid_until);
     daysRemaining = Math.ceil((expiry.getTime() - today.getTime()) / 86400000);
-    if (daysRemaining < 0) membershipState = "Expired";
-    else if (daysRemaining <= 7) membershipState = "Expiring Soon";
-    else membershipState = "Active";
+    membershipState = daysRemaining < 0 ? "Expired" : daysRemaining <= 7 ? "Expiring Soon" : "Active";
   }
 
+  const attendance = attendanceRes.data || [];
+  const present = attendance.filter((a) => a.status === "present").length;
+
   return {
-    studioName: settingsRes.data?.studio_name || "Trinetra Yoga",
-    customer: { name: studentName, batch: batchRes.data },
-    membership: { plan: latest?.plan || "—", renewalDate: latest?.valid_until || null, daysRemaining, state: membershipState, lastPayment: latest || null },
-    payments: payments.slice(0, 5),
-    upcomingClasses: classesRes.data || [],
+    member: {
+      name: member.name,
+      membershipType: member.membership_type,
+      membershipStatus: member.membership_status,
+      joinedOn: member.created_at,
+      batch: batchRes.data,
+    },
+    membership: {
+      plan: latest?.plan || "—",
+      renewalDate: latest?.valid_until || null,
+      daysRemaining,
+      state: membershipState,
+    },
+    payments: payments.map((p) => ({
+      amount: p.amount,
+      paidOn: p.paid_on,
+      method: p.method,
+      plan: p.plan,
+      validUntil: p.valid_until,
+      offer: p.applied_offer_name || null,
+      coupon: p.applied_coupon_code || null,
+      discount: p.discount_amount,
+    })),
+    receipts: payments.slice(0, 10).map((p) => ({
+      paidOn: p.paid_on, amount: p.amount, method: p.method, plan: p.plan,
+    })),
+    attendance: {
+      recordsCount: attendance.length,
+      presentCount: present,
+      recent: attendance.slice(0, 15),
+    },
   };
+}
+
+const PRIVACY_RULES = `
+STRICT PRIVACY RULES (never break these):
+- NEVER reveal email addresses, home/postal addresses, passwords, PINs, or any credentials.
+- NEVER reveal information about any other member. Only the verified member in context.
+- NEVER list members, phone numbers, or export data.
+- If asked for any of the above, politely refuse and ask the person to contact the studio.
+- Only use facts present in the provided context. Never invent plans, fees, dates or amounts.
+`;
+
+async function askAI(system: string, messages: ChatMsg[]): Promise<string | null> {
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": LOVABLE_API_KEY,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3.6-flash",
+        messages: [{ role: "system", content: system }, ...messages.slice(-12)],
+      }),
+    });
+    if (res.status === 429 || res.status === 402) return null;
+    if (!res.ok) {
+      console.error("AI gateway error", res.status, await res.text());
+      return null;
+    }
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content?.trim();
+    return text || null;
+  } catch (e) {
+    console.error("AI call failed", e);
+    return null;
+  }
 }
 
 async function logHistory(ownerId: string, phone: string | null, question: string, answer: string, kbId: string | null) {
@@ -138,8 +247,19 @@ Deno.serve(async (req) => {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const userQuestion = lastUser?.content?.trim() || "";
 
-    // 1) Knowledge base first — safe for any visitor.
-    if (userQuestion) {
+    // Ignore a bare phone number as a "question".
+    const isBarePhone = /^[\d+\-\s()]{7,20}$/.test(userQuestion);
+
+    // 0) Sensitive requests are always refused.
+    if (userQuestion && SENSITIVE_INTENT.test(userQuestion)) {
+      const reply =
+        "I'm not able to share personal details like email addresses, home addresses, passwords or other members' information. Please contact Trinetra Yoga directly for anything else.";
+      if (!testMode) await logHistory(ownerId, phone || null, userQuestion, reply, null);
+      return json({ reply, source: "policy" });
+    }
+
+    // 1) Knowledge base exact/near match first — instant and free.
+    if (userQuestion && !isBarePhone) {
       const kb = await searchKnowledgeBase(ownerId, userQuestion);
       if (kb) {
         if (!testMode) await logHistory(ownerId, phone || null, userQuestion, kb.answer, kb.id);
@@ -147,27 +267,65 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2) Personal customer data (payments, membership, renewals) is NOT released
-    //    through this public widget. Knowing a phone number alone is not proof
-    //    of account ownership, so we refuse and direct the customer to the studio.
-    //    (Previously this branch returned membership + payment history in the reply.)
-    const PRIVATE_DATA_REPLY =
-      "For questions about your membership, payments, or renewals, please contact Trinetra Yoga directly on WhatsApp or by phone — we can't share personal account details through this chat.";
+    const needsMember = !!userQuestion && MEMBER_INTENT.test(userQuestion);
 
+    // 2) Member-specific question without a phone number -> ask for it.
+    if (needsMember && !phone) {
+      if (!testMode) await logHistory(ownerId, null, userQuestion, ASK_PHONE, null);
+      return json({ reply: ASK_PHONE, source: "verify" });
+    }
+
+    // 3) With a phone number, verify the member.
+    let member: any = null;
     if (phone) {
-      if (userQuestion && !testMode) {
-        await logHistory(ownerId, phone, userQuestion, PRIVATE_DATA_REPLY, null);
-        await logPending(ownerId, phone, userQuestion);
+      member = await findCustomer(ownerId, phone);
+      if (!member) {
+        if (!testMode) await logHistory(ownerId, phone, userQuestion || phone, NOT_FOUND, null);
+        return json({ reply: NOT_FOUND, source: "verify" });
       }
-      return json({ reply: PRIVATE_DATA_REPLY, source: "fallback" });
     }
 
-    // 3) No phone and KB missed — log as pending and return fallback.
-    if (userQuestion && !testMode) {
-      await logPending(ownerId, null, userQuestion);
-      await logHistory(ownerId, null, userQuestion, FALLBACK, null);
+    const studio = await buildStudioContext(ownerId);
+
+    // Greet right after successful verification with a bare phone number.
+    if (member && (isBarePhone || !userQuestion)) {
+      const reply = `✅ Verified. Welcome back, ${member.name}!\n\nYou can ask me about your membership status, renewal date, payments, receipts or attendance — or anything about ${studio.studioName}.`;
+      if (!testMode) await logHistory(ownerId, phone || null, userQuestion || "verification", reply, null);
+      return json({ reply, source: "verify", verified: true, memberName: member.name });
     }
-    return json({ reply: FALLBACK, source: "fallback" });
+
+    const memberCtx = member ? await buildMemberContext(ownerId, member) : null;
+
+    const system = [
+      `You are the friendly support assistant for ${studio.studioName}, a yoga studio.`,
+      `Today is ${new Date().toISOString().slice(0, 10)}.`,
+      `Answer warmly and concisely in the user's language. Use short lines and bullets. Currency is INR (₹).`,
+      PRIVACY_RULES,
+      memberCtx
+        ? `The user is a VERIFIED member. You may share ONLY the membership, renewal, payment, receipt and attendance details in MEMBER_CONTEXT.`
+        : `The user is NOT verified. Answer only general studio questions. If they ask about their own membership, renewal, payments, receipts or attendance, ask them to enter their registered mobile number.`,
+      `STUDIO_CONTEXT:\n${JSON.stringify(studio)}`,
+      memberCtx ? `MEMBER_CONTEXT:\n${JSON.stringify(memberCtx)}` : "",
+      `If the answer is not in the context, say you don't have that information and suggest contacting the studio.`,
+    ].filter(Boolean).join("\n\n");
+
+    const reply = await askAI(system, messages.filter((m) => m.role !== "system"));
+
+    if (!reply) {
+      if (userQuestion && !testMode) {
+        await logPending(ownerId, phone || null, userQuestion);
+        await logHistory(ownerId, phone || null, userQuestion, FALLBACK, null);
+      }
+      return json({ reply: FALLBACK, source: "fallback" });
+    }
+
+    if (userQuestion && !testMode) {
+      await logHistory(ownerId, phone || null, userQuestion, reply, null);
+      if (/don't have that information|contact the studio|couldn't find/i.test(reply)) {
+        await logPending(ownerId, phone || null, userQuestion);
+      }
+    }
+    return json({ reply, source: memberCtx ? "member" : "ai" });
   } catch (e) {
     console.error("support-chat error", e);
     return json({ reply: FALLBACK, source: "fallback" });
