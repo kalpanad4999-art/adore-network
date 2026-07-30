@@ -862,9 +862,9 @@ const Payments = () => {
       <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o && !deleting) setDeleteTarget(null); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete all payments</DialogTitle>
+            <DialogTitle>Delete member entry from Payments</DialogTitle>
             <DialogDescription>
-              Are you sure you want to permanently delete all payment records for {deleteTarget?.name}? This action cannot be undone. The member profile and all other data stay untouched.
+              This permanently deletes all payment records and receipts for {deleteTarget?.name} and removes their entry from the Payments list. This action cannot be undone. The member profile and all other modules stay untouched.
             </DialogDescription>
           </DialogHeader>
           <div className="text-sm text-muted-foreground">
