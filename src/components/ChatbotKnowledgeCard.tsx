@@ -22,7 +22,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Pencil, Trash2, Download, Upload, MessageSquare, HelpCircle, Send, Loader2, Copy, ExternalLink, QrCode, Share2 } from "lucide-react";
-import chatbotAvatarAsset from "@/assets/chatbot-avatar.png.asset.json";
+import ChatbotAvatar from "@/components/ChatbotAvatar";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
@@ -318,7 +318,7 @@ export const ChatbotKnowledgeCard = () => {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <div className="flex items-center gap-2">
-              <img src={chatbotAvatarAsset.url} alt="Chatbot" className="h-7 w-7 rounded-full ring-1 ring-primary/20 object-cover" width={28} height={28} loading="lazy" />
+              <ChatbotAvatar className="h-7 w-7 ring-1 ring-primary/20" textClassName="text-xs" title="Chatbot" />
               <CardTitle className="font-display">AI Chatbot</CardTitle>
             </div>
             <CardDescription className="mt-1">

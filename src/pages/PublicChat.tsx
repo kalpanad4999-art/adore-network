@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import SupportChatWidget from "@/components/SupportChatWidget";
-import chatbotAvatarAsset from "@/assets/chatbot-avatar.png.asset.json";
+import ChatbotAvatar from "@/components/ChatbotAvatar";
 
 const PublicChat = () => {
   const { ownerId } = useParams<{ ownerId: string }>();
@@ -32,13 +32,12 @@ const PublicChat = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-start px-4 py-10">
       <div className="max-w-md w-full text-center space-y-4">
-        <img
-          src={chatbotAvatarAsset.url}
-          alt={`${studioName} assistant`}
-          className="h-24 w-24 rounded-full mx-auto shadow ring-2 ring-primary/20 object-cover bg-background"
-          width={96}
-          height={96}
+        <ChatbotAvatar
+          className="h-24 w-24 mx-auto shadow ring-2 ring-primary/20"
+          textClassName="text-4xl"
+          title={`${studioName} assistant`}
         />
+
         <h1 className="font-display text-3xl">{studioName}</h1>
         <p className="text-muted-foreground">
           Chat with us for membership, renewals, class schedules, payments and general support.
