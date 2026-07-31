@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Image as ImageIcon, Video, Radio, ExternalLink } from "lucide-react";
 import SupportChatWidget from "@/components/SupportChatWidget";
 import { useStudioMeta, applyStudioBranding } from "@/hooks/useStudioMeta";
-import { format } from "date-fns";
+import { fmtDate, fmtDateTime } from "@/lib/date";
 
 type G = { id: string; title: string | null; description: string | null; media_type: "image" | "video"; storage_path: string; thumbnail_path: string | null };
 type R = { id: string; title: string; description: string | null; storage_path: string | null; external_url: string | null; duration_minutes: number | null; recorded_on: string | null };
@@ -38,7 +38,7 @@ const RecCard = ({ r }: { r: R }) => {
       <CardContent className="p-4 space-y-2">
         <h4 className="font-medium">{r.title}</h4>
         {r.description && <p className="text-sm text-muted-foreground">{r.description}</p>}
-        <p className="text-xs text-muted-foreground">{r.recorded_on ? format(new Date(r.recorded_on), "PP") : ""} {r.duration_minutes ? `· ${r.duration_minutes} min` : ""}</p>
+        <p className="text-xs text-muted-foreground">{r.recorded_on ? fmtDate(r.recorded_on) : ""} {r.duration_minutes ? `· ${r.duration_minutes} min` : ""}</p>
         {r.storage_path && url && <video src={url} controls className="w-full rounded-md bg-black" />}
         {r.external_url && <a href={r.external_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary inline-flex items-center gap-1"><ExternalLink className="h-3.5 w-3.5" />Watch</a>}
       </CardContent>
@@ -109,7 +109,7 @@ const PublicStudio = () => {
                   <div>
                     <h4 className="font-medium">{it.title}</h4>
                     {it.description && <p className="text-sm text-muted-foreground">{it.description}</p>}
-                    <p className="text-sm text-muted-foreground mt-1">{format(new Date(it.scheduled_at), "PP p")} · {it.duration_minutes} min{it.platform ? ` · ${it.platform}` : ""}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{fmtDateTime(it.scheduled_at)} · {it.duration_minutes} min{it.platform ? ` · ${it.platform}` : ""}</p>
                   </div>
                   <a href={it.meeting_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary inline-flex items-center gap-1"><ExternalLink className="h-3.5 w-3.5" />Join</a>
                 </CardContent>

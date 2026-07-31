@@ -71,7 +71,7 @@ const fmtDate = (iso: string) => {
   if (!iso) return "—";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+  return fmtDate(d);
 };
 
 const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {

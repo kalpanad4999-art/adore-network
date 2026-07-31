@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { format } from "date-fns";
+import { fmtDate } from "@/lib/date";
 
 type Rec = {
   id: string;
@@ -59,7 +59,7 @@ const PublicRecording = () => {
       <div className="max-w-3xl mx-auto space-y-4">
         <h1 className="font-display text-3xl font-bold">{rec.title}</h1>
         <p className="text-sm text-muted-foreground">
-          {rec.recorded_on ? format(new Date(rec.recorded_on), "PP") : format(new Date(rec.created_at), "PP")}
+          {rec.recorded_on ? fmtDate(rec.recorded_on) : fmtDate(rec.created_at)}
           {rec.duration_minutes ? ` · ${rec.duration_minutes} min` : ""}
         </p>
         {rec.storage_path && videoUrl && (

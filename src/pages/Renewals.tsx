@@ -84,7 +84,7 @@ const filters: { key: FilterKey; label: string }[] = [
 ];
 
 const buildMessage = (name: string, renewalDate: string) =>
-  `Hello ${name},\n\nJust a quick reminder that your Trinetra Yoga membership expires on ${new Date(renewalDate).toLocaleDateString()}.\n\nTo continue enjoying uninterrupted access to classes, please renew before the expiry date.\n\nIF YOU HAVE ALREADY PAID, PLEASE IGNORE THIS MESSAGE.\n\nThank you,\n\nTeam Trinetra Yoga`;
+  `Hello ${name},\n\nJust a quick reminder that your Trinetra Yoga membership expires on ${fmtDate(renewalDate)}.\n\nTo continue enjoying uninterrupted access to classes, please renew before the expiry date.\n\nIF YOU HAVE ALREADY PAID, PLEASE IGNORE THIS MESSAGE.\n\nThank you,\n\nTeam Trinetra Yoga`;
 
 const sanitizePhone = (phone: string | null) => (phone || "").replace(/[^0-9]/g, "");
 
@@ -339,7 +339,7 @@ const Renewals = () => {
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {r.renewalDate
-                      ? <>Renews {new Date(r.renewalDate).toLocaleDateString()} · {r.daysRemaining !== null && r.daysRemaining >= 0 ? `${r.daysRemaining} day${r.daysRemaining === 1 ? "" : "s"} left` : `Expired ${Math.abs(r.daysRemaining || 0)} day${Math.abs(r.daysRemaining || 0) === 1 ? "" : "s"} ago`}</>
+                      ? <>Renews {fmtDate(r.renewalDate)} · {r.daysRemaining !== null && r.daysRemaining >= 0 ? `${r.daysRemaining} day${r.daysRemaining === 1 ? "" : "s"} left` : `Expired ${Math.abs(r.daysRemaining || 0)} day${Math.abs(r.daysRemaining || 0) === 1 ? "" : "s"} ago`}</>
                       : "No active membership"}
                   </p>
                 </div>

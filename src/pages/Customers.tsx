@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { fmtDate } from "@/lib/date";
 import CustomerDetailsTable from "@/components/CustomerDetailsTable";
 
 
@@ -375,7 +375,7 @@ const Customers = () => {
                           <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{members.length} {members.length === 1 ? "member" : "members"}</span>
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5 flex gap-3 flex-wrap font-normal">
-                          {b.start_date && <span>Starts {format(new Date(b.start_date), "PP")}</span>}
+                          {b.start_date && <span>Starts {fmtDate(b.start_date)}</span>}
                           <span>Fee ₹{Number(b.fee).toLocaleString()}</span>
                         </div>
                       </div>

@@ -218,7 +218,7 @@ const Attendance = () => {
     const rows = filteredRecords.map((r) => {
       const s = students.find((x) => x.id === r.student_id);
       const b = batches.find((x) => x.id === r.batch_id);
-      return [r.attendance_date, b?.name ?? "", s?.name ?? "", r.status, r.method, new Date(r.marked_at).toLocaleString()];
+      return [fmtDate(r.attendance_date), b?.name ?? "", s?.name ?? "", r.status, r.method, fmtDateTime(r.marked_at)];
     });
     const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -437,14 +437,14 @@ const Attendance = () => {
                     const b = batches.find((x) => x.id === r.batch_id);
                     return (
                       <tr key={r.id} className="border-t border-border">
-                        <td className="py-2 pr-3">{r.attendance_date}</td>
+                        <td className="py-2 pr-3">{fmtDate(r.attendance_date)}</td>
                         <td className="py-2 pr-3">{s?.name ?? "—"}</td>
                         <td className="py-2 pr-3">{b?.name ?? "—"}</td>
                         <td className="py-2 pr-3">
                           <Badge variant={r.status === "present" ? "secondary" : "outline"}>{r.status}</Badge>
                         </td>
                         <td className="py-2 pr-3 text-xs text-muted-foreground">{r.method}</td>
-                        <td className="py-2 pr-3 text-xs">{new Date(r.marked_at).toLocaleString()}</td>
+                        <td className="py-2 pr-3 text-xs">{fmtDateTime(r.marked_at)}</td>
                         {isOwner && (
                           <td className="py-2 pr-3 text-right">
                             <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(r)} aria-label="Delete attendance">
@@ -525,7 +525,7 @@ const Attendance = () => {
               Are you sure you want to delete this attendance record? This action cannot be undone.
               {deleteTarget && (
                 <span className="block mt-2 text-foreground">
-                  {students.find((s) => s.id === deleteTarget.student_id)?.name ?? "Member"} · {deleteTarget.attendance_date}
+                  {students.find((s) => s.id === deleteTarget.student_id)?.name ?? "Member"} · {fmtDate(deleteTarget.attendance_date)}
                 </span>
               )}
             </AlertDialogDescription>
