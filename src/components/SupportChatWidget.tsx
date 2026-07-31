@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { X, Minus, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import chatbotAvatarAsset from "@/assets/chatbot-avatar.png.asset.json";
+import ChatbotAvatar from "@/components/ChatbotAvatar";
 
-const CHATBOT_AVATAR = chatbotAvatarAsset.url;
 
 type Msg = { role: "user" | "assistant"; content: string };
 
