@@ -22,7 +22,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Pencil, Trash2, Download, Upload, MessageSquare, HelpCircle, Send, Loader2, Copy, ExternalLink, QrCode, Share2 } from "lucide-react";
-import chatbotAvatarAsset from "@/assets/chatbot-avatar.png.asset.json";
+import ChatbotAvatar from "@/components/ChatbotAvatar";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
