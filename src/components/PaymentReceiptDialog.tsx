@@ -68,12 +68,8 @@ interface Props {
 
 
 
-const fmtDate = (iso: string) => {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return fmtDate(d);
-};
+const fmtDate = (iso: string) => fmtDateDMY(iso, iso || "—");
+
 
 const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
