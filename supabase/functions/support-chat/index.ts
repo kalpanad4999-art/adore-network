@@ -3,6 +3,15 @@
 // Member-specific questions require a registered mobile number for verification.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+const dmy = (v: string | number | Date | null | undefined): string => {
+  if (!v) return "";
+  const m = typeof v === "string" ? /^(\d{4})-(\d{2})-(\d{2})/.exec(v) : null;
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  const d = v instanceof Date ? v : new Date(v);
+  if (isNaN(d.getTime())) return String(v);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -298,7 +307,8 @@ Deno.serve(async (req) => {
 
     const system = [
       `You are the friendly support assistant for ${studio.studioName}, a yoga studio.`,
-      `Today is ${new Date().toISOString().slice(0, 10)}.`,
+      `Today is ${dmy(new Date())}.`,
+      `ALWAYS write every date in DD/MM/YYYY format (e.g. 05/08/2026). Never use YYYY-MM-DD or month names.`,
       `Answer warmly and concisely in the user's language. Use short lines and bullets. Currency is INR (₹).`,
       PRIVACY_RULES,
       memberCtx
