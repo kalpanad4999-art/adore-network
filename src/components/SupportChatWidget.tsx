@@ -117,7 +117,7 @@ const SupportChatWidget = ({ ownerId, batchToken, autoOpen = false }: Props) => 
         aria-label="Open support chat"
         className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full overflow-hidden shadow-lg shadow-primary/30 ring-2 ring-primary/20 hover:scale-105 transition-transform bg-background"
       >
-        <img src={CHATBOT_AVATAR} alt="Trinetra Yoga assistant" className="h-full w-full object-cover" loading="lazy" width={56} height={56} />
+        <ChatbotAvatar className="h-full w-full" textClassName="text-xl" />
 
         {unread > 0 && (
           <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full h-5 min-w-5 px-1 flex items-center justify-center">
