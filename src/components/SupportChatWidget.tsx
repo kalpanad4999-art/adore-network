@@ -136,9 +136,8 @@ const SupportChatWidget = ({ ownerId, batchToken, autoOpen = false }: Props) => 
     >
       <header className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground shrink-0">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full overflow-hidden bg-primary-foreground/15 ring-1 ring-primary-foreground/30">
-            <img src={CHATBOT_AVATAR} alt="Trinetra Yoga assistant" className="h-full w-full object-cover" loading="lazy" width={32} height={32} />
-          </div>
+          <ChatbotAvatar className="h-8 w-8 ring-1 ring-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground" textClassName="text-sm" />
+
           <div>
             <p className="font-display text-sm leading-tight">Trinetra Yoga Support</p>
             <p className="text-[10px] opacity-80">{phone ? "Verified" : "Live assistant"}</p>
