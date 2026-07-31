@@ -7,6 +7,7 @@ import html2canvas from "html2canvas";
 import { toast } from "sonner";
 
 import logoAsset from "@/assets/trinetra-logo.jpg.asset.json";
+import { fmtDate as fmtDateDMY } from "@/lib/date";
 
 const LOGO_REMOTE_URL = (typeof window !== "undefined" ? window.location.origin : "") + logoAsset.url;
 // Cache the base64-encoded logo across dialog opens so it renders offline & after hosting.
@@ -67,12 +68,8 @@ interface Props {
 
 
 
-const fmtDate = (iso: string) => {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
-};
+const fmtDate = (iso: string) => fmtDateDMY(iso, iso || "—");
+
 
 const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
   const ref = useRef<HTMLDivElement>(null);

@@ -16,6 +16,7 @@ import PaymentReceiptDialog, { ReceiptData } from "@/components/PaymentReceiptDi
 import { FileText, Tag } from "lucide-react";
 import { Offer, Coupon, OFFER_LABELS, CONGRATS, computeDiscount, isOfferEligible } from "@/lib/offers";
 import { Badge } from "@/components/ui/badge";
+import { fmtDate, fmtDateFile } from "@/lib/date";
 
 interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
 interface Batch { id: string; name: string; }
@@ -412,12 +413,12 @@ const Payments = () => {
       .sort((a, b) => a.paid_on.localeCompare(b.paid_on));
     const header = ["Date", "Amount (Rs)", "Discount (Rs)", "Method", "Duration", "Valid Until", "Offer", "Coupon"];
     const body = rows.map((p) => [
-      p.paid_on,
+      fmtDate(p.paid_on),
       String(Number(p.amount)),
       String(Number(p.discount_amount || 0)),
       p.method || "",
       p.duration_value && p.duration_unit ? `${p.duration_value} ${p.duration_unit}` : (p.duration_months ? `${p.duration_months} months` : ""),
-      p.valid_until || "",
+      fmtDate(p.valid_until),
       p.applied_offer_name || "",
       p.applied_coupon_code || "",
     ]);
@@ -428,7 +429,8 @@ const Payments = () => {
   const exportMemberPayments = async (memberId: string, memberName: string) => {
     const { header, body, total } = buildExportRows(memberId);
     const safeName = memberName.replace(/[^\w\-]+/g, "_");
-    const stamp = new Date().toISOString().slice(0, 10);
+    const stamp = fmtDateFile(new Date());
+    const generatedOn = fmtDate(new Date());
 
     // CSV
     const esc = (v: string) => `"${(v ?? "").replace(/"/g, '""')}"`;
@@ -456,7 +458,7 @@ const Payments = () => {
     doc.setFontSize(16);
     doc.text(`${studioName || "Trinetra Yoga"} — Payment History`, 40, 32);
     doc.setFontSize(11);
-    doc.text(`Member: ${memberName}   |   Generated: ${stamp}   |   Total: Rs ${total.toLocaleString()}`, 40, 50);
+    doc.text(`Member: ${memberName}   |   Generated: ${generatedOn}   |   Total: Rs ${total.toLocaleString()}`, 40, 50);
     autoTable(doc, {
       head: [header], body, startY: 64,
       styles: { fontSize: 9, cellPadding: 4, overflow: "linebreak" },
@@ -805,8 +807,8 @@ const Payments = () => {
                                   <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground uppercase">{p.method}</span>
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                  Paid {new Date(p.paid_on).toLocaleDateString()}
-                                  {p.valid_until ? ` · renews ${new Date(p.valid_until).toLocaleDateString()}` : ""}
+                                  Paid {fmtDate(p.paid_on)}
+                                  {p.valid_until ? ` · renews ${fmtDate(p.valid_until)}` : ""}
                                 </p>
                               </div>
                               <div className="flex items-center gap-1 shrink-0">

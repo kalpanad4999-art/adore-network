@@ -25,6 +25,7 @@ import { Plus, Search, Pencil, Trash2, Download, Upload, MessageSquare, HelpCirc
 import ChatbotAvatar from "@/components/ChatbotAvatar";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
+import { fmtDate, fmtDateTime } from "@/lib/date";
 
 const CATEGORIES = [
   "Membership", "Fees", "Yoga Classes", "Meditation", "Trainers",
@@ -425,7 +426,7 @@ export const ChatbotKnowledgeCard = () => {
                         <Badge variant={i.status === "active" ? "default" : "secondary"}>{i.status}</Badge>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                        {new Date(i.updated_at).toLocaleDateString()}
+                        {fmtDate(i.updated_at)}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(i)}><Pencil className="h-4 w-4" /></Button>
@@ -475,7 +476,7 @@ export const ChatbotKnowledgeCard = () => {
                     <TableRow key={p.id}>
                       <TableCell className="max-w-[280px] truncate">{p.question}</TableCell>
                       <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{p.phone || "—"}</TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{new Date(p.created_at).toLocaleString()}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{fmtDateTime(p.created_at)}</TableCell>
                       <TableCell>{p.resolved ? <Badge variant="secondary">Resolved</Badge> : <Badge>Open</Badge>}</TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         <Button variant="outline" size="sm" onClick={() => resolvePending(p)}>
@@ -521,7 +522,7 @@ export const ChatbotKnowledgeCard = () => {
                 <div key={h.id} className="rounded-md border p-3 space-y-1.5">
                   <div className="flex justify-between items-start gap-2">
                     <div className="text-xs text-muted-foreground">
-                      {new Date(h.created_at).toLocaleString()}{h.phone ? ` • ${h.phone}` : ""}
+                      {fmtDateTime(h.created_at)}{h.phone ? ` • ${h.phone}` : ""}
                     </div>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => deleteHistoryItem(h.id)}>
                       <Trash2 className="h-3.5 w-3.5" />

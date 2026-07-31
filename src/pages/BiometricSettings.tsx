@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, PlugZap, Unplug, RefreshCw, Trash2, Wifi, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { fmtDateTime } from "@/lib/date";
 
 type Device = {
   id: string;
@@ -202,7 +203,7 @@ const BiometricSettings = () => {
                     <p className="text-xs text-muted-foreground truncate">
                       {d.ip_address ? `${d.ip_address}${d.port ? `:${d.port}` : ""}` : "—"}
                       {d.last_status_message ? ` • ${d.last_status_message}` : ""}
-                      {d.last_synced_at ? ` • Last sync: ${new Date(d.last_synced_at).toLocaleString()}` : ""}
+                      {d.last_synced_at ? ` • Last sync: ${fmtDateTime(d.last_synced_at)}` : ""}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">

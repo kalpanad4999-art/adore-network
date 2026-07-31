@@ -15,6 +15,7 @@ import { Video, Radio, Plus, Trash2, ExternalLink, Upload, Eye, EyeOff, Copy, Li
 import ShareLinkDialog from "@/components/ShareLinkDialog";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
+import { fmtDate, fmtDateTime } from "@/lib/date";
 import { QRCodeSVG } from "qrcode.react";
 
 type Recording = {
@@ -113,7 +114,7 @@ const RecordingCard = ({ r, canManage, onDelete, onTogglePublic, onShare }: {
             </div>
             {r.description && <p className="text-sm text-muted-foreground line-clamp-2">{r.description}</p>}
             <p className="text-xs text-muted-foreground mt-1">
-              {r.recorded_on ? format(new Date(r.recorded_on), "PP") : "—"}
+              {r.recorded_on ? fmtDate(r.recorded_on) : "—"}
               {r.duration_minutes ? ` · ${r.duration_minutes} min` : ""}
               {r.publish_at && new Date(r.publish_at).getTime() > Date.now() && ` · publishes ${formatDistanceToNow(new Date(r.publish_at), { addSuffix: true })}`}
               {r.expires_at && ` · hides ${formatDistanceToNow(new Date(r.expires_at), { addSuffix: true })}`}
@@ -514,7 +515,7 @@ const Media = () => {
                           {l.is_public ? <Eye className="h-3.5 w-3.5 text-muted-foreground" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
                         </div>
                         {l.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{l.description}</p>}
-                        <p className="text-sm text-muted-foreground mt-1">{format(dt, "PP p")} · {l.duration_minutes} min</p>
+                        <p className="text-sm text-muted-foreground mt-1">{fmtDateTime(dt)} · {l.duration_minutes} min</p>
                         <a href={l.meeting_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary inline-flex items-center gap-1 mt-1">
                           <ExternalLink className="h-3.5 w-3.5" />Join link
                         </a>

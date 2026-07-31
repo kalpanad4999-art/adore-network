@@ -3,6 +3,15 @@
 // Member-specific questions require a registered mobile number for verification.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+const dmy = (v: string | number | Date | null | undefined): string => {
+  if (!v) return "";
+  const m = typeof v === "string" ? /^(\d{4})-(\d{2})-(\d{2})/.exec(v) : null;
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  const d = v instanceof Date ? v : new Date(v);
+  if (isNaN(d.getTime())) return String(v);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -113,10 +122,10 @@ async function buildStudioContext(ownerId: string) {
 
   return {
     studioName: settings.data?.studio_name || "TRINETRA YOGA",
-    batchesAndPlans: batches.data || [],
-    upcomingLiveClasses: classes.data || [],
-    activeOffers: offers.data || [],
-    recordedClasses: recordings.data || [],
+    batchesAndPlans: (batches.data || []).map((b: any) => ({ ...b, start_date: dmy(b.start_date) })),
+    upcomingLiveClasses: (classes.data || []).map((c: any) => ({ ...c, scheduled_at: dmy(c.scheduled_at) })),
+    activeOffers: (offers.data || []).map((o: any) => ({ ...o, valid_from: dmy(o.valid_from), valid_to: dmy(o.valid_to) })),
+    recordedClasses: (recordings.data || []).map((r: any) => ({ ...r, recorded_on: dmy(r.recorded_on) })),
     faqs: kb.data || [],
   };
 }
@@ -156,32 +165,32 @@ async function buildMemberContext(ownerId: string, member: any) {
       name: member.name,
       membershipType: member.membership_type,
       membershipStatus: member.membership_status,
-      joinedOn: member.created_at,
-      batch: batchRes.data,
+      joinedOn: dmy(member.created_at),
+      batch: batchRes.data ? { ...batchRes.data, start_date: dmy((batchRes.data as any).start_date) } : null,
     },
     membership: {
       plan: latest?.plan || "—",
-      renewalDate: latest?.valid_until || null,
+      renewalDate: latest?.valid_until ? dmy(latest.valid_until) : null,
       daysRemaining,
       state: membershipState,
     },
     payments: payments.map((p) => ({
       amount: p.amount,
-      paidOn: p.paid_on,
+      paidOn: dmy(p.paid_on),
       method: p.method,
       plan: p.plan,
-      validUntil: p.valid_until,
+      validUntil: dmy(p.valid_until),
       offer: p.applied_offer_name || null,
       coupon: p.applied_coupon_code || null,
       discount: p.discount_amount,
     })),
     receipts: payments.slice(0, 10).map((p) => ({
-      paidOn: p.paid_on, amount: p.amount, method: p.method, plan: p.plan,
+      paidOn: dmy(p.paid_on), amount: p.amount, method: p.method, plan: p.plan,
     })),
     attendance: {
       recordsCount: attendance.length,
       presentCount: present,
-      recent: attendance.slice(0, 15),
+      recent: attendance.slice(0, 15).map((a) => ({ ...a, attendance_date: dmy(a.attendance_date) })),
     },
   };
 }
@@ -298,7 +307,8 @@ Deno.serve(async (req) => {
 
     const system = [
       `You are the friendly support assistant for ${studio.studioName}, a yoga studio.`,
-      `Today is ${new Date().toISOString().slice(0, 10)}.`,
+      `Today is ${dmy(new Date())}.`,
+      `ALWAYS write every date in DD/MM/YYYY format (e.g. 05/08/2026). Never use YYYY-MM-DD or month names.`,
       `Answer warmly and concisely in the user's language. Use short lines and bullets. Currency is INR (₹).`,
       PRIVACY_RULES,
       memberCtx

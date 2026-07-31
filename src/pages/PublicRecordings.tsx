@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Video, ExternalLink } from "lucide-react";
-import { format } from "date-fns";
+import { fmtDate } from "@/lib/date";
 
 type R = { id: string; title: string; description: string | null; storage_path: string | null; external_url: string | null; duration_minutes: number | null; recorded_on: string | null; public_slug: string | null };
 
@@ -26,7 +26,7 @@ const RecCard = ({ r }: { r: R }) => {
         <h4 className="font-medium">{r.title}</h4>
         {r.description && <p className="text-sm text-muted-foreground">{r.description}</p>}
         <p className="text-xs text-muted-foreground">
-          {r.recorded_on ? format(new Date(r.recorded_on), "PP") : ""}
+          {r.recorded_on ? fmtDate(r.recorded_on) : ""}
           {r.duration_minutes ? ` · ${r.duration_minutes} min` : ""}
         </p>
         {r.storage_path && url && <video src={url} controls playsInline className="w-full rounded-md bg-black" />}

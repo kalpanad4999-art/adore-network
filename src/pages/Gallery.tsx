@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Image as ImageIcon, Trash2, Upload, Eye, EyeOff, Copy, Clock, Infinity as InfinityIcon, QrCode, X } from "lucide-react";
 import { toast } from "sonner";
 import { format, formatDistanceToNowStrict } from "date-fns";
+import { fmtDateTime } from "@/lib/date";
 import ShareLinkDialog from "@/components/ShareLinkDialog";
 
 type Gallery = { id: string; title: string | null; description: string | null; media_type: "image" | "video"; storage_path: string; thumbnail_path: string | null; is_public: boolean; created_at: string; expires_at: string | null; expiry_action: "hide" | "delete" };
@@ -347,7 +348,7 @@ const GalleryPage = () => {
                 <div className="text-xs text-muted-foreground">Selected expiry</div>
                 <div className="font-medium">
                   {expiry
-                    ? `${format(expiry, "PPp")} · ${formatDistanceToNowStrict(expiry, { addSuffix: true })}`
+                    ? `${fmtDateTime(expiry)} · ${formatDistanceToNowStrict(expiry, { addSuffix: true })}`
                     : mode === "forever" ? "Never expires" : "—"}
                 </div>
               </div>
