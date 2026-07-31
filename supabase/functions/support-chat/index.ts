@@ -122,10 +122,10 @@ async function buildStudioContext(ownerId: string) {
 
   return {
     studioName: settings.data?.studio_name || "TRINETRA YOGA",
-    batchesAndPlans: batches.data || [],
-    upcomingLiveClasses: classes.data || [],
-    activeOffers: offers.data || [],
-    recordedClasses: recordings.data || [],
+    batchesAndPlans: (batches.data || []).map((b: any) => ({ ...b, start_date: dmy(b.start_date) })),
+    upcomingLiveClasses: (classes.data || []).map((c: any) => ({ ...c, scheduled_at: dmy(c.scheduled_at) })),
+    activeOffers: (offers.data || []).map((o: any) => ({ ...o, valid_from: dmy(o.valid_from), valid_to: dmy(o.valid_to) })),
+    recordedClasses: (recordings.data || []).map((r: any) => ({ ...r, recorded_on: dmy(r.recorded_on) })),
     faqs: kb.data || [],
   };
 }
