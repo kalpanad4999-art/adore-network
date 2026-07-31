@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import SupportChatWidget from "@/components/SupportChatWidget";
-import chatbotAvatarAsset from "@/assets/chatbot-avatar.png.asset.json";
+import ChatbotAvatar from "@/components/ChatbotAvatar";
 
 const PublicChat = () => {
   const { ownerId } = useParams<{ ownerId: string }>();
