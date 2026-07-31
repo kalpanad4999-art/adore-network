@@ -16,6 +16,7 @@ import PaymentReceiptDialog, { ReceiptData } from "@/components/PaymentReceiptDi
 import { FileText, Tag } from "lucide-react";
 import { Offer, Coupon, OFFER_LABELS, CONGRATS, computeDiscount, isOfferEligible } from "@/lib/offers";
 import { Badge } from "@/components/ui/badge";
+import { fmtDate, fmtDateFile } from "@/lib/date";
 
 interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
 interface Batch { id: string; name: string; }

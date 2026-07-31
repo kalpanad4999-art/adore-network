@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, PlugZap, Unplug, RefreshCw, Trash2, Wifi, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { fmtDateTime } from "@/lib/date";
 
 type Device = {
   id: string;

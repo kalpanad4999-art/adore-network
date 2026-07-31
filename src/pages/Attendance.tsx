@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Fingerprint, CheckCircle2, XCircle, Search, Download, Printer, Cog, Loader2, Trash2, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { verifyBiometric } from "@/lib/biometric";
+import { fmtDate, fmtDateTime } from "@/lib/date";
 
 const AUTO_DELETE_KEY = "attendance_auto_delete_days_v1";
 type AutoDeleteDays = 0 | 30 | 60 | 90 | 180 | 365;

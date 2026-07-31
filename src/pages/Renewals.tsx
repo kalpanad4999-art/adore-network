@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Send, RefreshCw, CalendarClock, AlertTriangle, CheckCircle2, Users } from "lucide-react";
 import { toast } from "sonner";
+import { fmtDate } from "@/lib/date";
 
 interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
 interface Batch { id: string; name: string; }

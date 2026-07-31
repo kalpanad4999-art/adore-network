@@ -25,6 +25,7 @@ import { Plus, Search, Pencil, Trash2, Download, Upload, MessageSquare, HelpCirc
 import ChatbotAvatar from "@/components/ChatbotAvatar";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
+import { fmtDate, fmtDateTime } from "@/lib/date";
 
 const CATEGORIES = [
   "Membership", "Fees", "Yoga Classes", "Meditation", "Trainers",

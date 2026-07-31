@@ -7,6 +7,7 @@ import html2canvas from "html2canvas";
 import { toast } from "sonner";
 
 import logoAsset from "@/assets/trinetra-logo.jpg.asset.json";
+import { fmtDate } from "@/lib/date";
 
 const LOGO_REMOTE_URL = (typeof window !== "undefined" ? window.location.origin : "") + logoAsset.url;
 // Cache the base64-encoded logo across dialog opens so it renders offline & after hosting.
