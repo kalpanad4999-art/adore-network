@@ -318,7 +318,7 @@ export const ChatbotKnowledgeCard = () => {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <div className="flex items-center gap-2">
-              <img src={chatbotAvatarAsset.url} alt="Chatbot" className="h-7 w-7 rounded-full ring-1 ring-primary/20 object-cover" width={28} height={28} loading="lazy" />
+              <ChatbotAvatar className="h-7 w-7 ring-1 ring-primary/20" textClassName="text-xs" title="Chatbot" />
               <CardTitle className="font-display">AI Chatbot</CardTitle>
             </div>
             <CardDescription className="mt-1">
