@@ -136,7 +136,7 @@ const Payments = () => {
     const [{ data: cust }, { data: pays }, { data: bat }, { data: offs }, { data: cps }] = await Promise.all([
       supabase.from("students").select("id,name,phone,batch_id").eq("user_id", workspaceId).order("name"),
       supabase.from("student_payments").select("*").eq("user_id", workspaceId).order("paid_on", { ascending: false }),
-      supabase.from("batches").select("id,name").eq("user_id", workspaceId),
+      supabase.from("batches").select("id,name,fee").eq("user_id", workspaceId),
       (supabase as any).from("offers").select("*").eq("user_id", workspaceId).eq("is_active", true),
       (supabase as any).from("coupons").select("*").eq("user_id", workspaceId).eq("is_active", true),
     ]);
