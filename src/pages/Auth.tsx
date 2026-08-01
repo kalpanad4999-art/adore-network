@@ -146,8 +146,15 @@ const Auth = () => {
   const handleGoogle = async () => {
     setGoogleLoading(true);
     try {
+      // Remember where to land after the provider round-trip (never a raw token in the URL).
+      try {
+        sessionStorage.setItem("post_auth_redirect", "/");
+      } catch {
+        /* ignore */
+      }
+      // Must be a full, public, same-origin URL — not a protected route.
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/auth/callback`,
       });
       if (result.error) {
         toast.error(friendlyAuthError(result.error));
@@ -161,6 +168,7 @@ const Auth = () => {
       setGoogleLoading(false);
     }
   };
+
 
   const handleResendConfirmation = async () => {
     const target = (email || identifier).trim();
