@@ -576,7 +576,15 @@ const Payments = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="font-display text-3xl font-bold">Payments</h1>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <Dialog
+          open={addOpen}
+          onOpenChange={(o) => {
+            setAddOpen(o);
+            if (o && !formBatchId && filterBatchId && filterBatchId !== "__all__") {
+              onFormBatchChange(filterBatchId);
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />Record Payment</Button>
           </DialogTrigger>
