@@ -355,7 +355,8 @@ const Payments = () => {
     e.preventDefault();
     if (!workspaceId) return;
     const originalAmount = parseFloat(form.amount);
-    if (!form.student_id) { toast.error("Pick a customer"); return; }
+    if (!formBatchId) { toast.error("Select a batch first"); return; }
+    if (!form.student_id) { toast.error("Pick a member"); return; }
     if (!originalAmount || originalAmount <= 0) { toast.error("Enter a valid amount"); return; }
     if (!effectiveValue) { toast.error("Enter a valid duration"); return; }
     if (!renewalDate) { toast.error("Could not calculate renewal date"); return; }
