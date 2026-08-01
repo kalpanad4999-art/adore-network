@@ -108,6 +108,8 @@ const Payments = () => {
   const [couponInput, setCouponInput] = useState<string>("");
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [filterBatchId, setFilterBatchId] = useState<string>("");
+  // Batch chosen inside the Record Payment form (required, selected first).
+  const [formBatchId, setFormBatchId] = useState<string>("");
   // Members whose payment entry was fully removed from the Payments section.
   // Purely a Payments-section view state — the member profile itself is untouched.
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
