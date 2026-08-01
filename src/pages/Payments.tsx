@@ -582,22 +582,34 @@ const Payments = () => {
           <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display">Record Payment</DialogTitle>
-              <DialogDescription>Renewal date is auto-calculated from duration.</DialogDescription>
+              <DialogDescription>Select a batch first, then the member. Renewal date is auto-calculated from duration.</DialogDescription>
             </DialogHeader>
             <form onSubmit={addPayment} className="space-y-4">
               <div className="space-y-2">
-                <Label>Member</Label>
-                <Select value={form.student_id} onValueChange={(v) => setForm({ ...form, student_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                <Label>Batch <span className="text-destructive">*</span></Label>
+                <Select value={formBatchId} onValueChange={onFormBatchChange}>
+                  <SelectTrigger><SelectValue placeholder="Select batch" /></SelectTrigger>
                   <SelectContent>
-                    {customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</SelectItem>)}
+                    {batches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                    <SelectItem value="__none__">No Batch Assigned</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Batch <span className="text-muted-foreground text-xs">(auto)</span></Label>
-                <Input value={form.student_id ? selectedBatchName : ""} readOnly disabled placeholder="Select a customer first" className="bg-muted/50 cursor-not-allowed" />
+                <Label>Member <span className="text-destructive">*</span></Label>
+                <Select value={form.student_id} onValueChange={onFormMemberChange} disabled={!formBatchId}>
+                  <SelectTrigger><SelectValue placeholder={formBatchId ? "Select member" : "Select a batch first"} /></SelectTrigger>
+                  <SelectContent>
+                    {formBatchMembers.length === 0 ? (
+                      <div className="px-2 py-3 text-xs text-muted-foreground">No members in this batch</div>
+                    ) : formBatchMembers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {formBatchId && (
+                  <p className="text-xs text-muted-foreground">Batch: {selectedBatchName}</p>
+                )}
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Amount (₹)</Label><Input type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
                 <div className="space-y-2"><Label>Paid on</Label><Input type="date" value={form.paid_on} onChange={(e) => setForm({ ...form, paid_on: e.target.value })} required /></div>
