@@ -301,7 +301,40 @@ const Payments = () => {
   }, [customers, filterBatchId, removedIds]);
 
   const selectedCustomer = customers.find((c) => c.id === form.student_id);
-  const selectedBatchName = selectedCustomer?.batch_id ? (batchMap.get(selectedCustomer.batch_id) || "No Batch Assigned") : "No Batch Assigned";
+  const selectedBatchName = formBatchId
+    ? (formBatchId === "__none__" ? "No Batch Assigned" : (batchMap.get(formBatchId) || "No Batch Assigned"))
+    : "";
+
+  // Members of the batch selected in the Record Payment form.
+  const formBatchMembers = useMemo(() => {
+    if (!formBatchId) return [];
+    if (formBatchId === "__none__") return customers.filter((c) => !c.batch_id);
+    return customers.filter((c) => c.batch_id === formBatchId);
+  }, [customers, formBatchId]);
+
+  // Choosing a batch resets the member and pre-fills the batch fee.
+  const onFormBatchChange = (batchId: string) => {
+    setFormBatchId(batchId);
+    const fee = batches.find((b) => b.id === batchId)?.fee;
+    setForm((f) => ({ ...f, student_id: "", amount: fee ? String(fee) : "" }));
+    clearOffer();
+  };
+
+  // Selecting a member keeps the already-chosen batch and fills their last plan details.
+  const onFormMemberChange = (studentId: string) => {
+    const last = (payments.filter((p) => p.student_id === studentId)
+      .sort((a, b) => (a.paid_on < b.paid_on ? 1 : -1)))[0];
+    const fee = batches.find((b) => b.id === formBatchId)?.fee;
+    setForm((f) => ({
+      ...f,
+      student_id: studentId,
+      amount: f.amount || (last ? String(last.amount) : (fee ? String(fee) : "")),
+      method: last?.method || f.method,
+      durationUnit: ((last?.duration_unit as Unit) || (last?.duration_months ? "months" : f.durationUnit)) as Unit,
+      durationValue: String(last?.duration_value ?? last?.duration_months ?? f.durationValue),
+    }));
+  };
+
 
   const grouped = useMemo(() => {
     const map = new Map<string, Payment[]>();
