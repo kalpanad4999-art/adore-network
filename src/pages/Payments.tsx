@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { fmtDate, fmtDateFile } from "@/lib/date";
 
 interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
-interface Batch { id: string; name: string; }
+interface Batch { id: string; name: string; fee?: number | null; }
 interface Payment {
   id: string;
   student_id: string;
