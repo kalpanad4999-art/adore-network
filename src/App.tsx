@@ -55,6 +55,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/join/:token" element={<Join />} />
             <Route path="/studio/:ownerId" element={<PublicStudio />} />
