@@ -46,18 +46,22 @@ const unitOptions: { value: Unit; label: string }[] = [
 ];
 const unitMax: Record<Unit, number> = { days: 365, months: 60, years: 10 };
 
+// Renewal date = one day before the same date in the next membership cycle.
+// e.g. 30/07/2026 + 1 month -> 29/08/2026
 const addDuration = (isoDate: string, value: number, unit: Unit): string => {
   if (!isoDate || !value || value <= 0) return "";
   const [y, m, d] = isoDate.split("-").map(Number);
   if (unit === "days") {
-    const dt = new Date(Date.UTC(y, m - 1, d + value));
+    const dt = new Date(Date.UTC(y, m - 1, d + value - 1));
     return dt.toISOString().slice(0, 10);
   }
   const months = unit === "years" ? value * 12 : value;
   const dt = new Date(Date.UTC(y, m - 1 + months, d));
-  if (dt.getUTCDate() !== d) dt.setUTCDate(0);
+  if (dt.getUTCDate() !== d) dt.setUTCDate(0); // clamp to end of shorter month
+  dt.setUTCDate(dt.getUTCDate() - 1);
   return dt.toISOString().slice(0, 10);
 };
+
 
 type RangeKey = "today" | "week" | "month" | "year" | "all";
 const rangeOptions: { value: RangeKey; label: string }[] = [
