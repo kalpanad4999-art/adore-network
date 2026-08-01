@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { fmtDate, fmtDateFile } from "@/lib/date";
 
 interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
-interface Batch { id: string; name: string; }
+interface Batch { id: string; name: string; fee?: number | null; }
 interface Payment {
   id: string;
   student_id: string;
@@ -108,6 +108,8 @@ const Payments = () => {
   const [couponInput, setCouponInput] = useState<string>("");
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [filterBatchId, setFilterBatchId] = useState<string>("");
+  // Batch chosen inside the Record Payment form (required, selected first).
+  const [formBatchId, setFormBatchId] = useState<string>("");
   // Members whose payment entry was fully removed from the Payments section.
   // Purely a Payments-section view state — the member profile itself is untouched.
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
@@ -136,7 +138,7 @@ const Payments = () => {
     const [{ data: cust }, { data: pays }, { data: bat }, { data: offs }, { data: cps }] = await Promise.all([
       supabase.from("students").select("id,name,phone,batch_id").eq("user_id", workspaceId).order("name"),
       supabase.from("student_payments").select("*").eq("user_id", workspaceId).order("paid_on", { ascending: false }),
-      supabase.from("batches").select("id,name").eq("user_id", workspaceId),
+      supabase.from("batches").select("id,name,fee").eq("user_id", workspaceId),
       (supabase as any).from("offers").select("*").eq("user_id", workspaceId).eq("is_active", true),
       (supabase as any).from("coupons").select("*").eq("user_id", workspaceId).eq("is_active", true),
     ]);
@@ -299,7 +301,40 @@ const Payments = () => {
   }, [customers, filterBatchId, removedIds]);
 
   const selectedCustomer = customers.find((c) => c.id === form.student_id);
-  const selectedBatchName = selectedCustomer?.batch_id ? (batchMap.get(selectedCustomer.batch_id) || "No Batch Assigned") : "No Batch Assigned";
+  const selectedBatchName = formBatchId
+    ? (formBatchId === "__none__" ? "No Batch Assigned" : (batchMap.get(formBatchId) || "No Batch Assigned"))
+    : "";
+
+  // Members of the batch selected in the Record Payment form.
+  const formBatchMembers = useMemo(() => {
+    if (!formBatchId) return [];
+    if (formBatchId === "__none__") return customers.filter((c) => !c.batch_id);
+    return customers.filter((c) => c.batch_id === formBatchId);
+  }, [customers, formBatchId]);
+
+  // Choosing a batch resets the member and pre-fills the batch fee.
+  const onFormBatchChange = (batchId: string) => {
+    setFormBatchId(batchId);
+    const fee = batches.find((b) => b.id === batchId)?.fee;
+    setForm((f) => ({ ...f, student_id: "", amount: fee ? String(fee) : "" }));
+    clearOffer();
+  };
+
+  // Selecting a member keeps the already-chosen batch and fills their last plan details.
+  const onFormMemberChange = (studentId: string) => {
+    const last = (payments.filter((p) => p.student_id === studentId)
+      .sort((a, b) => (a.paid_on < b.paid_on ? 1 : -1)))[0];
+    const fee = batches.find((b) => b.id === formBatchId)?.fee;
+    setForm((f) => ({
+      ...f,
+      student_id: studentId,
+      amount: f.amount || (last ? String(last.amount) : (fee ? String(fee) : "")),
+      method: last?.method || f.method,
+      durationUnit: ((last?.duration_unit as Unit) || (last?.duration_months ? "months" : f.durationUnit)) as Unit,
+      durationValue: String(last?.duration_value ?? last?.duration_months ?? f.durationValue),
+    }));
+  };
+
 
   const grouped = useMemo(() => {
     const map = new Map<string, Payment[]>();
@@ -320,7 +355,8 @@ const Payments = () => {
     e.preventDefault();
     if (!workspaceId) return;
     const originalAmount = parseFloat(form.amount);
-    if (!form.student_id) { toast.error("Pick a customer"); return; }
+    if (!formBatchId) { toast.error("Select a batch first"); return; }
+    if (!form.student_id) { toast.error("Pick a member"); return; }
     if (!originalAmount || originalAmount <= 0) { toast.error("Enter a valid amount"); return; }
     if (!effectiveValue) { toast.error("Enter a valid duration"); return; }
     if (!renewalDate) { toast.error("Could not calculate renewal date"); return; }
@@ -540,29 +576,49 @@ const Payments = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="font-display text-3xl font-bold">Payments</h1>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <Dialog
+          open={addOpen}
+          onOpenChange={(o) => {
+            setAddOpen(o);
+            if (o && !formBatchId && filterBatchId && filterBatchId !== "__all__") {
+              onFormBatchChange(filterBatchId);
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />Record Payment</Button>
           </DialogTrigger>
           <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display">Record Payment</DialogTitle>
-              <DialogDescription>Renewal date is auto-calculated from duration.</DialogDescription>
+              <DialogDescription>Select a batch first, then the member. Renewal date is auto-calculated from duration.</DialogDescription>
             </DialogHeader>
             <form onSubmit={addPayment} className="space-y-4">
               <div className="space-y-2">
-                <Label>Member</Label>
-                <Select value={form.student_id} onValueChange={(v) => setForm({ ...form, student_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+                <Label>Batch <span className="text-destructive">*</span></Label>
+                <Select value={formBatchId} onValueChange={onFormBatchChange}>
+                  <SelectTrigger><SelectValue placeholder="Select batch" /></SelectTrigger>
                   <SelectContent>
-                    {customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</SelectItem>)}
+                    {batches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                    <SelectItem value="__none__">No Batch Assigned</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Batch <span className="text-muted-foreground text-xs">(auto)</span></Label>
-                <Input value={form.student_id ? selectedBatchName : ""} readOnly disabled placeholder="Select a customer first" className="bg-muted/50 cursor-not-allowed" />
+                <Label>Member <span className="text-destructive">*</span></Label>
+                <Select value={form.student_id} onValueChange={onFormMemberChange} disabled={!formBatchId}>
+                  <SelectTrigger><SelectValue placeholder={formBatchId ? "Select member" : "Select a batch first"} /></SelectTrigger>
+                  <SelectContent>
+                    {formBatchMembers.length === 0 ? (
+                      <div className="px-2 py-3 text-xs text-muted-foreground">No members in this batch</div>
+                    ) : formBatchMembers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {formBatchId && (
+                  <p className="text-xs text-muted-foreground">Batch: {selectedBatchName}</p>
+                )}
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Amount (₹)</Label><Input type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
                 <div className="space-y-2"><Label>Paid on</Label><Input type="date" value={form.paid_on} onChange={(e) => setForm({ ...form, paid_on: e.target.value })} required /></div>
