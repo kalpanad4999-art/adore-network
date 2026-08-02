@@ -192,13 +192,46 @@ const Payments = () => {
   }, [workspaceId]);
 
 
+  // Full eligibility context for the member selected in the Record Payment form.
+  const memberCtx = useMemo(() => {
+    const cust = customers.find((c) => c.id === form.student_id);
+    if (!cust) return null;
+    const mine = payments.filter((p) => p.student_id === cust.id);
+    const today = form.paid_on;
+    const firstPaid = mine.length ? mine.map((p) => p.paid_on).sort()[0] : null;
+    const membership_days = firstPaid
+      ? Math.max(0, Math.round((Date.parse(today) - Date.parse(firstPaid)) / 86400000))
+      : 0;
+    const latestValid = mine
+      .map((p) => p.valid_until)
+      .filter(Boolean)
+      .sort()
+      .pop() as string | undefined;
+    const has_active_membership = !!latestValid && latestValid >= today;
+    return {
+      id: cust.id,
+      batch_id: cust.batch_id,
+      membership_days,
+      has_active_membership,
+      payment_status: (has_active_membership ? "paid" : "overdue") as "paid" | "overdue",
+      membership_type: null,
+      member_usage_count: 0,
+    };
+  }, [customers, payments, form.student_id, form.paid_on]);
+
   // Eligible offers for the current form context
   const eligibleOffers = useMemo(() => {
+    if (!form.student_id || !memberCtx) return [];
     const amt = parseFloat(form.amount) || 0;
-    const cust = customers.find((c) => c.id === form.student_id);
-    const ctx = cust ? { id: cust.id, batch_id: cust.batch_id } : null;
-    return offers.filter((o) => isOfferEligible(o, ctx as any, amt, form.paid_on));
-  }, [offers, form.student_id, form.amount, form.paid_on, customers]);
+    return offers.filter((o) =>
+      isOfferEligible(
+        o,
+        { ...memberCtx, member_usage_count: payments.filter((p) => p.student_id === memberCtx.id && p.applied_offer_id === o.id).length } as any,
+        amt,
+        form.paid_on,
+      ),
+    );
+  }, [offers, memberCtx, form.student_id, form.amount, form.paid_on, payments]);
 
   const selectedOffer = useMemo(() => {
     if (appliedCoupon) return offers.find((o) => o.id === appliedCoupon.offer_id) || null;
