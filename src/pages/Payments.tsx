@@ -449,6 +449,7 @@ const Payments = () => {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteMode, setDeleteMode] = useState<"export" | "only" | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const longPress = useRef<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const exportOnly = async (memberId: string, memberName: string) => {
