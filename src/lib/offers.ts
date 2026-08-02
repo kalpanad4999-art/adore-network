@@ -62,6 +62,7 @@ export interface MemberContext {
   membership_type?: string | null;
   payment_status?: "paid" | "overdue" | null;
   birthday_today?: boolean;
+  member_usage_count?: number;
 }
 
 export const isOfferEligible = (offer: Offer, ctx: MemberContext | null, amount: number, todayISO: string): boolean => {
