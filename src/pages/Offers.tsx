@@ -337,11 +337,22 @@ const Offers = () => {
     setSendOpen(null);
   };
 
+  const selectedFormBatchId = form.cond_batch_ids[0] ?? "";
+
   const filteredMembers = useMemo(() => {
     const q = memberSearch.trim().toLowerCase();
     if (!q) return members;
     return members.filter((m) => m.name.toLowerCase().includes(q) || (m.phone || "").includes(q));
   }, [members, memberSearch]);
+
+  // Members of the batch chosen in the offer form (used by "Apply to specific members").
+  const batchMembers = useMemo(() => {
+    if (!selectedFormBatchId) return [];
+    const q = memberSearch.trim().toLowerCase();
+    return members
+      .filter((m) => m.batch_id === selectedFormBatchId)
+      .filter((m) => !q || m.name.toLowerCase().includes(q) || (m.phone || "").includes(q));
+  }, [members, memberSearch, selectedFormBatchId]);
 
   const activeTemplate = builtInKey ? BUILT_IN_TEMPLATES.find((t) => t.key === builtInKey) : null;
 
