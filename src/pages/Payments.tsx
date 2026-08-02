@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudio } from "@/contexts/StudioContext";
@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight, MoreVertical, Download } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import PaymentReceiptDialog, { ReceiptData } from "@/components/PaymentReceiptDialog";
@@ -446,7 +447,19 @@ const Payments = () => {
   };
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteMode, setDeleteMode] = useState<"export" | "only" | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const longPress = useRef<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const exportOnly = async (memberId: string, memberName: string) => {
+    try {
+      await exportMemberPayments(memberId, memberName);
+      toast.success(`Exported payment records for ${memberName}`);
+    } catch {
+      toast.error("Export failed");
+    }
+  };
 
   const buildExportRows = (memberId: string) => {
     const rows = payments.filter((p) => p.student_id === memberId)
@@ -534,6 +547,7 @@ const Payments = () => {
       await logAudit(ownerId, "payment.bulk_deleted", { member_id: memberId, member_name: memberName, count: count ?? 0, exported: withExport, entry_removed: true }, { type: "student", id: memberId });
       toast.success(`${withExport ? "Exported and removed" : "Removed"} ${memberName} from Payments (${count ?? 0} record${count === 1 ? "" : "s"})`);
       setDeleteTarget(null);
+      setDeleteMode(null);
       fetchAll();
     } finally {
       setDeleting(false);
@@ -819,7 +833,15 @@ const Payments = () => {
             return (
               <Card key={c.id}>
                 <CardContent className="p-0">
-                  <button onClick={() => toggle(c.id)} className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-muted/40 transition-colors">
+                  <div className="w-full flex items-center gap-1 pr-2">
+                  <button
+                    onClick={() => toggle(c.id)}
+                    onContextMenu={(e) => { e.preventDefault(); setMenuOpenId(c.id); }}
+                    onTouchStart={() => { longPress.current = window.setTimeout(() => setMenuOpenId(c.id), 550); }}
+                    onTouchEnd={() => { if (longPress.current) window.clearTimeout(longPress.current); }}
+                    onTouchMove={() => { if (longPress.current) window.clearTimeout(longPress.current); }}
+                    className="flex-1 min-w-0 flex items-center justify-between gap-3 p-4 text-left hover:bg-muted/40 transition-colors"
+                  >
                     <div className="flex items-center gap-2 min-w-0">
                       {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
                       <div className="min-w-0">
@@ -835,6 +857,34 @@ const Payments = () => {
                     </div>
                     <span className="font-display font-bold text-lg shrink-0">₹{total.toLocaleString()}</span>
                   </button>
+                  <DropdownMenu open={menuOpenId === c.id} onOpenChange={(o) => setMenuOpenId(o ? c.id : null)}>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        aria-label={`Options for ${c.name}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
+                      >
+                        <MoreVertical className="h-5 w-5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel className="truncate max-w-[220px]">{c.name}</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => exportOnly(c.id, c.name)}>
+                        <Download className="h-4 w-4 mr-2" /> Export (PDF + Excel)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setDeleteTarget({ id: c.id, name: c.name }); setDeleteMode("export"); }}>
+                        <FileText className="h-4 w-4 mr-2" /> Delete &amp; Export
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => { setDeleteTarget({ id: c.id, name: c.name }); setDeleteMode("only"); }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  </div>
                   {isOpen && (
                     <div className="border-t border-border">
                       {list.length === 0 ? (
@@ -921,25 +971,30 @@ const Payments = () => {
           })}
         </div>
       )}
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o && !deleting) setDeleteTarget(null); }}>
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o && !deleting) { setDeleteTarget(null); setDeleteMode(null); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete member entry from Payments</DialogTitle>
+            <DialogTitle>{deleteMode === "export" ? "Delete & Export" : "Delete member entry from Payments"}</DialogTitle>
             <DialogDescription>
-              This permanently deletes all payment records and receipts for {deleteTarget?.name} and removes their entry from the Payments list. This action cannot be undone. The member profile and all other modules stay untouched.
+              {deleteMode === "export" ? "The full payment history is exported (PDF + Excel) first, then " : "This "}
+              permanently deletes all payment records and receipts for {deleteTarget?.name} and removes their entry from the Payments list. This action cannot be undone. The member profile and all other modules stay untouched.
             </DialogDescription>
           </DialogHeader>
           <div className="text-sm text-muted-foreground">
             {deleteTarget ? `${buildExportRows(deleteTarget.id).count} payment record(s) will be removed.` : null}
           </div>
           <div className="flex flex-col gap-2">
-            <Button disabled={deleting} onClick={() => runDeleteAll(true)}>
-              <FileText className="h-4 w-4 mr-2" /> Export & Delete (PDF + Excel)
-            </Button>
-            <Button variant="destructive" disabled={deleting} onClick={() => runDeleteAll(false)}>
-              <Trash2 className="h-4 w-4 mr-2" /> Delete Only
-            </Button>
-            <Button variant="outline" disabled={deleting} onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            {deleteMode !== "only" && (
+              <Button disabled={deleting} onClick={() => runDeleteAll(true)}>
+                <FileText className="h-4 w-4 mr-2" /> Export &amp; Delete (PDF + Excel)
+              </Button>
+            )}
+            {deleteMode !== "export" && (
+              <Button variant="destructive" disabled={deleting} onClick={() => runDeleteAll(false)}>
+                <Trash2 className="h-4 w-4 mr-2" /> Delete Only
+              </Button>
+            )}
+            <Button variant="outline" disabled={deleting} onClick={() => { setDeleteTarget(null); setDeleteMode(null); }}>Cancel</Button>
           </div>
         </DialogContent>
       </Dialog>
