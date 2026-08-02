@@ -93,6 +93,7 @@ const emptyForm = {
   cond_membership_type: "",
   cond_batch_ids: [] as string[],
   cond_member_ids: [] as string[],
+  cond_all_members: true,
   cond_payment_status: "any" as "any" | "paid" | "overdue",
   cond_requires_active: false,
   cond_custom_rule: "",
