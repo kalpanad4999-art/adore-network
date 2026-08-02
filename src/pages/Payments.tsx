@@ -831,7 +831,15 @@ const Payments = () => {
             return (
               <Card key={c.id}>
                 <CardContent className="p-0">
-                  <button onClick={() => toggle(c.id)} className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-muted/40 transition-colors">
+                  <div className="w-full flex items-center gap-1 pr-2">
+                  <button
+                    onClick={() => toggle(c.id)}
+                    onContextMenu={(e) => { e.preventDefault(); setMenuOpenId(c.id); }}
+                    onTouchStart={() => { longPress.current = window.setTimeout(() => setMenuOpenId(c.id), 550); }}
+                    onTouchEnd={() => { if (longPress.current) window.clearTimeout(longPress.current); }}
+                    onTouchMove={() => { if (longPress.current) window.clearTimeout(longPress.current); }}
+                    className="flex-1 min-w-0 flex items-center justify-between gap-3 p-4 text-left hover:bg-muted/40 transition-colors"
+                  >
                     <div className="flex items-center gap-2 min-w-0">
                       {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
                       <div className="min-w-0">
@@ -847,6 +855,34 @@ const Payments = () => {
                     </div>
                     <span className="font-display font-bold text-lg shrink-0">₹{total.toLocaleString()}</span>
                   </button>
+                  <DropdownMenu open={menuOpenId === c.id} onOpenChange={(o) => setMenuOpenId(o ? c.id : null)}>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        aria-label={`Options for ${c.name}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
+                      >
+                        <MoreVertical className="h-5 w-5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel className="truncate max-w-[220px]">{c.name}</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => exportOnly(c.id, c.name)}>
+                        <Download className="h-4 w-4 mr-2" /> Export (PDF + Excel)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setDeleteTarget({ id: c.id, name: c.name }); setDeleteMode("export"); }}>
+                        <FileText className="h-4 w-4 mr-2" /> Delete &amp; Export
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => { setDeleteTarget({ id: c.id, name: c.name }); setDeleteMode("only"); }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  </div>
                   {isOpen && (
                     <div className="border-t border-border">
                       {list.length === 0 ? (
