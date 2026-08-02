@@ -221,13 +221,18 @@ const Offers = () => {
     const discount = parseFloat(form.discount_amount);
     if (!discount || discount <= 0) { toast.error("Enter a valid discount amount"); return; }
 
+    if (!isBuiltIn && !form.cond_all_members && form.cond_member_ids.length === 0) {
+      toast.error("Select at least one member, or turn on Select All Members");
+      return;
+    }
+
     const conditions = {
       membership_duration_min_days: form.cond_membership_days ? parseInt(form.cond_membership_days) : null,
-      membership_type: form.cond_membership_type.trim() || null,
+      membership_type: null,
       batch_ids: isBuiltIn ? null : (form.cond_batch_ids.length ? form.cond_batch_ids : null),
-      member_ids: form.cond_member_ids.length ? form.cond_member_ids : null,
-      payment_status: isBuiltIn ? "any" : form.cond_payment_status,
-      requires_active_membership: form.cond_requires_active,
+      member_ids: !isBuiltIn && !form.cond_all_members && form.cond_member_ids.length ? form.cond_member_ids : null,
+      payment_status: "any",
+      requires_active_membership: false,
       custom_rule: form.cond_custom_rule.trim() || null,
     };
 
@@ -237,11 +242,11 @@ const Offers = () => {
       offer_type: form.offer_type,
       message: form.message.trim() || null,
       discount_amount: discount,
-      min_payment_amount: isBuiltIn ? 0 : (parseFloat(form.min_payment_amount || "0") || 0),
+      min_payment_amount: 0,
       valid_from: isBuiltIn ? null : (form.valid_from || null),
       valid_to: isBuiltIn ? null : (form.valid_to || null),
       usage_limit_total: isBuiltIn ? null : (form.usage_limit_total ? parseInt(form.usage_limit_total) : null),
-      usage_limit_per_member: isBuiltIn ? null : (form.usage_limit_per_member ? parseInt(form.usage_limit_per_member) : null),
+      usage_limit_per_member: null,
       is_active: form.is_active,
       conditions,
     };
