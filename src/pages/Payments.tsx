@@ -447,7 +447,18 @@ const Payments = () => {
   };
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteMode, setDeleteMode] = useState<"export" | "only" | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const exportOnly = async (memberId: string, memberName: string) => {
+    try {
+      await exportMemberPayments(memberId, memberName);
+      toast.success(`Exported payment records for ${memberName}`);
+    } catch {
+      toast.error("Export failed");
+    }
+  };
 
   const buildExportRows = (memberId: string) => {
     const rows = payments.filter((p) => p.student_id === memberId)
