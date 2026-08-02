@@ -997,8 +997,6 @@ const Payments = () => {
           </div>
         </DialogContent>
       </Dialog>
-        </DialogContent>
-      </Dialog>
       <PaymentReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} data={receiptData} />
 
     </div>
