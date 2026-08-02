@@ -547,6 +547,7 @@ const Payments = () => {
       await logAudit(ownerId, "payment.bulk_deleted", { member_id: memberId, member_name: memberName, count: count ?? 0, exported: withExport, entry_removed: true }, { type: "student", id: memberId });
       toast.success(`${withExport ? "Exported and removed" : "Removed"} ${memberName} from Payments (${count ?? 0} record${count === 1 ? "" : "s"})`);
       setDeleteTarget(null);
+      setDeleteMode(null);
       fetchAll();
     } finally {
       setDeleting(false);
