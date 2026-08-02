@@ -294,9 +294,11 @@ const Payments = () => {
         toast.error(`Minimum payment ₹${offer.min_payment_amount} required for this coupon`); return;
       }
 
-      const cust = customers.find((cc) => cc.id === form.student_id);
-      if (!cust) { toast.error("Select a member before applying a coupon"); return; }
-      const ctx = { id: cust.id, batch_id: cust.batch_id };
+      if (!memberCtx) { toast.error("Select a member before applying a coupon"); return; }
+      const ctx = {
+        ...memberCtx,
+        member_usage_count: payments.filter((p) => p.student_id === memberCtx.id && p.applied_offer_id === offer.id).length,
+      };
       if (!isOfferEligible(offer, ctx as any, amt, form.paid_on)) {
         toast.error("Coupon is not eligible for this member"); return;
       }
