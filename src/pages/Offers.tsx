@@ -203,6 +203,7 @@ const Offers = () => {
       cond_membership_type: o.conditions.membership_type ?? "",
       cond_batch_ids: o.conditions.batch_ids ?? [],
       cond_member_ids: o.conditions.member_ids ?? [],
+      cond_all_members: !(o.conditions.member_ids && o.conditions.member_ids.length > 0),
       cond_payment_status: (o.conditions.payment_status ?? "any") as any,
       cond_requires_active: !!o.conditions.requires_active_membership,
       cond_custom_rule: o.conditions.custom_rule ?? "",
