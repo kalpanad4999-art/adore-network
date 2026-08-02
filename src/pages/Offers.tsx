@@ -93,6 +93,7 @@ const emptyForm = {
   cond_membership_type: "",
   cond_batch_ids: [] as string[],
   cond_member_ids: [] as string[],
+  cond_all_members: true,
   cond_payment_status: "any" as "any" | "paid" | "overdue",
   cond_requires_active: false,
   cond_custom_rule: "",
@@ -202,6 +203,7 @@ const Offers = () => {
       cond_membership_type: o.conditions.membership_type ?? "",
       cond_batch_ids: o.conditions.batch_ids ?? [],
       cond_member_ids: o.conditions.member_ids ?? [],
+      cond_all_members: !(o.conditions.member_ids && o.conditions.member_ids.length > 0),
       cond_payment_status: (o.conditions.payment_status ?? "any") as any,
       cond_requires_active: !!o.conditions.requires_active_membership,
       cond_custom_rule: o.conditions.custom_rule ?? "",
@@ -219,13 +221,18 @@ const Offers = () => {
     const discount = parseFloat(form.discount_amount);
     if (!discount || discount <= 0) { toast.error("Enter a valid discount amount"); return; }
 
+    if (!isBuiltIn && !form.cond_all_members && form.cond_member_ids.length === 0) {
+      toast.error("Select at least one member, or turn on Select All Members");
+      return;
+    }
+
     const conditions = {
       membership_duration_min_days: form.cond_membership_days ? parseInt(form.cond_membership_days) : null,
-      membership_type: form.cond_membership_type.trim() || null,
+      membership_type: null,
       batch_ids: isBuiltIn ? null : (form.cond_batch_ids.length ? form.cond_batch_ids : null),
-      member_ids: form.cond_member_ids.length ? form.cond_member_ids : null,
-      payment_status: isBuiltIn ? "any" : form.cond_payment_status,
-      requires_active_membership: form.cond_requires_active,
+      member_ids: !isBuiltIn && !form.cond_all_members && form.cond_member_ids.length ? form.cond_member_ids : null,
+      payment_status: "any",
+      requires_active_membership: false,
       custom_rule: form.cond_custom_rule.trim() || null,
     };
 
@@ -235,11 +242,11 @@ const Offers = () => {
       offer_type: form.offer_type,
       message: form.message.trim() || null,
       discount_amount: discount,
-      min_payment_amount: isBuiltIn ? 0 : (parseFloat(form.min_payment_amount || "0") || 0),
+      min_payment_amount: 0,
       valid_from: isBuiltIn ? null : (form.valid_from || null),
       valid_to: isBuiltIn ? null : (form.valid_to || null),
       usage_limit_total: isBuiltIn ? null : (form.usage_limit_total ? parseInt(form.usage_limit_total) : null),
-      usage_limit_per_member: isBuiltIn ? null : (form.usage_limit_per_member ? parseInt(form.usage_limit_per_member) : null),
+      usage_limit_per_member: null,
       is_active: form.is_active,
       conditions,
     };
@@ -330,11 +337,22 @@ const Offers = () => {
     setSendOpen(null);
   };
 
+  const selectedFormBatchId = form.cond_batch_ids[0] ?? "";
+
   const filteredMembers = useMemo(() => {
     const q = memberSearch.trim().toLowerCase();
     if (!q) return members;
     return members.filter((m) => m.name.toLowerCase().includes(q) || (m.phone || "").includes(q));
   }, [members, memberSearch]);
+
+  // Members of the batch chosen in the offer form (used by "Apply to specific members").
+  const batchMembers = useMemo(() => {
+    if (!selectedFormBatchId) return [];
+    const q = memberSearch.trim().toLowerCase();
+    return members
+      .filter((m) => m.batch_id === selectedFormBatchId)
+      .filter((m) => !q || m.name.toLowerCase().includes(q) || (m.phone || "").includes(q));
+  }, [members, memberSearch, selectedFormBatchId]);
 
   const activeTemplate = builtInKey ? BUILT_IN_TEMPLATES.find((t) => t.key === builtInKey) : null;
 
@@ -474,10 +492,6 @@ const Offers = () => {
               {!isBuiltIn && (
                 <>
                   <div className="space-y-2">
-                    <Label>Min Payment (₹)</Label>
-                    <Input type="number" min="0" step="1" value={form.min_payment_amount} onChange={(e) => setForm({ ...form, min_payment_amount: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
                     <Label>Valid From</Label>
                     <Input type="date" value={form.valid_from} onChange={(e) => setForm({ ...form, valid_from: e.target.value })} />
                   </div>
@@ -485,13 +499,9 @@ const Offers = () => {
                     <Label>Valid To</Label>
                     <Input type="date" value={form.valid_to} onChange={(e) => setForm({ ...form, valid_to: e.target.value })} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Total usage limit</Label>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Usage limit</Label>
                     <Input type="number" min="0" step="1" value={form.usage_limit_total} onChange={(e) => setForm({ ...form, usage_limit_total: e.target.value })} placeholder="Unlimited" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Per-member limit</Label>
-                    <Input type="number" min="0" step="1" value={form.usage_limit_per_member} onChange={(e) => setForm({ ...form, usage_limit_per_member: e.target.value })} placeholder="Unlimited" />
                   </div>
                 </>
               )}
@@ -506,12 +516,11 @@ const Offers = () => {
                     <Input type="number" min="0" value={form.cond_membership_days} onChange={(e) => setForm({ ...form, cond_membership_days: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Membership type</Label>
-                    <Input value={form.cond_membership_type} onChange={(e) => setForm({ ...form, cond_membership_type: e.target.value })} placeholder="Any" />
-                  </div>
-                  <div className="space-y-2">
                     <Label>Batch</Label>
-                    <Select value={form.cond_batch_ids[0] ?? "any"} onValueChange={(v) => setForm({ ...form, cond_batch_ids: v === "any" ? [] : [v] })}>
+                    <Select
+                      value={form.cond_batch_ids[0] ?? "any"}
+                      onValueChange={(v) => setForm({ ...form, cond_batch_ids: v === "any" ? [] : [v], cond_member_ids: [] })}
+                    >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="any">Any batch</SelectItem>
@@ -519,30 +528,19 @@ const Offers = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Payment status</Label>
-                    <Select value={form.cond_payment_status} onValueChange={(v) => setForm({ ...form, cond_payment_status: v as any })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="any">Any</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="overdue">Overdue</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+
                   <div className="flex items-center gap-2 sm:col-span-2">
-                    <Switch checked={form.cond_requires_active} onCheckedChange={(v) => setForm({ ...form, cond_requires_active: v })} />
-                    <Label className="!m-0">Requires active membership</Label>
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label>Custom rule (free text)</Label>
-                    <Input value={form.cond_custom_rule} onChange={(e) => setForm({ ...form, cond_custom_rule: e.target.value })} placeholder="Optional notes for staff" />
+                    <Switch
+                      checked={form.cond_all_members}
+                      onCheckedChange={(v) => setForm({ ...form, cond_all_members: v, cond_member_ids: v ? [] : form.cond_member_ids })}
+                    />
+                    <Label className="!m-0">Select all members{selectedFormBatchId ? " in this batch" : ""}</Label>
                   </div>
 
                   <div className="space-y-2 sm:col-span-2">
                     <div className="flex items-center justify-between gap-2">
-                      <Label>Apply to specific members</Label>
-                      {form.cond_member_ids.length > 0 && (
+                      <Label className={form.cond_all_members ? "opacity-50" : ""}>Apply to specific members</Label>
+                      {!form.cond_all_members && form.cond_member_ids.length > 0 && (
                         <button
                           type="button"
                           className="text-xs text-muted-foreground hover:text-foreground underline"
@@ -552,32 +550,46 @@ const Offers = () => {
                         </button>
                       )}
                     </div>
-                    <Input
-                      placeholder="Search members by name or phone…"
-                      value={memberSearch}
-                      onChange={(e) => setMemberSearch(e.target.value)}
-                    />
-                    <div className="max-h-48 overflow-y-auto rounded-md border p-2 space-y-1">
-                      {filteredMembers.length === 0 ? (
-                        <p className="text-xs text-muted-foreground py-2 text-center">No members found</p>
-                      ) : filteredMembers.map((m) => (
-                        <label key={m.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={form.cond_member_ids.includes(m.id)}
-                            onChange={(e) => setForm((f) => ({
-                              ...f,
-                              cond_member_ids: e.target.checked
-                                ? [...f.cond_member_ids, m.id]
-                                : f.cond_member_ids.filter((x) => x !== m.id),
-                            }))}
-                          />
-                          <span className="truncate">{m.name}</span>
-                          <span className="text-xs text-muted-foreground ml-auto">{m.phone || "no phone"}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">Leave empty to apply to all eligible members. Selecting members applies the same offer conditions to each.</p>
+                    {form.cond_all_members ? (
+                      <p className="text-[11px] text-muted-foreground">
+                        The offer applies to {selectedFormBatchId ? "every member in the selected batch" : "all members"}. Turn this off to pick specific members.
+                      </p>
+                    ) : !selectedFormBatchId ? (
+                      <p className="text-[11px] text-muted-foreground">Select a batch first to choose specific members.</p>
+                    ) : (
+                      <>
+                        <Input
+                          placeholder="Search members by name or phone…"
+                          value={memberSearch}
+                          onChange={(e) => setMemberSearch(e.target.value)}
+                        />
+                        <div className="max-h-48 overflow-y-auto rounded-md border p-2 space-y-1">
+                          {batchMembers.length === 0 ? (
+                            <p className="text-xs text-muted-foreground py-2 text-center">No members found in this batch</p>
+                          ) : batchMembers.map((m) => (
+                            <label key={m.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={form.cond_member_ids.includes(m.id)}
+                                onChange={(e) => setForm((f) => ({
+                                  ...f,
+                                  cond_member_ids: e.target.checked
+                                    ? [...f.cond_member_ids, m.id]
+                                    : f.cond_member_ids.filter((x) => x !== m.id),
+                                }))}
+                              />
+                              <span className="truncate">{m.name}</span>
+                              <span className="text-xs text-muted-foreground ml-auto">{m.phone || "no phone"}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Custom rule (free text)</Label>
+                    <Input value={form.cond_custom_rule} onChange={(e) => setForm({ ...form, cond_custom_rule: e.target.value })} placeholder="Optional notes for staff" />
                   </div>
                 </div>
               </div>
