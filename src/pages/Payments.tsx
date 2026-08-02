@@ -970,26 +970,33 @@ const Payments = () => {
           })}
         </div>
       )}
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o && !deleting) setDeleteTarget(null); }}>
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o && !deleting) { setDeleteTarget(null); setDeleteMode(null); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete member entry from Payments</DialogTitle>
+            <DialogTitle>{deleteMode === "export" ? "Delete & Export" : "Delete member entry from Payments"}</DialogTitle>
             <DialogDescription>
-              This permanently deletes all payment records and receipts for {deleteTarget?.name} and removes their entry from the Payments list. This action cannot be undone. The member profile and all other modules stay untouched.
+              {deleteMode === "export" ? "The full payment history is exported (PDF + Excel) first, then " : "This "}
+              permanently deletes all payment records and receipts for {deleteTarget?.name} and removes their entry from the Payments list. This action cannot be undone. The member profile and all other modules stay untouched.
             </DialogDescription>
           </DialogHeader>
           <div className="text-sm text-muted-foreground">
             {deleteTarget ? `${buildExportRows(deleteTarget.id).count} payment record(s) will be removed.` : null}
           </div>
           <div className="flex flex-col gap-2">
-            <Button disabled={deleting} onClick={() => runDeleteAll(true)}>
-              <FileText className="h-4 w-4 mr-2" /> Export & Delete (PDF + Excel)
-            </Button>
-            <Button variant="destructive" disabled={deleting} onClick={() => runDeleteAll(false)}>
-              <Trash2 className="h-4 w-4 mr-2" /> Delete Only
-            </Button>
-            <Button variant="outline" disabled={deleting} onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            {deleteMode !== "only" && (
+              <Button disabled={deleting} onClick={() => runDeleteAll(true)}>
+                <FileText className="h-4 w-4 mr-2" /> Export &amp; Delete (PDF + Excel)
+              </Button>
+            )}
+            {deleteMode !== "export" && (
+              <Button variant="destructive" disabled={deleting} onClick={() => runDeleteAll(false)}>
+                <Trash2 className="h-4 w-4 mr-2" /> Delete Only
+              </Button>
+            )}
+            <Button variant="outline" disabled={deleting} onClick={() => { setDeleteTarget(null); setDeleteMode(null); }}>Cancel</Button>
           </div>
+        </DialogContent>
+      </Dialog>
         </DialogContent>
       </Dialog>
       <PaymentReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} data={receiptData} />
