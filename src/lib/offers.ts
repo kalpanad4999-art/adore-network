@@ -71,7 +71,8 @@ export const isOfferEligible = (offer: Offer, ctx: MemberContext | null, amount:
   if (offer.min_payment_amount && amount < offer.min_payment_amount) return false;
   if (offer.usage_limit_total != null && offer.usage_count >= offer.usage_limit_total) return false;
 
-  if (offer.offer_type === "birthday" && ctx && !ctx.birthday_today) return false;
+  // Birthday offers only filter when birthday data is actually known for the member.
+  if (offer.offer_type === "birthday" && ctx && ctx.birthday_today === false) return false;
 
   const c = offer.conditions || {};
   if (c.batch_ids && c.batch_ids.length > 0 && ctx && (!ctx.batch_id || !c.batch_ids.includes(ctx.batch_id))) return false;
@@ -80,6 +81,7 @@ export const isOfferEligible = (offer: Offer, ctx: MemberContext | null, amount:
   if (c.membership_duration_min_days && ctx && (ctx.membership_days ?? 0) < c.membership_duration_min_days) return false;
   if (c.membership_type && ctx && (ctx.membership_type ?? null) !== c.membership_type) return false;
   if (c.payment_status && c.payment_status !== "any" && ctx && ctx.payment_status !== c.payment_status) return false;
+  if (offer.usage_limit_per_member != null && ctx && (ctx.member_usage_count ?? 0) >= offer.usage_limit_per_member) return false;
   return true;
 };
 
