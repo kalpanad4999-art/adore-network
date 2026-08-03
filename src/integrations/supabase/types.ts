@@ -476,6 +476,72 @@ export type Database = {
         }
         Relationships: []
       }
+      learning_insights: {
+        Row: {
+          batch_id: string | null
+          created_at: string
+          custom_notes: string | null
+          id: string
+          initial_flexibility: number | null
+          initial_height: number | null
+          initial_weight: number | null
+          insights: string | null
+          present_flexibility: number | null
+          present_height: number | null
+          present_weight: number | null
+          student_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string
+          custom_notes?: string | null
+          id?: string
+          initial_flexibility?: number | null
+          initial_height?: number | null
+          initial_weight?: number | null
+          insights?: string | null
+          present_flexibility?: number | null
+          present_height?: number | null
+          present_weight?: number | null
+          student_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string
+          custom_notes?: string | null
+          id?: string
+          initial_flexibility?: number | null
+          initial_height?: number | null
+          initial_weight?: number | null
+          insights?: string | null
+          present_flexibility?: number | null
+          present_height?: number | null
+          present_weight?: number | null
+          student_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_insights_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_insights_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       live_classes: {
         Row: {
           auto_convert_to_recording: boolean
