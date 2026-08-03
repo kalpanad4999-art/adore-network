@@ -241,7 +241,7 @@ const LearningInsights = () => {
             ["notes", "Custom Notes"],
             ["date", "Generated Date"],
           ] as [keyof ReportSections, string][]).map(([key, label]) => (
-            <label key={key} className="flex cursor-pointer items-center gap-3 text-sm">
+            <label key={String(key)} className="flex cursor-pointer items-center gap-3 text-sm">
               <Checkbox checked={sections[key]} onCheckedChange={(c) => setSections((s) => ({ ...s, [key]: !!c }))} />
               {label}
             </label>
