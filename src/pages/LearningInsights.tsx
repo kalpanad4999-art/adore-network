@@ -78,35 +78,49 @@ const LearningInsights = () => {
   const [saving, setSaving] = useState<string | null>(null);
   const [sections, setSections] = useState<ReportSections>(defaultSections);
   const [report, setReport] = useState<InsightsReportData | null>(null);
+  const [comps, setComps] = useState<Comparison[]>([]);
+  const [compData, setCompData] = useState<Record<string, Measures>>({});
+  const [activeComp, setActiveComp] = useState<Record<string, string>>({});
+  const [liveData, setLiveData] = useState<Record<string, Measures>>({});
+
+  const toMeasures = (r: any): Measures => ({
+    initial_height: r.initial_height?.toString() ?? "",
+    present_height: r.present_height?.toString() ?? "",
+    initial_weight: r.initial_weight?.toString() ?? "",
+    present_weight: r.present_weight?.toString() ?? "",
+    initial_flexibility: r.initial_flexibility?.toString() ?? "",
+    present_flexibility: r.present_flexibility?.toString() ?? "",
+    insights: r.insights ?? "",
+    custom_notes: r.custom_notes ?? "",
+  });
 
   useEffect(() => {
     if (!workspaceId) return;
     (async () => {
       setLoading(true);
-      const [b, m, li] = await Promise.all([
+      const [b, m, li, ic] = await Promise.all([
         supabase.from("batches").select("id,name").eq("user_id", workspaceId).order("name"),
         supabase.from("students").select("id,name,phone,email,batch_id").eq("user_id", workspaceId).order("name"),
         supabase.from("learning_insights").select("*").eq("user_id", workspaceId),
+        supabase.from("insight_comparisons").select("*").eq("user_id", workspaceId).order("created_at", { ascending: false }),
       ]);
       setBatches((b.data as Batch[]) || []);
       setMembers((m.data as Member[]) || []);
       const map: Record<string, Measures> = {};
-      (li.data || []).forEach((r: any) => {
-        map[r.student_id] = {
-          initial_height: r.initial_height?.toString() ?? "",
-          present_height: r.present_height?.toString() ?? "",
-          initial_weight: r.initial_weight?.toString() ?? "",
-          present_weight: r.present_weight?.toString() ?? "",
-          initial_flexibility: r.initial_flexibility?.toString() ?? "",
-          present_flexibility: r.present_flexibility?.toString() ?? "",
-          insights: r.insights ?? "",
-          custom_notes: r.custom_notes ?? "",
-        };
-      });
+      (li.data || []).forEach((r: any) => { map[r.student_id] = toMeasures(r); });
       setData(map);
+      const cmap: Record<string, Measures> = {};
+      const list: Comparison[] = [];
+      (ic.data || []).forEach((r: any) => {
+        cmap[r.id] = toMeasures(r);
+        list.push({ id: r.id, student_id: r.student_id, label: r.label, created_at: r.created_at });
+      });
+      setCompData(cmap);
+      setComps(list);
       setLoading(false);
     })();
   }, [workspaceId]);
+
 
   const batchMembers = useMemo(
     () => members.filter((m) => m.batch_id === batchId),
