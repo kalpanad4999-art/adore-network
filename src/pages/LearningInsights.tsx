@@ -339,7 +339,26 @@ const LearningInsights = () => {
                 <CardDescription>{batches.find((b) => b.id === m.batch_id)?.name ?? "—"}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-end">
+                  <div className="flex-1 space-y-1.5">
+                    <Label>Comparison record</Label>
+                    <Select value={activeComp[m.id] || "current"} onValueChange={(val) => selectComp(m, val)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="current">Current measurements</SelectItem>
+                        {memberComps(m.id).map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button type="button" variant="outline" onClick={() => addOneTimeComparison(m)} disabled={saving === m.id}>
+                    <Plus className="mr-1.5 h-4 w-4" /> One-Time Comparison
+                  </Button>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+
                   <div className="space-y-1.5"><Label>Initial Height (cm)</Label>
                     <Input inputMode="decimal" value={v.initial_height} onChange={(e) => set(m.id, { initial_height: e.target.value })} /></div>
                   <div className="space-y-1.5"><Label>Present Height (cm)</Label>
