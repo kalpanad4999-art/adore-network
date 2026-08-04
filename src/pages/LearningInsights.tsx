@@ -141,23 +141,77 @@ const LearningInsights = () => {
   const set = (id: string, patch: Partial<Measures>) =>
     setData((d) => ({ ...d, [id]: { ...get(id), ...patch } }));
 
+  const memberComps = (id: string) => comps.filter((c) => c.student_id === id);
+
+  const selectComp = (m: Member, value: string) => {
+    const current = activeComp[m.id] || "";
+    if (value === current) return;
+    if (!current) setLiveData((d) => ({ ...d, [m.id]: get(m.id) }));
+    setActiveComp((a) => ({ ...a, [m.id]: value === "current" ? "" : value }));
+    if (value === "current") {
+      const restore = liveData[m.id] ?? emptyMeasures();
+      setData((d) => ({ ...d, [m.id]: restore }));
+    } else {
+      setData((d) => ({ ...d, [m.id]: compData[value] ?? emptyMeasures() }));
+    }
+  };
+
+  const addOneTimeComparison = async (m: Member) => {
+    if (!workspaceId) return;
+    setSaving(m.id);
+    const v = get(m.id);
+    const label = `Comparison ${new Date().toLocaleDateString("en-GB")} ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    const { data: row, error } = await supabase.from("insight_comparisons").insert({
+      user_id: workspaceId,
+      student_id: m.id,
+      batch_id: m.batch_id,
+      label,
+      initial_height: num(v.initial_height),
+      present_height: num(v.present_height),
+      initial_weight: num(v.initial_weight),
+      present_weight: num(v.present_weight),
+      initial_flexibility: num(v.initial_flexibility),
+      present_flexibility: num(v.present_flexibility),
+      insights: v.insights || null,
+      custom_notes: v.custom_notes || null,
+    }).select().single();
+    setSaving(null);
+    if (error || !row) { toast.error(error?.message ?? "Could not save comparison"); return; }
+    setCompData((d) => ({ ...d, [row.id]: toMeasures(row) }));
+    setComps((c) => [{ id: row.id, student_id: row.student_id, label: row.label, created_at: row.created_at }, ...c]);
+    if (!activeComp[m.id]) setLiveData((d) => ({ ...d, [m.id]: v }));
+    setActiveComp((a) => ({ ...a, [m.id]: row.id }));
+    toast.success("One-time comparison saved");
+  };
+
   const save = async (m: Member) => {
     if (!workspaceId) return;
     setSaving(m.id);
     const v = get(m.id);
+    const payload = {
+      initial_height: num(v.initial_height),
+      present_height: num(v.present_height),
+      initial_weight: num(v.initial_weight),
+      present_weight: num(v.present_weight),
+      initial_flexibility: num(v.initial_flexibility),
+      present_flexibility: num(v.present_flexibility),
+      insights: v.insights || null,
+      custom_notes: v.custom_notes || null,
+    };
+    const compId = activeComp[m.id];
+    if (compId) {
+      const { error } = await supabase.from("insight_comparisons").update(payload).eq("id", compId);
+      setSaving(null);
+      if (error) toast.error(error.message);
+      else { setCompData((d) => ({ ...d, [compId]: v })); toast.success("Comparison updated"); }
+      return;
+    }
     const { error } = await supabase.from("learning_insights").upsert(
       {
         user_id: workspaceId,
         student_id: m.id,
         batch_id: m.batch_id,
-        initial_height: num(v.initial_height),
-        present_height: num(v.present_height),
-        initial_weight: num(v.initial_weight),
-        present_weight: num(v.present_weight),
-        initial_flexibility: num(v.initial_flexibility),
-        present_flexibility: num(v.present_flexibility),
-        insights: v.insights || null,
-        custom_notes: v.custom_notes || null,
+        ...payload,
       },
       { onConflict: "student_id" }
     );
@@ -165,6 +219,7 @@ const LearningInsights = () => {
     if (error) toast.error(error.message);
     else toast.success("Measurements saved");
   };
+
 
   const openReport = (m: Member) => {
     const v = get(m.id);
