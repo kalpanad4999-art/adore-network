@@ -10,12 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, FileText, Sparkles } from "lucide-react";
+import { Loader2, Save, FileText, Sparkles, Plus } from "lucide-react";
 import { toast } from "sonner";
 import InsightsReportDialog, { InsightsReportData, ReportSections } from "@/components/InsightsReportDialog";
 
 interface Member { id: string; name: string; phone: string | null; email: string | null; batch_id: string | null }
 interface Batch { id: string; name: string }
+interface Comparison { id: string; student_id: string; label: string; created_at: string } 
+
 
 export interface Measures {
   initial_height: string; present_height: string;
