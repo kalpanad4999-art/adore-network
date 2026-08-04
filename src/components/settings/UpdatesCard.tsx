@@ -7,7 +7,7 @@ import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAppUpdate } from "@/hooks/useAppUpdate";
 import { isAutoUpdateEnabled, setAutoUpdateEnabled } from "@/lib/appVersion";
-import { formatDate } from "@/lib/date";
+import { fmtDate } from "@/lib/date";
 
 const UpdatesCard = () => {
   const { checking, check, update, lastChecked, updateAvailable } = useAppUpdate();
@@ -33,7 +33,7 @@ const UpdatesCard = () => {
             ? "A new version has been deployed. Update to load it now."
             : "This app checks for new deployments automatically."}
           {lastChecked && (
-            <> Last checked: {formatDate(lastChecked)} {lastChecked.toLocaleTimeString()}.</>
+            <> Last checked: {fmtDate(lastChecked)} {lastChecked.toLocaleTimeString()}.</>
           )}
         </p>
 
