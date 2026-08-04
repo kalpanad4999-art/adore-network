@@ -31,6 +31,7 @@ import PublicChat from "./pages/PublicChat";
 import NotFound from "./pages/NotFound";
 import PaymentsGuard from "./components/PaymentsGuard";
 import PermissionGuard from "./components/PermissionGuard";
+import UpdateBanner from "./components/UpdateBanner";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <UpdateBanner />
       <BrowserRouter>
         <AuthProvider>
           <Routes>

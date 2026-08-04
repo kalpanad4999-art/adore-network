@@ -3,7 +3,7 @@ import { useStudio } from "@/contexts/StudioContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Palette, Lock, ShieldCheck, Users, Bot, Crown, ChevronRight, ArrowLeft, Wallpaper,
+  Palette, Lock, ShieldCheck, Users, Bot, Crown, ChevronRight, ArrowLeft, Wallpaper, RefreshCw,
 } from "lucide-react";
 import AppearanceCard from "@/components/settings/AppearanceCard";
 import AppLockCard from "@/components/settings/AppLockCard";
@@ -12,6 +12,7 @@ import WallpaperCard from "@/components/settings/WallpaperCard";
 import { StaffPermissionsCard } from "@/components/StaffPermissionsCard";
 import { ChatbotKnowledgeCard } from "@/components/ChatbotKnowledgeCard";
 import { OwnerInfoCard } from "@/components/OwnerInfoCard";
+import UpdatesCard from "@/components/settings/UpdatesCard";
 
 type Section = {
   slug: string;
@@ -68,6 +69,13 @@ const SECTIONS: Section[] = [
     icon: Bot,
     ownerOnly: true,
     render: () => <ChatbotKnowledgeCard />,
+  },
+  {
+    slug: "updates",
+    title: "App Updates",
+    subtitle: "Check for updates and manage automatic updates",
+    icon: RefreshCw,
+    render: () => <UpdatesCard />,
   },
   {
     slug: "owner",
