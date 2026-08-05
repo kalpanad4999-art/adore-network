@@ -10,34 +10,34 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Save, FileText, Sparkles, Plus } from "lucide-react";
+import { Loader2, Save, FileText, Sparkles, Plus, Trash2, Check, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import InsightsReportDialog, { InsightsReportData, ReportSections } from "@/components/InsightsReportDialog";
 
 interface Member { id: string; name: string; phone: string | null; email: string | null; batch_id: string | null }
 interface Batch { id: string; name: string }
-interface Comparison { id: string; student_id: string; label: string; created_at: string } 
-
+export interface InsightField { id: string; name: string; unit: string | null; sort_order: number }
 
 export interface Measures {
   initial_height: string; present_height: string;
   initial_weight: string; present_weight: string;
   initial_flexibility: string; present_flexibility: string;
   insights: string; custom_notes: string;
+  custom: Record<string, { i: string; p: string }>;
 }
 
 const emptyMeasures = (): Measures => ({
   initial_height: "", present_height: "",
   initial_weight: "", present_weight: "",
   initial_flexibility: "", present_flexibility: "",
-  insights: "", custom_notes: "",
+  insights: "", custom_notes: "", custom: {},
 });
 
 const num = (v: string) => (v.trim() === "" ? null : Number(v));
 
 export const compare = (a: string, b: string, unit: string) => {
   const x = num(a); const y = num(b);
-  if (x === null || y === null) return "—";
+  if (x === null || y === null || isNaN(x) || isNaN(y)) return "—";
   const d = Math.round((y - x) * 100) / 100;
   if (d === 0) return "No change";
   const sign = d > 0 ? "+" : "";
@@ -45,7 +45,7 @@ export const compare = (a: string, b: string, unit: string) => {
   return `${sign}${d}${unit} (${word})`;
 };
 
-export const autoInsight = (m: Measures, name: string) => {
+export const autoInsight = (m: Measures, name: string, fields: InsightField[] = []) => {
   const parts: string[] = [];
   const h = compare(m.initial_height, m.present_height, " cm");
   const w = compare(m.initial_weight, m.present_weight, " kg");
@@ -53,13 +53,19 @@ export const autoInsight = (m: Measures, name: string) => {
   if (h !== "—") parts.push(`Height: ${h}.`);
   if (w !== "—") parts.push(`Weight: ${w}.`);
   if (f !== "—") parts.push(`Flexibility / Speed: ${f}.`);
+  fields.forEach((fl) => {
+    const v = m.custom?.[fl.id];
+    if (!v) return;
+    const c = compare(v.i ?? "", v.p ?? "", fl.unit ? ` ${fl.unit}` : "");
+    if (c !== "—") parts.push(`${fl.name}: ${c}.`);
+  });
   if (!parts.length) return `${name} has no recorded measurements yet.`;
   return `${name} has shown measurable progress through consistent practice. ${parts.join(" ")} Continue regular attendance and guided practice to sustain this improvement.`;
 };
 
 const defaultSections: ReportSections = {
   memberDetails: true, height: true, weight: true, flexibility: true,
-  insights: true, notes: true, date: true,
+  customFields: true, insights: true, notes: true, date: true,
 };
 
 const LearningInsights = () => {
@@ -78,10 +84,15 @@ const LearningInsights = () => {
   const [saving, setSaving] = useState<string | null>(null);
   const [sections, setSections] = useState<ReportSections>(defaultSections);
   const [report, setReport] = useState<InsightsReportData | null>(null);
-  const [comps, setComps] = useState<Comparison[]>([]);
-  const [compData, setCompData] = useState<Record<string, Measures>>({});
-  const [activeComp, setActiveComp] = useState<Record<string, string>>({});
-  const [liveData, setLiveData] = useState<Record<string, Measures>>({});
+
+  // Dynamic comparison fields
+  const [fields, setFields] = useState<InsightField[]>([]);
+  const [newField, setNewField] = useState("");
+  const [newUnit, setNewUnit] = useState("");
+  const [addingField, setAddingField] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editUnit, setEditUnit] = useState("");
 
   const toMeasures = (r: any): Measures => ({
     initial_height: r.initial_height?.toString() ?? "",
@@ -92,35 +103,28 @@ const LearningInsights = () => {
     present_flexibility: r.present_flexibility?.toString() ?? "",
     insights: r.insights ?? "",
     custom_notes: r.custom_notes ?? "",
+    custom: (r.custom_measures as Record<string, { i: string; p: string }>) ?? {},
   });
 
   useEffect(() => {
     if (!workspaceId) return;
     (async () => {
       setLoading(true);
-      const [b, m, li, ic] = await Promise.all([
+      const [b, m, li, fl] = await Promise.all([
         supabase.from("batches").select("id,name").eq("user_id", workspaceId).order("name"),
         supabase.from("students").select("id,name,phone,email,batch_id").eq("user_id", workspaceId).order("name"),
         supabase.from("learning_insights").select("*").eq("user_id", workspaceId),
-        supabase.from("insight_comparisons").select("*").eq("user_id", workspaceId).order("created_at", { ascending: false }),
+        supabase.from("insight_fields").select("id,name,unit,sort_order").eq("user_id", workspaceId).order("sort_order").order("created_at"),
       ]);
       setBatches((b.data as Batch[]) || []);
       setMembers((m.data as Member[]) || []);
       const map: Record<string, Measures> = {};
       (li.data || []).forEach((r: any) => { map[r.student_id] = toMeasures(r); });
       setData(map);
-      const cmap: Record<string, Measures> = {};
-      const list: Comparison[] = [];
-      (ic.data || []).forEach((r: any) => {
-        cmap[r.id] = toMeasures(r);
-        list.push({ id: r.id, student_id: r.student_id, label: r.label, created_at: r.created_at });
-      });
-      setCompData(cmap);
-      setComps(list);
+      setFields((fl.data as InsightField[]) || []);
       setLoading(false);
     })();
   }, [workspaceId]);
-
 
   const batchMembers = useMemo(
     () => members.filter((m) => m.batch_id === batchId),
@@ -140,78 +144,64 @@ const LearningInsights = () => {
   const get = (id: string) => data[id] ?? emptyMeasures();
   const set = (id: string, patch: Partial<Measures>) =>
     setData((d) => ({ ...d, [id]: { ...get(id), ...patch } }));
-
-  const memberComps = (id: string) => comps.filter((c) => c.student_id === id);
-
-  const selectComp = (m: Member, value: string) => {
-    const current = activeComp[m.id] || "";
-    if (value === current) return;
-    if (!current) setLiveData((d) => ({ ...d, [m.id]: get(m.id) }));
-    setActiveComp((a) => ({ ...a, [m.id]: value === "current" ? "" : value }));
-    if (value === "current") {
-      const restore = liveData[m.id] ?? emptyMeasures();
-      setData((d) => ({ ...d, [m.id]: restore }));
-    } else {
-      setData((d) => ({ ...d, [m.id]: compData[value] ?? emptyMeasures() }));
-    }
+  const setCustom = (id: string, fieldId: string, which: "i" | "p", value: string) => {
+    const cur = get(id);
+    const entry = cur.custom?.[fieldId] ?? { i: "", p: "" };
+    set(id, { custom: { ...(cur.custom || {}), [fieldId]: { ...entry, [which]: value } } });
   };
 
-  const addOneTimeComparison = async (m: Member) => {
-    if (!workspaceId) return;
-    setSaving(m.id);
-    const v = get(m.id);
-    const label = `Comparison ${new Date().toLocaleDateString("en-GB")} ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-    const { data: row, error } = await supabase.from("insight_comparisons").insert({
-      user_id: workspaceId,
-      student_id: m.id,
-      batch_id: m.batch_id,
-      label,
-      initial_height: num(v.initial_height),
-      present_height: num(v.present_height),
-      initial_weight: num(v.initial_weight),
-      present_weight: num(v.present_weight),
-      initial_flexibility: num(v.initial_flexibility),
-      present_flexibility: num(v.present_flexibility),
-      insights: v.insights || null,
-      custom_notes: v.custom_notes || null,
-    }).select().single();
-    setSaving(null);
-    if (error || !row) { toast.error(error?.message ?? "Could not save comparison"); return; }
-    setCompData((d) => ({ ...d, [row.id]: toMeasures(row) }));
-    setComps((c) => [{ id: row.id, student_id: row.student_id, label: row.label, created_at: row.created_at }, ...c]);
-    if (!activeComp[m.id]) setLiveData((d) => ({ ...d, [m.id]: v }));
-    setActiveComp((a) => ({ ...a, [m.id]: row.id }));
-    toast.success("One-time comparison saved");
+  const addField = async () => {
+    const name = newField.trim();
+    if (!workspaceId || !name) return;
+    if (fields.some((f) => f.name.toLowerCase() === name.toLowerCase())) {
+      toast.error("That comparison field already exists."); return;
+    }
+    setAddingField(true);
+    const { data: row, error } = await supabase.from("insight_fields").insert({
+      user_id: workspaceId, name, unit: newUnit.trim() || null, sort_order: fields.length,
+    }).select("id,name,unit,sort_order").single();
+    setAddingField(false);
+    if (error || !row) { toast.error(error?.message ?? "Could not add field"); return; }
+    setFields((f) => [...f, row as InsightField]);
+    setNewField(""); setNewUnit("");
+    toast.success(`Added “Initial ${name}” and “Present ${name}”`);
+  };
+
+  const saveFieldEdit = async (id: string) => {
+    const name = editName.trim();
+    if (!name) return;
+    const { error } = await supabase.from("insight_fields").update({ name, unit: editUnit.trim() || null }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    setFields((f) => f.map((x) => (x.id === id ? { ...x, name, unit: editUnit.trim() || null } : x)));
+    setEditId(null);
+    toast.success("Field updated");
+  };
+
+  const removeField = async (f: InsightField) => {
+    const { error } = await supabase.from("insight_fields").delete().eq("id", f.id);
+    if (error) { toast.error(error.message); return; }
+    setFields((list) => list.filter((x) => x.id !== f.id));
+    toast.success(`Removed ${f.name}`);
   };
 
   const save = async (m: Member) => {
     if (!workspaceId) return;
     setSaving(m.id);
     const v = get(m.id);
-    const payload = {
-      initial_height: num(v.initial_height),
-      present_height: num(v.present_height),
-      initial_weight: num(v.initial_weight),
-      present_weight: num(v.present_weight),
-      initial_flexibility: num(v.initial_flexibility),
-      present_flexibility: num(v.present_flexibility),
-      insights: v.insights || null,
-      custom_notes: v.custom_notes || null,
-    };
-    const compId = activeComp[m.id];
-    if (compId) {
-      const { error } = await supabase.from("insight_comparisons").update(payload).eq("id", compId);
-      setSaving(null);
-      if (error) toast.error(error.message);
-      else { setCompData((d) => ({ ...d, [compId]: v })); toast.success("Comparison updated"); }
-      return;
-    }
     const { error } = await supabase.from("learning_insights").upsert(
       {
         user_id: workspaceId,
         student_id: m.id,
         batch_id: m.batch_id,
-        ...payload,
+        initial_height: num(v.initial_height),
+        present_height: num(v.present_height),
+        initial_weight: num(v.initial_weight),
+        present_weight: num(v.present_weight),
+        initial_flexibility: num(v.initial_flexibility),
+        present_flexibility: num(v.present_flexibility),
+        insights: v.insights || null,
+        custom_notes: v.custom_notes || null,
+        custom_measures: v.custom || {},
       },
       { onConflict: "student_id" }
     );
@@ -220,6 +210,17 @@ const LearningInsights = () => {
     else toast.success("Measurements saved");
   };
 
+  const customRowsFor = (v: Measures) =>
+    fields.map((f) => {
+      const e = v.custom?.[f.id] ?? { i: "", p: "" };
+      const unit = f.unit ? ` ${f.unit}` : "";
+      return {
+        label: f.unit ? `${f.name} (${f.unit})` : f.name,
+        i: e.i || "",
+        p: e.p || "",
+        c: compare(e.i || "", e.p || "", unit),
+      };
+    });
 
   const openReport = (m: Member) => {
     const v = get(m.id);
@@ -228,7 +229,8 @@ const LearningInsights = () => {
       phone: m.phone,
       email: m.email,
       batchName: batches.find((b) => b.id === m.batch_id)?.name ?? "—",
-      measures: { ...v, insights: v.insights || autoInsight(v, m.name) },
+      measures: { ...v, insights: v.insights || autoInsight(v, m.name, fields) },
+      customRows: customRowsFor(v).map((r) => ({ ...r, i: r.i || "—", p: r.p || "—" })),
       sections,
     });
   };
@@ -299,6 +301,71 @@ const LearningInsights = () => {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-lg">Comparison Fields</CardTitle>
+          <CardDescription>
+            Add a field name once — Initial and Present inputs are created automatically for every member.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              className="flex-1"
+              placeholder="Field name (e.g. Speed, BMI, Blood Pressure)"
+              value={newField}
+              onChange={(e) => setNewField(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addField(); } }}
+            />
+            <Input
+              className="sm:w-36"
+              placeholder="Unit (optional)"
+              value={newUnit}
+              onChange={(e) => setNewUnit(e.target.value)}
+            />
+            <Button type="button" onClick={addField} disabled={!newField.trim() || addingField}>
+              {addingField ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Plus className="mr-1.5 h-4 w-4" />} Add Custom Field
+            </Button>
+          </div>
+
+          {fields.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No custom comparison fields yet.</p>
+          ) : (
+            <div className="divide-y divide-border rounded-lg border border-border">
+              {fields.map((f) => (
+                <div key={f.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
+                  {editId === f.id ? (
+                    <>
+                      <Input className="flex-1" value={editName} onChange={(e) => setEditName(e.target.value)} />
+                      <Input className="sm:w-32" placeholder="Unit" value={editUnit} onChange={(e) => setEditUnit(e.target.value)} />
+                      <div className="flex gap-1">
+                        <Button size="sm" onClick={() => saveFieldEdit(f.id)}><Check className="h-4 w-4" /></Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditId(null)}><X className="h-4 w-4" /></Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{f.name}{f.unit ? ` (${f.unit})` : ""}</p>
+                        <p className="text-xs text-muted-foreground">Initial {f.name} · Present {f.name}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => { setEditId(f.id); setEditName(f.name); setEditUnit(f.unit ?? ""); }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => removeField(f)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-lg">Include in report</CardTitle>
           <CardDescription>Only the selected sections are printed.</CardDescription>
         </CardHeader>
@@ -308,6 +375,7 @@ const LearningInsights = () => {
             ["height", "Height Comparison"],
             ["weight", "Weight Comparison"],
             ["flexibility", "Flexibility / Speed Comparison"],
+            ["customFields", "Custom Comparison Fields"],
             ["insights", "Learning Insights"],
             ["notes", "Custom Notes"],
             ["date", "Generated Date"],
@@ -331,6 +399,7 @@ const LearningInsights = () => {
             { label: "Height (cm)", i: v.initial_height, p: v.present_height, c: compare(v.initial_height, v.present_height, " cm") },
             { label: "Weight (kg)", i: v.initial_weight, p: v.present_weight, c: compare(v.initial_weight, v.present_weight, " kg") },
             { label: "Flexibility / Speed (%)", i: v.initial_flexibility, p: v.present_flexibility, c: compare(v.initial_flexibility, v.present_flexibility, "%") },
+            ...customRowsFor(v),
           ];
           return (
             <Card key={m.id}>
@@ -339,26 +408,7 @@ const LearningInsights = () => {
                 <CardDescription>{batches.find((b) => b.id === m.batch_id)?.name ?? "—"}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-end">
-                  <div className="flex-1 space-y-1.5">
-                    <Label>Comparison record</Label>
-                    <Select value={activeComp[m.id] || "current"} onValueChange={(val) => selectComp(m, val)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="current">Current measurements</SelectItem>
-                        {memberComps(m.id).map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="button" variant="outline" onClick={() => addOneTimeComparison(m)} disabled={saving === m.id}>
-                    <Plus className="mr-1.5 h-4 w-4" /> One-Time Comparison
-                  </Button>
-                </div>
-
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-
                   <div className="space-y-1.5"><Label>Initial Height (cm)</Label>
                     <Input inputMode="decimal" value={v.initial_height} onChange={(e) => set(m.id, { initial_height: e.target.value })} /></div>
                   <div className="space-y-1.5"><Label>Present Height (cm)</Label>
@@ -371,6 +421,23 @@ const LearningInsights = () => {
                     <Input inputMode="decimal" value={v.initial_flexibility} onChange={(e) => set(m.id, { initial_flexibility: e.target.value })} /></div>
                   <div className="space-y-1.5"><Label>Present Flexibility / Speed (%)</Label>
                     <Input inputMode="decimal" value={v.present_flexibility} onChange={(e) => set(m.id, { present_flexibility: e.target.value })} /></div>
+
+                  {fields.map((f) => {
+                    const e = v.custom?.[f.id] ?? { i: "", p: "" };
+                    const suffix = f.unit ? ` (${f.unit})` : "";
+                    return (
+                      <>
+                        <div key={`${f.id}-i`} className="space-y-1.5">
+                          <Label>Initial {f.name}{suffix}</Label>
+                          <Input value={e.i} onChange={(ev) => setCustom(m.id, f.id, "i", ev.target.value)} />
+                        </div>
+                        <div key={`${f.id}-p`} className="space-y-1.5">
+                          <Label>Present {f.name}{suffix}</Label>
+                          <Input value={e.p} onChange={(ev) => setCustom(m.id, f.id, "p", ev.target.value)} />
+                        </div>
+                      </>
+                    );
+                  })}
                 </div>
 
                 <div className="overflow-x-auto rounded-lg border border-border">
@@ -399,7 +466,7 @@ const LearningInsights = () => {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Label>Learning Insights</Label>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => set(m.id, { insights: autoInsight(v, m.name) })}>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => set(m.id, { insights: autoInsight(v, m.name, fields) })}>
                       <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Auto-generate
                     </Button>
                   </div>
