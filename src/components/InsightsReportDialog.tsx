@@ -61,7 +61,9 @@ const InsightsReportDialog = ({ data, onClose }: { data: InsightsReportData | nu
     s.height && { label: "Height (cm)", i: m.initial_height || "—", p: m.present_height || "—", c: diff(m.initial_height, m.present_height, " cm") },
     s.weight && { label: "Weight (kg)", i: m.initial_weight || "—", p: m.present_weight || "—", c: diff(m.initial_weight, m.present_weight, " kg") },
     s.flexibility && { label: "Flexibility / Speed (%)", i: m.initial_flexibility || "—", p: m.present_flexibility || "—", c: diff(m.initial_flexibility, m.present_flexibility, "%") },
-  ].filter(Boolean) as { label: string; i: string; p: string; c: string }[];
+    ...(s.customFields ? (data.customRows ?? []) : []),
+  ].filter(Boolean) as ReportRow[];
+
 
   const snapshot = async () => {
     if (!ref.current) throw new Error("Report not ready");
