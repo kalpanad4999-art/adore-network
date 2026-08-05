@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudio } from "@/contexts/StudioContext";
@@ -426,16 +426,16 @@ const LearningInsights = () => {
                     const e = v.custom?.[f.id] ?? { i: "", p: "" };
                     const suffix = f.unit ? ` (${f.unit})` : "";
                     return (
-                      <>
-                        <div key={`${f.id}-i`} className="space-y-1.5">
+                      <Fragment key={f.id}>
+                        <div className="space-y-1.5">
                           <Label>Initial {f.name}{suffix}</Label>
                           <Input value={e.i} onChange={(ev) => setCustom(m.id, f.id, "i", ev.target.value)} />
                         </div>
-                        <div key={`${f.id}-p`} className="space-y-1.5">
+                        <div className="space-y-1.5">
                           <Label>Present {f.name}{suffix}</Label>
                           <Input value={e.p} onChange={(ev) => setCustom(m.id, f.id, "p", ev.target.value)} />
                         </div>
-                      </>
+                      </Fragment>
                     );
                   })}
                 </div>
