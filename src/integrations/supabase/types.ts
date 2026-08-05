@@ -434,74 +434,35 @@ export type Database = {
         }
         Relationships: []
       }
-      insight_comparisons: {
+      insight_fields: {
         Row: {
-          batch_id: string | null
           created_at: string
-          custom_notes: string | null
           id: string
-          initial_flexibility: number | null
-          initial_height: number | null
-          initial_weight: number | null
-          insights: string | null
-          label: string
-          present_flexibility: number | null
-          present_height: number | null
-          present_weight: number | null
-          student_id: string
+          name: string
+          sort_order: number
+          unit: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          batch_id?: string | null
           created_at?: string
-          custom_notes?: string | null
           id?: string
-          initial_flexibility?: number | null
-          initial_height?: number | null
-          initial_weight?: number | null
-          insights?: string | null
-          label?: string
-          present_flexibility?: number | null
-          present_height?: number | null
-          present_weight?: number | null
-          student_id: string
+          name: string
+          sort_order?: number
+          unit?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          batch_id?: string | null
           created_at?: string
-          custom_notes?: string | null
           id?: string
-          initial_flexibility?: number | null
-          initial_height?: number | null
-          initial_weight?: number | null
-          insights?: string | null
-          label?: string
-          present_flexibility?: number | null
-          present_height?: number | null
-          present_weight?: number | null
-          student_id?: string
+          name?: string
+          sort_order?: number
+          unit?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "insight_comparisons_batch_id_fkey"
-            columns: ["batch_id"]
-            isOneToOne: false
-            referencedRelation: "batches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "insight_comparisons_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "students"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       instructors: {
         Row: {
@@ -549,6 +510,7 @@ export type Database = {
         Row: {
           batch_id: string | null
           created_at: string
+          custom_measures: Json
           custom_notes: string | null
           id: string
           initial_flexibility: number | null
@@ -565,6 +527,7 @@ export type Database = {
         Insert: {
           batch_id?: string | null
           created_at?: string
+          custom_measures?: Json
           custom_notes?: string | null
           id?: string
           initial_flexibility?: number | null
@@ -581,6 +544,7 @@ export type Database = {
         Update: {
           batch_id?: string | null
           created_at?: string
+          custom_measures?: Json
           custom_notes?: string | null
           id?: string
           initial_flexibility?: number | null
