@@ -12,10 +12,13 @@ export interface ReportSections {
   height: boolean;
   weight: boolean;
   flexibility: boolean;
+  customFields: boolean;
   insights: boolean;
   notes: boolean;
   date: boolean;
 }
+
+export interface ReportRow { label: string; i: string; p: string; c: string }
 
 export interface InsightsReportData {
   memberName: string;
@@ -28,8 +31,10 @@ export interface InsightsReportData {
     initial_flexibility: string; present_flexibility: string;
     insights: string; custom_notes: string;
   };
+  customRows?: ReportRow[];
   sections: ReportSections;
 }
+
 
 const NAVY = "#123a6b";
 const GOLD = "#d4a017";
