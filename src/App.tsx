@@ -65,6 +65,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/accept-invite" element={<AcceptInvitation />} />
+            <Route path="/accept-invite/:token" element={<AcceptInvitation />} />
             <Route path="/join/:token" element={<Join />} />
             <Route path="/studio/:ownerId" element={<PublicStudio />} />
             <Route path="/r/:slug" element={<PublicRecording />} />
