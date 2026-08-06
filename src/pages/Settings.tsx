@@ -3,8 +3,9 @@ import { useStudio } from "@/contexts/StudioContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Palette, Lock, ShieldCheck, Users, Bot, Crown, ChevronRight, ArrowLeft, Wallpaper, RefreshCw,
+  Palette, Lock, ShieldCheck, Users, Bot, Crown, ChevronRight, ArrowLeft, Wallpaper, RefreshCw, Repeat,
 } from "lucide-react";
+import TransferOwnershipCard from "@/components/settings/TransferOwnershipCard";
 import AppearanceCard from "@/components/settings/AppearanceCard";
 import AppLockCard from "@/components/settings/AppLockCard";
 import SecurityCard from "@/components/settings/SecurityCard";
