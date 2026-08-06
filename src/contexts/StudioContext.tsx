@@ -29,6 +29,8 @@ interface StudioContextValue {
   biometricCredentialId: string | null;
   ownerId: string | null;
   isOwner: boolean;
+  role: "owner" | "staff" | null;
+  authorized: boolean;
   permissions: ModulePermissions;
   loading: boolean;
   refresh: () => Promise<void>;
