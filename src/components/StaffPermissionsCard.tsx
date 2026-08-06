@@ -23,7 +23,7 @@ type StaffRow = {
   is_active: boolean;
 };
 
-type Invite = { id: string; email: string; accepted_at: string | null };
+type Invite = { id: string; email: string; accepted_at: string | null; token: string; expires_at: string };
 
 const MODULES: { key: ModuleKey; label: string }[] = [
   { key: "customers", label: "Members" },
