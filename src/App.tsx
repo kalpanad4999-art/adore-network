@@ -41,9 +41,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!user) return <Navigate to="/auth" replace />;
   return (
     <StudioProvider>
-      <AppLockGuard>
-        <AppLayout>{children}</AppLayout>
-      </AppLockGuard>
+      <AuthorizationGate>
+        <AppLockGuard>
+          <AppLayout>{children}</AppLayout>
+        </AppLockGuard>
+      </AuthorizationGate>
     </StudioProvider>
   );
 };
