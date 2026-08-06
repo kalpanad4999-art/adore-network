@@ -62,8 +62,13 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [role, setRole] = useState<"owner" | "staff" | null>(null);
   const [permissions, setPermissions] = useState<ModulePermissions>(ALL_ALLOWED);
   const [loading, setLoading] = useState(true);
+
+  const NO_ACCESS: ModulePermissions = {
+    customers: false, gallery: false, classes: false, payments: false, renewals: false, attendance: false,
+  };
 
   const refresh = async () => {
     if (!user) { setLoading(false); return; }
@@ -73,12 +78,16 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
       .select("owner_id, role")
       .eq("user_id", user.id)
       .maybeSingle();
-    const owner = roleRow?.owner_id || user.id;
+    const nextRole = (roleRow?.role as "owner" | "staff" | undefined) ?? null;
+    setRole(nextRole);
+    const owner = roleRow?.owner_id || (nextRole === "owner" ? user.id : null);
     setOwnerId(owner);
-    const isOwnerRole = roleRow?.role === "owner" || !roleRow;
+    const isOwnerRole = nextRole === "owner";
     setIsOwner(isOwnerRole);
     if (isOwnerRole) {
       setPermissions(ALL_ALLOWED);
+    } else if (!nextRole) {
+      setPermissions(NO_ACCESS);
     } else {
       const { data: perm } = await supabase
         .from("staff_permissions" as any)
@@ -86,10 +95,8 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
         .eq("staff_user_id", user.id)
         .maybeSingle();
       const p = (perm ?? null) as any;
-      if (!p) {
-        setPermissions(ALL_ALLOWED); // grandfather
-      } else if (!p.is_active) {
-        setPermissions({ customers: false, gallery: false, classes: false, payments: false, renewals: false, attendance: false });
+      if (!p || !p.is_active) {
+        setPermissions(NO_ACCESS);
       } else {
         setPermissions({
           customers: !!p.can_customers, gallery: !!p.can_gallery, classes: !!p.can_classes,
@@ -98,6 +105,8 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
         });
       }
     }
+    if (!owner) { setLoading(false); return; }
+
     const { data: settings } = await supabase
       .from("studio_settings")
       .select("*")
