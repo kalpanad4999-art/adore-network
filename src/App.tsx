@@ -8,6 +8,8 @@ import { StudioProvider } from "@/contexts/StudioContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import AppLayout from "@/components/layout/AppLayout";
 import AppLockGuard from "@/components/AppLockGuard";
+import AuthorizationGate from "@/components/AuthorizationGate";
+import AcceptInvitation from "./pages/AcceptInvitation";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
@@ -41,9 +43,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!user) return <Navigate to="/auth" replace />;
   return (
     <StudioProvider>
-      <AppLockGuard>
-        <AppLayout>{children}</AppLayout>
-      </AppLockGuard>
+      <AuthorizationGate>
+        <AppLockGuard>
+          <AppLayout>{children}</AppLayout>
+        </AppLockGuard>
+      </AuthorizationGate>
     </StudioProvider>
   );
 };
@@ -61,6 +65,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/accept-invite" element={<AcceptInvitation />} />
+            <Route path="/accept-invite/:token" element={<AcceptInvitation />} />
             <Route path="/join/:token" element={<Join />} />
             <Route path="/studio/:ownerId" element={<PublicStudio />} />
             <Route path="/r/:slug" element={<PublicRecording />} />

@@ -3,8 +3,9 @@ import { useStudio } from "@/contexts/StudioContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Palette, Lock, ShieldCheck, Users, Bot, Crown, ChevronRight, ArrowLeft, Wallpaper, RefreshCw,
+  Palette, Lock, ShieldCheck, Users, Bot, Crown, ChevronRight, ArrowLeft, Wallpaper, RefreshCw, Repeat,
 } from "lucide-react";
+import TransferOwnershipCard from "@/components/settings/TransferOwnershipCard";
 import AppearanceCard from "@/components/settings/AppearanceCard";
 import AppLockCard from "@/components/settings/AppLockCard";
 import SecurityCard from "@/components/settings/SecurityCard";
@@ -85,7 +86,16 @@ const SECTIONS: Section[] = [
     ownerOnly: true,
     render: () => <OwnerInfoCard />,
   },
+  {
+    slug: "transfer-ownership",
+    title: "Transfer Ownership",
+    subtitle: "Hand the Owner role to a Staff account in 3 secure steps",
+    icon: Repeat,
+    ownerOnly: true,
+    render: () => <TransferOwnershipCard />,
+  },
 ];
+
 
 const Settings = () => {
   const { isOwner } = useStudio();

@@ -58,7 +58,10 @@ const Auth = () => {
   const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && user) navigate("/", { replace: true });
+    if (authLoading || !user) return;
+    const pending = localStorage.getItem("trinetra.pending_invite_token");
+    if (pending) { navigate(`/accept-invite/${pending}`, { replace: true }); return; }
+    navigate("/", { replace: true });
   }, [user, authLoading, navigate]);
 
 

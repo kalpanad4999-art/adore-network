@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Users, Mail, Trash2, Ban, RotateCcw } from "lucide-react";
+import { UserPlus, Users, Mail, Trash2, Ban, RotateCcw, Send, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 type StaffRow = {
@@ -23,7 +23,7 @@ type StaffRow = {
   is_active: boolean;
 };
 
-type Invite = { id: string; email: string; accepted_at: string | null };
+type Invite = { id: string; email: string; accepted_at: string | null; token: string; expires_at: string };
 
 const MODULES: { key: ModuleKey; label: string }[] = [
   { key: "customers", label: "Members" },
@@ -88,7 +88,7 @@ export const StaffPermissionsCard = () => {
 
     const { data: inv } = await supabase
       .from("staff_invitations")
-      .select("id, email, accepted_at")
+      .select("id, email, accepted_at, token, expires_at")
       .eq("owner_id", ownerId)
       .is("accepted_at", null);
     setInvites((inv ?? []) as any);
@@ -135,20 +135,41 @@ export const StaffPermissionsCard = () => {
     await togglePerm(row, "is_active", active);
   };
 
+  const inviteLink = (token: string) => `${window.location.origin}/accept-invite/${token}`;
+
+  const emailBody = (link: string) =>
+    `Hello,\n\nYou have been invited to join the ${"TRINETRA YOGA"} studio workspace as a Staff member.\n\n` +
+    `Accept your invitation here:\n${link}\n\n` +
+    `This secure link expires in 7 days and can only be used with this email address. ` +
+    `After signing in, your account is linked automatically and your Studio Owner will enable the modules you need.\n\n` +
+    `Warm regards,\nTRINETRA YOGA`;
+
+  const shareInvite = async (email: string, token: string) => {
+    const link = inviteLink(token);
+    try { await navigator.clipboard.writeText(link); toast.success("Invitation link copied"); } catch { /* ignore */ }
+    window.open(
+      `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent("Your TRINETRA YOGA Staff invitation")}&body=${encodeURIComponent(emailBody(link))}`,
+      "_blank"
+    );
+  };
+
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ownerId) return;
     const cleaned = inviteEmail.trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleaned)) { toast.error("Enter a valid email"); return; }
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("staff_invitations")
-      .insert({ owner_id: ownerId, email: cleaned });
+      .insert({ owner_id: ownerId, email: cleaned })
+      .select("id, email, token")
+      .maybeSingle();
     if (error) {
       toast.error(error.code === "23505" ? "That email is already invited" : error.message);
       return;
     }
-    toast.success("Invitation saved — ask them to sign up with this email");
+    toast.success("Invitation created — sending the Accept Invitation link");
     setInviteEmail("");
+    if (data?.token) await shareInvite(cleaned, (data as any).token);
     load();
   };
 
@@ -157,6 +178,7 @@ export const StaffPermissionsCard = () => {
     await supabase.from("staff_invitations").delete().eq("id", id);
     load();
   };
+
 
   return (
     <Card>
@@ -189,21 +211,38 @@ export const StaffPermissionsCard = () => {
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">Pending invitations</Label>
             {invites.map((i) => (
-              <div key={i.id} className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+              <div key={i.id} className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 p-3">
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm truncate">{i.email}</p>
-                  <p className="text-xs text-muted-foreground">Waiting for signup</p>
+                  <p className="text-xs text-muted-foreground">
+                    Awaiting acceptance · expires {new Date(i.expires_at).toLocaleDateString("en-GB")}
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => revokeInvite(i.id)}
-                  aria-label="Revoke invitation"
-                  className="text-muted-foreground hover:text-destructive p-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="outline" size="sm" onClick={() => shareInvite(i.email, i.token)}>
+                    <Send className="h-3.5 w-3.5 mr-1" /> Resend
+                  </Button>
+                  <Button
+                    type="button" variant="ghost" size="sm"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(inviteLink(i.token));
+                      toast.success("Invitation link copied");
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5 mr-1" /> Copy link
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => revokeInvite(i.id)}
+                    aria-label="Revoke invitation"
+                    className="text-muted-foreground hover:text-destructive p-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
+
             ))}
           </div>
         )}
