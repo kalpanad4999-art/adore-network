@@ -85,7 +85,16 @@ const SECTIONS: Section[] = [
     ownerOnly: true,
     render: () => <OwnerInfoCard />,
   },
+  {
+    slug: "transfer-ownership",
+    title: "Transfer Ownership",
+    subtitle: "Hand the Owner role to a Staff account in 3 secure steps",
+    icon: Repeat,
+    ownerOnly: true,
+    render: () => <TransferOwnershipCard />,
+  },
 ];
+
 
 const Settings = () => {
   const { isOwner } = useStudio();
