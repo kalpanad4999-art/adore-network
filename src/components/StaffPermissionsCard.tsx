@@ -135,20 +135,41 @@ export const StaffPermissionsCard = () => {
     await togglePerm(row, "is_active", active);
   };
 
+  const inviteLink = (token: string) => `${window.location.origin}/accept-invite/${token}`;
+
+  const emailBody = (link: string) =>
+    `Hello,\n\nYou have been invited to join the ${"TRINETRA YOGA"} studio workspace as a Staff member.\n\n` +
+    `Accept your invitation here:\n${link}\n\n` +
+    `This secure link expires in 7 days and can only be used with this email address. ` +
+    `After signing in, your account is linked automatically and your Studio Owner will enable the modules you need.\n\n` +
+    `Warm regards,\nTRINETRA YOGA`;
+
+  const shareInvite = async (email: string, token: string) => {
+    const link = inviteLink(token);
+    try { await navigator.clipboard.writeText(link); toast.success("Invitation link copied"); } catch { /* ignore */ }
+    window.open(
+      `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent("Your TRINETRA YOGA Staff invitation")}&body=${encodeURIComponent(emailBody(link))}`,
+      "_blank"
+    );
+  };
+
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ownerId) return;
     const cleaned = inviteEmail.trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleaned)) { toast.error("Enter a valid email"); return; }
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("staff_invitations")
-      .insert({ owner_id: ownerId, email: cleaned });
+      .insert({ owner_id: ownerId, email: cleaned })
+      .select("id, email, token")
+      .maybeSingle();
     if (error) {
       toast.error(error.code === "23505" ? "That email is already invited" : error.message);
       return;
     }
-    toast.success("Invitation saved — ask them to sign up with this email");
+    toast.success("Invitation created — sending the Accept Invitation link");
     setInviteEmail("");
+    if (data?.token) await shareInvite(cleaned, (data as any).token);
     load();
   };
 
@@ -157,6 +178,7 @@ export const StaffPermissionsCard = () => {
     await supabase.from("staff_invitations").delete().eq("id", id);
     load();
   };
+
 
   return (
     <Card>
