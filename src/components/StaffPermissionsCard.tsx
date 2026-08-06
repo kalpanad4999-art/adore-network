@@ -88,7 +88,7 @@ export const StaffPermissionsCard = () => {
 
     const { data: inv } = await supabase
       .from("staff_invitations")
-      .select("id, email, accepted_at")
+      .select("id, email, accepted_at, token, expires_at")
       .eq("owner_id", ownerId)
       .is("accepted_at", null);
     setInvites((inv ?? []) as any);
