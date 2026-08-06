@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Users, Mail, Trash2, Ban, RotateCcw } from "lucide-react";
+import { UserPlus, Users, Mail, Trash2, Ban, RotateCcw, Send, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 type StaffRow = {
