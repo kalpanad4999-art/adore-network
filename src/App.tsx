@@ -8,6 +8,8 @@ import { StudioProvider } from "@/contexts/StudioContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import AppLayout from "@/components/layout/AppLayout";
 import AppLockGuard from "@/components/AppLockGuard";
+import AuthorizationGate from "@/components/AuthorizationGate";
+import AcceptInvitation from "./pages/AcceptInvitation";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import ResetPassword from "./pages/ResetPassword";
