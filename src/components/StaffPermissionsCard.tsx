@@ -211,21 +211,38 @@ export const StaffPermissionsCard = () => {
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">Pending invitations</Label>
             {invites.map((i) => (
-              <div key={i.id} className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+              <div key={i.id} className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 p-3">
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm truncate">{i.email}</p>
-                  <p className="text-xs text-muted-foreground">Waiting for signup</p>
+                  <p className="text-xs text-muted-foreground">
+                    Awaiting acceptance · expires {new Date(i.expires_at).toLocaleDateString("en-GB")}
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => revokeInvite(i.id)}
-                  aria-label="Revoke invitation"
-                  className="text-muted-foreground hover:text-destructive p-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="outline" size="sm" onClick={() => shareInvite(i.email, i.token)}>
+                    <Send className="h-3.5 w-3.5 mr-1" /> Resend
+                  </Button>
+                  <Button
+                    type="button" variant="ghost" size="sm"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(inviteLink(i.token));
+                      toast.success("Invitation link copied");
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5 mr-1" /> Copy link
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => revokeInvite(i.id)}
+                    aria-label="Revoke invitation"
+                    className="text-muted-foreground hover:text-destructive p-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
+
             ))}
           </div>
         )}
