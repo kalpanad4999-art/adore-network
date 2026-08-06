@@ -42,7 +42,7 @@ export const OwnerInfoCard = () => {
           <Crown className="h-5 w-5 text-primary" /> Studio Owner
         </CardTitle>
         <CardDescription>
-          The permanent Owner account for this studio. Ownership cannot be transferred.
+          The current Owner of this studio workspace. Use Settings → Transfer Ownership to hand the role to a Staff account.
         </CardDescription>
       </CardHeader>
       <CardContent>
