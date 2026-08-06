@@ -934,24 +934,36 @@ export type Database = {
       staff_invitations: {
         Row: {
           accepted_at: string | null
+          accepted_by: string | null
           created_at: string
           email: string
+          expires_at: string
           id: string
           owner_id: string
+          revoked_at: string | null
+          token: string
         }
         Insert: {
           accepted_at?: string | null
+          accepted_by?: string | null
           created_at?: string
           email: string
+          expires_at?: string
           id?: string
           owner_id: string
+          revoked_at?: string | null
+          token?: string
         }
         Update: {
           accepted_at?: string | null
+          accepted_by?: string | null
           created_at?: string
           email?: string
+          expires_at?: string
           id?: string
           owner_id?: string
+          revoked_at?: string | null
+          token?: string
         }
         Relationships: []
       }
@@ -1223,12 +1235,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_staff_invitation: {
+        Args: { _token: string }
+        Returns: {
+          owner_id: string
+          status: string
+        }[]
+      }
       cleanup_expired_gallery: {
         Args: { _owner: string }
         Returns: {
           deleted_paths: string[]
         }[]
       }
+      current_workspace_owner: { Args: never; Returns: string }
       get_batch_by_token: {
         Args: { _token: string }
         Returns: {
@@ -1251,6 +1271,16 @@ export type Database = {
         }[]
       }
       get_email_by_phone: { Args: { _phone: string }; Returns: string }
+      get_invitation_preview: {
+        Args: { _token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          invited_at: string
+          status: string
+          studio_name: string
+        }[]
+      }
       get_owner_id: { Args: { _user_id: string }; Returns: string }
       get_public_gallery: {
         Args: { _owner: string }
@@ -1370,6 +1400,7 @@ export type Database = {
         Args: { _module: string; _user_id: string }
         Returns: boolean
       }
+      transfer_ownership: { Args: { _new_owner: string }; Returns: string }
     }
     Enums: {
       app_role: "owner" | "staff"
