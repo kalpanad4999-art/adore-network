@@ -198,6 +198,25 @@ const Payments = () => {
   }, [workspaceId]);
 
 
+  // Reads a member's date of birth from the batch's custom registration fields.
+  const birthdayOf = (cust: Customer): string | null => {
+    const data = (cust.custom_data || {}) as Record<string, any>;
+    const batch = batches.find((b) => b.id === cust.batch_id);
+    const fields = (batch?.custom_fields || []) as any[];
+    for (const f of fields) {
+      const name = String(f?.name || "");
+      if (/birth|dob|b\.?o\.?d/i.test(name)) {
+        const v = data[f?.id];
+        if (v) return String(v);
+      }
+    }
+    // Fallback: any stored value that clearly looks like a date-of-birth key.
+    for (const [k, v] of Object.entries(data)) {
+      if (/birth|dob/i.test(k) && v) return String(v);
+    }
+    return null;
+  };
+
   // Full eligibility context for the member selected in the Record Payment form.
   const memberCtx = useMemo(() => {
     const cust = customers.find((c) => c.id === form.student_id);
@@ -222,8 +241,10 @@ const Payments = () => {
       payment_status: (has_active_membership ? "paid" : "overdue") as "paid" | "overdue",
       membership_type: null,
       member_usage_count: 0,
+      birthday_today: isBirthdayOn(birthdayOf(cust), today),
     };
-  }, [customers, payments, form.student_id, form.paid_on]);
+  }, [customers, batches, payments, form.student_id, form.paid_on]);
+
 
   // Eligible offers for the current form context
   const eligibleOffers = useMemo(() => {
