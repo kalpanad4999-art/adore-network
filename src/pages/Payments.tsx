@@ -714,6 +714,16 @@ const Payments = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Amount (₹)</Label><Input type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
+                <div className="space-y-2">
+                  <Label>Due Amount (₹)</Label>
+                  <Input
+                    type="number" step="0.01" min="0" placeholder="0"
+                    value={form.due}
+                    onChange={(e) => setForm({ ...form, due: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">Leave blank if fully paid. Any balance marks this payment as Partially Paid.</p>
+                </div>
+
                 <div className="space-y-2"><Label>Paid on</Label><Input type="date" value={form.paid_on} onChange={(e) => setForm({ ...form, paid_on: e.target.value })} required /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
