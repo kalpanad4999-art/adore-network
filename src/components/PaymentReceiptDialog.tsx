@@ -49,6 +49,9 @@ export interface ReceiptData {
   amount: number;
   originalAmount?: number;
   discountAmount?: number;
+  dueAmount?: number;
+  paymentStatus?: "paid" | "partial";
+
   offerName?: string;
   offerCongrats?: string;
   offerMessage?: string;
