@@ -496,9 +496,12 @@ const Payments = () => {
       batchName,
       planDescription: `${batchName} Membership · ${effectiveValue} ${form.durationUnit}`,
       paymentMethod: form.method,
-      amount: payable,
+      amount: paidNow,
       originalAmount,
       discountAmount: discountAmount || undefined,
+      dueAmount: dueAmount || undefined,
+      paymentStatus,
+
       offerName: selectedOffer?.name,
       offerCongrats: selectedOffer ? CONGRATS[selectedOffer.offer_type] : undefined,
       couponCode: appliedCoupon?.code,
