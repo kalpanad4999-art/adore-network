@@ -276,6 +276,17 @@ const Payments = () => {
     return Math.max(0, amt - discountAmount);
   }, [form.amount, discountAmount]);
 
+  // Remaining balance after this payment. Capped at the payable amount.
+  const dueAmount = useMemo(() => {
+    const d = parseFloat(form.due);
+    if (!Number.isFinite(d) || d <= 0) return 0;
+    return Math.round(Math.min(d, finalAmount) * 100) / 100;
+  }, [form.due, finalAmount]);
+
+  const paidNow = useMemo(() => Math.max(0, Math.round((finalAmount - dueAmount) * 100) / 100), [finalAmount, dueAmount]);
+  const paymentStatus: "paid" | "partial" = dueAmount > 0 ? "partial" : "paid";
+
+
   const [couponApplying, setCouponApplying] = useState(false);
   const applyCoupon = async () => {
     const code = couponInput.trim().toUpperCase();
