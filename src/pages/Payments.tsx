@@ -120,11 +120,13 @@ const Payments = () => {
   const [form, setForm] = useState({
     student_id: "",
     amount: "",
+    due: "",
     paid_on: new Date().toISOString().slice(0, 10),
     method: "cash",
     durationValue: "1",
     durationUnit: "months" as Unit,
   });
+
 
   const effectiveValue = useMemo(() => {
     const n = parseInt(form.durationValue, 10);
