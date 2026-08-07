@@ -151,6 +151,8 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
       includeOffer && data.couponCode ? `Coupon: ${data.couponCode}` : "",
       includeOffer && hasOffer ? `Discount: ₹${discount.toLocaleString("en-IN")} (You saved ₹${discount.toLocaleString("en-IN")})` : "",
       `Amount Paid: ₹${total.toLocaleString("en-IN")}`,
+      due > 0 ? `Due Amount: ₹${due.toLocaleString("en-IN")} (Partially Paid)` : "",
+
       data.renewalDate ? `Valid until: ${fmtDate(data.renewalDate)}` : "",
       "",
       "Thank you! 🙏",
