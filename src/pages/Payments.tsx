@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import PaymentReceiptDialog, { ReceiptData } from "@/components/PaymentReceiptDialog";
 import { FileText, Tag } from "lucide-react";
-import { Offer, Coupon, OFFER_LABELS, CONGRATS, computeDiscount, isOfferEligible } from "@/lib/offers";
+import { Offer, Coupon, OFFER_LABELS, CONGRATS, computeDiscount, isOfferEligible, isBirthdayOn } from "@/lib/offers";
 import { Badge } from "@/components/ui/badge";
 import { fmtDate, fmtDateFile } from "@/lib/date";
 
