@@ -1013,6 +1013,12 @@ const Payments = () => {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-semibold">₹{Number(p.amount).toLocaleString()}</span>
+                                  {Number(p.due_amount || 0) > 0 && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium">
+                                      Due ₹{Number(p.due_amount).toLocaleString()} · Partially Paid
+                                    </span>
+                                  )}
+
                                   {(p.duration_value && p.duration_unit) ? (
                                     <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
                                       {p.duration_value} {p.duration_unit}
