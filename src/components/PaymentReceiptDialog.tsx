@@ -365,6 +365,15 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", fontSize: 15, fontWeight: 700, color: "#fff", background: INK, borderRadius: 6, marginTop: 8 }}>
                     <span style={{ letterSpacing: 0.5 }}>Grand Total</span><span>{money(total)}</span>
                   </div>
+                  {due > 0 ? (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 14px", fontSize: 13, fontWeight: 700, color: ACCENT, marginTop: 6 }}>
+                      <span>Due Amount</span><span>{money(due)}</span>
+                    </div>
+                  ) : null}
+                  <div style={{ textAlign: "right", marginTop: 6, fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 700, color: status === "partial" ? ACCENT : INK_SOFT }}>
+                    {status === "partial" ? "Partially Paid" : "Paid"}
+                  </div>
+
                 </div>
               </div>
 
