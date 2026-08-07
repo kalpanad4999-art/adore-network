@@ -446,7 +446,10 @@ const Payments = () => {
       student_id: form.student_id,
       user_id: workspaceId,
 
-      amount: payable,
+      amount: paidNow,
+      due_amount: dueAmount,
+      payment_status: paymentStatus,
+
       paid_on: form.paid_on,
       method: form.method,
       duration_value: effectiveValue,
