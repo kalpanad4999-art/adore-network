@@ -49,15 +49,42 @@ const TransferOwnershipCard = () => {
   if (!isOwner) return null;
 
   const verifyOwner = async () => {
-    if (!user?.email) return;
+    if (!user?.email) { toast.error("No signed-in account found"); return; }
     if (!password) { toast.error("Enter your account password"); return; }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: user.email, password });
-    setBusy(false);
-    if (error) { toast.error("Incorrect account password"); return; }
-    setPassword("");
-    setStep(2);
+    try {
+      // Verify against a throw-away client so the live Owner session is never
+      // replaced or invalidated by the password check.
+      const { createClient } = await import("@supabase/supabase-js");
+      const probe = createClient(
+        import.meta.env.VITE_SUPABASE_URL as string,
+        import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+        { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } },
+      );
+      const { data, error } = await probe.auth.signInWithPassword({
+        email: user.email.trim().toLowerCase(),
+        password,
+      });
+      if (error || !data?.user) {
+        toast.error(
+          error?.message?.toLowerCase().includes("invalid")
+            ? "Incorrect account password"
+            : error?.message || "Verification failed",
+        );
+        return;
+      }
+      if (data.user.id !== user.id) { toast.error("Verification failed for this account"); return; }
+      await probe.auth.signOut({ scope: "local" });
+      setPassword("");
+      toast.success("Owner verified");
+      setStep(2);
+    } catch (e: any) {
+      toast.error(e?.message || "Verification failed");
+    } finally {
+      setBusy(false);
+    }
   };
+
 
   const pickNewOwner = () => {
     const cleaned = email.trim().toLowerCase();
