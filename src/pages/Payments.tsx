@@ -1051,8 +1051,11 @@ const Payments = () => {
                                       planDescription: `${batchName} Membership · ${val} ${unit}`,
                                       paymentMethod: p.method,
                                       amount: Number(p.amount),
-                                      originalAmount: Number(p.amount) + Number(p.discount_amount || 0),
+                                      originalAmount: Number(p.amount) + Number(p.discount_amount || 0) + Number(p.due_amount || 0),
                                       discountAmount: p.discount_amount ? Number(p.discount_amount) : undefined,
+                                      dueAmount: p.due_amount ? Number(p.due_amount) : undefined,
+                                      paymentStatus: (Number(p.due_amount || 0) > 0 ? "partial" : "paid"),
+
                                       offerName: p.applied_offer_name || undefined,
                                       offerCongrats: p.applied_offer_type ? CONGRATS[p.applied_offer_type as keyof typeof CONGRATS] : undefined,
                                       couponCode: p.applied_coupon_code || undefined,
