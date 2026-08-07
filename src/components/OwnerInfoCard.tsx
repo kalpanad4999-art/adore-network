@@ -14,8 +14,15 @@ export const OwnerInfoCard = () => {
   const [owner, setOwner] = useState<OwnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
+  const load = async () => {
+    setLoading(true);
+    // Security-definer lookup: always returns the current Owner's name + email,
+    // even for staff accounts that cannot read other profiles directly.
+    const { data, error } = await (supabase as any).rpc("get_workspace_owner_info");
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!error && row?.user_id) {
+      setOwner({ id: row.user_id, email: row.email ?? null, full_name: row.full_name ?? null });
+    } else {
       const { data: role } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -29,11 +36,24 @@ export const OwnerInfoCard = () => {
           .select("id, email, full_name")
           .eq("id", role.user_id)
           .maybeSingle();
-        setOwner(prof as OwnerProfile ?? { id: role.user_id, email: null, full_name: null });
+        setOwner((prof as OwnerProfile) ?? { id: role.user_id, email: null, full_name: null });
+      } else {
+        setOwner(null);
       }
-      setLoading(false);
-    })();
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void load();
+    // Ownership transfers rewrite user_roles — refresh instantly for everyone.
+    const ch = supabase
+      .channel("owner-info-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => void load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, []);
+
 
   return (
     <Card>
