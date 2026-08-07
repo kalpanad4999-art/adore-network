@@ -85,7 +85,10 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
   const discount = Number(data.discountAmount || 0);
   const subtotal = data.originalAmount != null ? Number(data.originalAmount) : Number(data.amount) + discount;
   const total = Number(data.amount);
+  const due = Math.max(0, Number(data.dueAmount || 0));
+  const status = data.paymentStatus || (due > 0 ? "partial" : "paid");
   const hasOffer = discount > 0;
+
 
   const snapshot = async (): Promise<HTMLCanvasElement> => {
     if (!ref.current) throw new Error("Receipt not ready");
