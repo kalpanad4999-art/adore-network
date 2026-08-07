@@ -1015,6 +1015,7 @@ export type Database = {
           applied_offer_type: string | null
           created_at: string
           discount_amount: number
+          due_amount: number
           duration_months: number | null
           duration_unit: string | null
           duration_value: number | null
@@ -1022,6 +1023,7 @@ export type Database = {
           method: string
           notes: string | null
           paid_on: string
+          payment_status: string
           plan: string | null
           reminder_sent_at: string | null
           student_id: string
@@ -1037,6 +1039,7 @@ export type Database = {
           applied_offer_type?: string | null
           created_at?: string
           discount_amount?: number
+          due_amount?: number
           duration_months?: number | null
           duration_unit?: string | null
           duration_value?: number | null
@@ -1044,6 +1047,7 @@ export type Database = {
           method?: string
           notes?: string | null
           paid_on?: string
+          payment_status?: string
           plan?: string | null
           reminder_sent_at?: string | null
           student_id: string
@@ -1059,6 +1063,7 @@ export type Database = {
           applied_offer_type?: string | null
           created_at?: string
           discount_amount?: number
+          due_amount?: number
           duration_months?: number | null
           duration_unit?: string | null
           duration_value?: number | null
@@ -1066,6 +1071,7 @@ export type Database = {
           method?: string
           notes?: string | null
           paid_on?: string
+          payment_status?: string
           plan?: string | null
           reminder_sent_at?: string | null
           student_id?: string
@@ -1340,6 +1346,14 @@ export type Database = {
           recorded_on: string
           storage_path: string
           title: string
+          user_id: string
+        }[]
+      }
+      get_workspace_owner_info: {
+        Args: never
+        Returns: {
+          email: string
+          full_name: string
           user_id: string
         }[]
       }

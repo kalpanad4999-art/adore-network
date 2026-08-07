@@ -15,12 +15,12 @@ import { toast } from "sonner";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import PaymentReceiptDialog, { ReceiptData } from "@/components/PaymentReceiptDialog";
 import { FileText, Tag } from "lucide-react";
-import { Offer, Coupon, OFFER_LABELS, CONGRATS, computeDiscount, isOfferEligible } from "@/lib/offers";
+import { Offer, Coupon, OFFER_LABELS, CONGRATS, computeDiscount, isOfferEligible, isBirthdayOn } from "@/lib/offers";
 import { Badge } from "@/components/ui/badge";
 import { fmtDate, fmtDateFile } from "@/lib/date";
 
-interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
-interface Batch { id: string; name: string; fee?: number | null; }
+interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; custom_data?: Record<string, any> | null; }
+interface Batch { id: string; name: string; fee?: number | null; custom_fields?: any[] | null; }
 interface Payment {
   id: string;
   student_id: string;
@@ -36,7 +36,10 @@ interface Payment {
   applied_offer_type?: string | null;
   applied_coupon_code?: string | null;
   discount_amount?: number | null;
+  due_amount?: number | null;
+  payment_status?: string | null;
 }
+
 
 const paymentMethods = ["cash", "upi", "card", "bank-transfer", "other"];
 type Unit = "days" | "months" | "years";
@@ -117,11 +120,13 @@ const Payments = () => {
   const [form, setForm] = useState({
     student_id: "",
     amount: "",
+    due: "",
     paid_on: new Date().toISOString().slice(0, 10),
     method: "cash",
     durationValue: "1",
     durationUnit: "months" as Unit,
   });
+
 
   const effectiveValue = useMemo(() => {
     const n = parseInt(form.durationValue, 10);
@@ -137,9 +142,10 @@ const Payments = () => {
   const fetchAll = async () => {
     if (!workspaceId) return;
     const [{ data: cust }, { data: pays }, { data: bat }, { data: offs }, { data: cps }] = await Promise.all([
-      supabase.from("students").select("id,name,phone,batch_id").eq("user_id", workspaceId).order("name"),
+      supabase.from("students").select("id,name,phone,batch_id,custom_data").eq("user_id", workspaceId).order("name"),
       supabase.from("student_payments").select("*").eq("user_id", workspaceId).order("paid_on", { ascending: false }),
-      supabase.from("batches").select("id,name,fee").eq("user_id", workspaceId),
+      supabase.from("batches").select("id,name,fee,custom_fields").eq("user_id", workspaceId),
+
       (supabase as any).from("offers").select("*").eq("user_id", workspaceId).eq("is_active", true),
       (supabase as any).from("coupons").select("*").eq("user_id", workspaceId).eq("is_active", true),
     ]);
@@ -192,6 +198,25 @@ const Payments = () => {
   }, [workspaceId]);
 
 
+  // Reads a member's date of birth from the batch's custom registration fields.
+  const birthdayOf = (cust: Customer): string | null => {
+    const data = (cust.custom_data || {}) as Record<string, any>;
+    const batch = batches.find((b) => b.id === cust.batch_id);
+    const fields = (batch?.custom_fields || []) as any[];
+    for (const f of fields) {
+      const name = String(f?.name || "");
+      if (/birth|dob|b\.?o\.?d/i.test(name)) {
+        const v = data[f?.id];
+        if (v) return String(v);
+      }
+    }
+    // Fallback: any stored value that clearly looks like a date-of-birth key.
+    for (const [k, v] of Object.entries(data)) {
+      if (/birth|dob/i.test(k) && v) return String(v);
+    }
+    return null;
+  };
+
   // Full eligibility context for the member selected in the Record Payment form.
   const memberCtx = useMemo(() => {
     const cust = customers.find((c) => c.id === form.student_id);
@@ -216,8 +241,10 @@ const Payments = () => {
       payment_status: (has_active_membership ? "paid" : "overdue") as "paid" | "overdue",
       membership_type: null,
       member_usage_count: 0,
+      birthday_today: isBirthdayOn(birthdayOf(cust), today),
     };
-  }, [customers, payments, form.student_id, form.paid_on]);
+  }, [customers, batches, payments, form.student_id, form.paid_on]);
+
 
   // Eligible offers for the current form context
   const eligibleOffers = useMemo(() => {
@@ -248,6 +275,17 @@ const Payments = () => {
     const amt = parseFloat(form.amount) || 0;
     return Math.max(0, amt - discountAmount);
   }, [form.amount, discountAmount]);
+
+  // Remaining balance after this payment. Capped at the payable amount.
+  const dueAmount = useMemo(() => {
+    const d = parseFloat(form.due);
+    if (!Number.isFinite(d) || d <= 0) return 0;
+    return Math.round(Math.min(d, finalAmount) * 100) / 100;
+  }, [form.due, finalAmount]);
+
+  const paidNow = useMemo(() => Math.max(0, Math.round((finalAmount - dueAmount) * 100) / 100), [finalAmount, dueAmount]);
+  const paymentStatus: "paid" | "partial" = dueAmount > 0 ? "partial" : "paid";
+
 
   const [couponApplying, setCouponApplying] = useState(false);
   const applyCoupon = async () => {
@@ -408,7 +446,10 @@ const Payments = () => {
       student_id: form.student_id,
       user_id: workspaceId,
 
-      amount: payable,
+      amount: paidNow,
+      due_amount: dueAmount,
+      payment_status: paymentStatus,
+
       paid_on: form.paid_on,
       method: form.method,
       duration_value: effectiveValue,
@@ -455,9 +496,12 @@ const Payments = () => {
       batchName,
       planDescription: `${batchName} Membership · ${effectiveValue} ${form.durationUnit}`,
       paymentMethod: form.method,
-      amount: payable,
+      amount: paidNow,
       originalAmount,
       discountAmount: discountAmount || undefined,
+      dueAmount: dueAmount || undefined,
+      paymentStatus,
+
       offerName: selectedOffer?.name,
       offerCongrats: selectedOffer ? CONGRATS[selectedOffer.offer_type] : undefined,
       couponCode: appliedCoupon?.code,
@@ -469,7 +513,7 @@ const Payments = () => {
     });
     setReceiptOpen(true);
 
-    setForm({ ...form, amount: "", durationValue: "1" });
+    setForm({ ...form, amount: "", due: "", durationValue: "1" });
     clearOffer();
     setAddOpen(false);
     fetchAll();
@@ -670,6 +714,16 @@ const Payments = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Amount (₹)</Label><Input type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
+                <div className="space-y-2">
+                  <Label>Due Amount (₹)</Label>
+                  <Input
+                    type="number" step="0.01" min="0" placeholder="0"
+                    value={form.due}
+                    onChange={(e) => setForm({ ...form, due: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">Leave blank if fully paid. Any balance marks this payment as Partially Paid.</p>
+                </div>
+
                 <div className="space-y-2"><Label>Paid on</Label><Input type="date" value={form.paid_on} onChange={(e) => setForm({ ...form, paid_on: e.target.value })} required /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -761,11 +815,30 @@ const Payments = () => {
                 )}
 
                 {form.amount && (
-                  <div className="flex items-center justify-between text-sm border-t pt-2">
-                    <span className="text-muted-foreground">Payable</span>
-                    <span className="font-semibold">₹{finalAmount.toLocaleString()}</span>
+                  <div className="space-y-1 border-t pt-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Payable</span>
+                      <span className="font-semibold">₹{finalAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Paid now</span>
+                      <span className="font-semibold">₹{paidNow.toLocaleString()}</span>
+                    </div>
+                    {dueAmount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Due</span>
+                        <span className="font-semibold text-destructive">₹{dueAmount.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Status</span>
+                      <Badge variant={paymentStatus === "partial" ? "destructive" : "secondary"}>
+                        {paymentStatus === "partial" ? "Partially Paid" : "Paid"}
+                      </Badge>
+                    </div>
                   </div>
                 )}
+
               </div>
 
               <Button type="submit" className="w-full">Save Payment</Button>
@@ -940,6 +1013,12 @@ const Payments = () => {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-semibold">₹{Number(p.amount).toLocaleString()}</span>
+                                  {Number(p.due_amount || 0) > 0 && (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium">
+                                      Due ₹{Number(p.due_amount).toLocaleString()} · Partially Paid
+                                    </span>
+                                  )}
+
                                   {(p.duration_value && p.duration_unit) ? (
                                     <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
                                       {p.duration_value} {p.duration_unit}
@@ -972,8 +1051,11 @@ const Payments = () => {
                                       planDescription: `${batchName} Membership · ${val} ${unit}`,
                                       paymentMethod: p.method,
                                       amount: Number(p.amount),
-                                      originalAmount: Number(p.amount) + Number(p.discount_amount || 0),
+                                      originalAmount: Number(p.amount) + Number(p.discount_amount || 0) + Number(p.due_amount || 0),
                                       discountAmount: p.discount_amount ? Number(p.discount_amount) : undefined,
+                                      dueAmount: p.due_amount ? Number(p.due_amount) : undefined,
+                                      paymentStatus: (Number(p.due_amount || 0) > 0 ? "partial" : "paid"),
+
                                       offerName: p.applied_offer_name || undefined,
                                       offerCongrats: p.applied_offer_type ? CONGRATS[p.applied_offer_type as keyof typeof CONGRATS] : undefined,
                                       couponCode: p.applied_coupon_code || undefined,

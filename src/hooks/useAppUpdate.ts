@@ -17,9 +17,11 @@ export const useAppUpdate = () => {
   const bootRef = useRef(true);
 
   const check = useCallback(async (opts?: { silent?: boolean }) => {
+    if (import.meta.env.DEV) { bootRef.current = false; return false; }
     setChecking(true);
     try {
       const deployed = await fetchDeployedBuildId();
+
       setLastChecked(new Date());
       if (!deployed) return false;
       const known = getKnownBuildId();

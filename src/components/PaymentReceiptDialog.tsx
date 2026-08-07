@@ -49,6 +49,9 @@ export interface ReceiptData {
   amount: number;
   originalAmount?: number;
   discountAmount?: number;
+  dueAmount?: number;
+  paymentStatus?: "paid" | "partial";
+
   offerName?: string;
   offerCongrats?: string;
   offerMessage?: string;
@@ -82,7 +85,10 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
   const discount = Number(data.discountAmount || 0);
   const subtotal = data.originalAmount != null ? Number(data.originalAmount) : Number(data.amount) + discount;
   const total = Number(data.amount);
+  const due = Math.max(0, Number(data.dueAmount || 0));
+  const status = data.paymentStatus || (due > 0 ? "partial" : "paid");
   const hasOffer = discount > 0;
+
 
   const snapshot = async (): Promise<HTMLCanvasElement> => {
     if (!ref.current) throw new Error("Receipt not ready");
@@ -145,6 +151,8 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
       includeOffer && data.couponCode ? `Coupon: ${data.couponCode}` : "",
       includeOffer && hasOffer ? `Discount: ₹${discount.toLocaleString("en-IN")} (You saved ₹${discount.toLocaleString("en-IN")})` : "",
       `Amount Paid: ₹${total.toLocaleString("en-IN")}`,
+      due > 0 ? `Due Amount: ₹${due.toLocaleString("en-IN")} (Partially Paid)` : "",
+
       data.renewalDate ? `Valid until: ${fmtDate(data.renewalDate)}` : "",
       "",
       "Thank you! 🙏",
@@ -357,6 +365,15 @@ const PaymentReceiptDialog = ({ open, onOpenChange, data }: Props) => {
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", fontSize: 15, fontWeight: 700, color: "#fff", background: INK, borderRadius: 6, marginTop: 8 }}>
                     <span style={{ letterSpacing: 0.5 }}>Grand Total</span><span>{money(total)}</span>
                   </div>
+                  {due > 0 ? (
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 14px", fontSize: 13, fontWeight: 700, color: ACCENT, marginTop: 6 }}>
+                      <span>Due Amount</span><span>{money(due)}</span>
+                    </div>
+                  ) : null}
+                  <div style={{ textAlign: "right", marginTop: 6, fontSize: 11, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 700, color: status === "partial" ? ACCENT : INK_SOFT }}>
+                    {status === "partial" ? "Partially Paid" : "Paid"}
+                  </div>
+
                 </div>
               </div>
 
