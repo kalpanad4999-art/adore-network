@@ -513,7 +513,7 @@ const Payments = () => {
     });
     setReceiptOpen(true);
 
-    setForm({ ...form, amount: "", durationValue: "1" });
+    setForm({ ...form, amount: "", due: "", durationValue: "1" });
     clearOffer();
     setAddOpen(false);
     fetchAll();
