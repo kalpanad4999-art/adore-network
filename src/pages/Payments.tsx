@@ -19,8 +19,8 @@ import { Offer, Coupon, OFFER_LABELS, CONGRATS, computeDiscount, isOfferEligible
 import { Badge } from "@/components/ui/badge";
 import { fmtDate, fmtDateFile } from "@/lib/date";
 
-interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
-interface Batch { id: string; name: string; fee?: number | null; }
+interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; custom_data?: Record<string, any> | null; }
+interface Batch { id: string; name: string; fee?: number | null; custom_fields?: any[] | null; }
 interface Payment {
   id: string;
   student_id: string;
@@ -36,7 +36,10 @@ interface Payment {
   applied_offer_type?: string | null;
   applied_coupon_code?: string | null;
   discount_amount?: number | null;
+  due_amount?: number | null;
+  payment_status?: string | null;
 }
+
 
 const paymentMethods = ["cash", "upi", "card", "bank-transfer", "other"];
 type Unit = "days" | "months" | "years";
