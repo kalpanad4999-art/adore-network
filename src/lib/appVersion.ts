@@ -35,9 +35,11 @@ export const currentBuildId = (): string => {
 /** Fingerprint of the build currently deployed on the server. */
 export const fetchDeployedBuildId = async (): Promise<string | null> => {
   try {
+    // `cache: reload` bypasses HTTP cache *and* any service-worker cache entry,
+    // so a freshly published deploy is always seen.
     const res = await fetch(`/index.html?_v=${Date.now()}`, {
-      cache: "no-store",
-      headers: { "Cache-Control": "no-cache" },
+      cache: "reload",
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
     });
     if (!res.ok) return null;
     const html = await res.text();
@@ -48,9 +50,17 @@ export const fetchDeployedBuildId = async (): Promise<string | null> => {
   }
 };
 
+/**
+ * Baseline for comparison: the build actually running in this tab.
+ * Falling back to localStorage alone was unreliable — a stale stored id could
+ * mask a new deploy (or fire false positives), so the live DOM wins.
+ */
 export const getKnownBuildId = () => {
+  const live = currentBuildId();
+  if (live && live !== "dev") return live;
   try { return localStorage.getItem(STORAGE_KEY); } catch { return null; }
 };
+
 
 export const rememberBuildId = (id: string) => {
   try { localStorage.setItem(STORAGE_KEY, id); } catch { /* ignore */ }
