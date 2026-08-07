@@ -815,11 +815,30 @@ const Payments = () => {
                 )}
 
                 {form.amount && (
-                  <div className="flex items-center justify-between text-sm border-t pt-2">
-                    <span className="text-muted-foreground">Payable</span>
-                    <span className="font-semibold">₹{finalAmount.toLocaleString()}</span>
+                  <div className="space-y-1 border-t pt-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Payable</span>
+                      <span className="font-semibold">₹{finalAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Paid now</span>
+                      <span className="font-semibold">₹{paidNow.toLocaleString()}</span>
+                    </div>
+                    {dueAmount > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Due</span>
+                        <span className="font-semibold text-destructive">₹{dueAmount.toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Status</span>
+                      <Badge variant={paymentStatus === "partial" ? "destructive" : "secondary"}>
+                        {paymentStatus === "partial" ? "Partially Paid" : "Paid"}
+                      </Badge>
+                    </div>
                   </div>
                 )}
+
               </div>
 
               <Button type="submit" className="w-full">Save Payment</Button>
