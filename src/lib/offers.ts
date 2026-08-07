@@ -65,6 +65,30 @@ export interface MemberContext {
   member_usage_count?: number;
 }
 
+/** Parse a birthday value in DD/MM/YYYY, DD-MM-YYYY or YYYY-MM-DD into {month, day}. */
+export const parseBirthday = (raw: string | null | undefined): { month: number; day: number } | null => {
+  const v = (raw || "").trim();
+  if (!v) return null;
+  let m: RegExpMatchArray | null;
+  if ((m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) {
+    return { month: Number(m[2]), day: Number(m[3]) };
+  }
+  if ((m = v.match(/^(\d{1,2})[/\-.](\d{1,2})(?:[/\-.](\d{2,4}))?$/))) {
+    return { month: Number(m[2]), day: Number(m[1]) };
+  }
+  const d = new Date(v);
+  if (!Number.isNaN(d.getTime())) return { month: d.getMonth() + 1, day: d.getDate() };
+  return null;
+};
+
+/** True when the stored birthday falls on the given ISO date (day + month match). */
+export const isBirthdayOn = (raw: string | null | undefined, isoDate: string): boolean => {
+  const b = parseBirthday(raw);
+  if (!b) return false;
+  const [, mm, dd] = isoDate.split("-").map(Number);
+  return b.month === mm && b.day === dd;
+};
+
 export const isOfferEligible = (offer: Offer, ctx: MemberContext | null, amount: number, todayISO: string): boolean => {
   if (!offer.is_active) return false;
   if (offer.valid_from && todayISO < offer.valid_from) return false;
@@ -72,8 +96,9 @@ export const isOfferEligible = (offer: Offer, ctx: MemberContext | null, amount:
   if (offer.min_payment_amount && amount < offer.min_payment_amount) return false;
   if (offer.usage_limit_total != null && offer.usage_count >= offer.usage_limit_total) return false;
 
-  // Birthday offers only filter when birthday data is actually known for the member.
-  if (offer.offer_type === "birthday" && ctx && ctx.birthday_today === false) return false;
+  // Birthday offers require a member whose birthday is actually today.
+  if (offer.offer_type === "birthday" && ctx?.birthday_today !== true) return false;
+
 
   const c = offer.conditions || {};
   if (c.batch_ids && c.batch_ids.length > 0 && ctx && (!ctx.batch_id || !c.batch_ids.includes(ctx.batch_id))) return false;
