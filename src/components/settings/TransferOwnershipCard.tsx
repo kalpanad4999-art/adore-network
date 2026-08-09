@@ -27,6 +27,8 @@ const TransferOwnershipCard = () => {
   const [busy, setBusy] = useState(false);
   const [staff, setStaff] = useState<StaffOption[]>([]);
   const [target, setTarget] = useState<StaffOption | null>(null);
+  const [notFoundEmail, setNotFoundEmail] = useState<string | null>(null);
+  const [createdAccount, setCreatedAccount] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -86,14 +88,53 @@ const TransferOwnershipCard = () => {
   };
 
 
-  const pickNewOwner = () => {
+  const pickNewOwner = async () => {
     const cleaned = email.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleaned)) { toast.error("Enter a valid email"); return; }
+    if ((user?.email || "").toLowerCase() === cleaned) { toast.error("You are already the Owner"); return; }
+    setNotFoundEmail(null);
+
+    // Existing Staff member — continue normally.
     const found = staff.find((s) => (s.email || "").toLowerCase() === cleaned);
-    if (!found) {
-      toast.error("No Staff account found with that email. Invite and activate them first.");
+    if (found) {
+      setTarget(found);
+      setCreatedAccount(false);
+      setStep(3);
       return;
     }
-    setTarget(found);
+
+    // Otherwise check whether the account exists at all.
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke("transfer-account", { body: { email: cleaned } });
+    setBusy(false);
+    if (error || data?.error) {
+      toast.error(data?.error || error?.message || "Could not check that email");
+      return;
+    }
+    if (!data?.exists) {
+      setNotFoundEmail(cleaned);
+      return;
+    }
+    setTarget({ user_id: data.user_id, email: cleaned, full_name: null });
+    setCreatedAccount(!!data.created);
+    setStep(3);
+  };
+
+  const createAccountAndContinue = async () => {
+    if (!notFoundEmail) return;
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke("transfer-account", {
+      body: { email: notFoundEmail, create: true },
+    });
+    setBusy(false);
+    if (error || data?.error || !data?.user_id) {
+      toast.error(data?.error || error?.message || "Could not create the account");
+      return;
+    }
+    toast.success("Account created — they can set a password via Forgot Password on the login page");
+    setTarget({ user_id: data.user_id, email: notFoundEmail, full_name: null });
+    setCreatedAccount(true);
+    setNotFoundEmail(null);
     setStep(3);
   };
 
