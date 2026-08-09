@@ -27,6 +27,8 @@ const TransferOwnershipCard = () => {
   const [busy, setBusy] = useState(false);
   const [staff, setStaff] = useState<StaffOption[]>([]);
   const [target, setTarget] = useState<StaffOption | null>(null);
+  const [notFoundEmail, setNotFoundEmail] = useState<string | null>(null);
+  const [createdAccount, setCreatedAccount] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -86,14 +88,53 @@ const TransferOwnershipCard = () => {
   };
 
 
-  const pickNewOwner = () => {
+  const pickNewOwner = async () => {
     const cleaned = email.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleaned)) { toast.error("Enter a valid email"); return; }
+    if ((user?.email || "").toLowerCase() === cleaned) { toast.error("You are already the Owner"); return; }
+    setNotFoundEmail(null);
+
+    // Existing Staff member — continue normally.
     const found = staff.find((s) => (s.email || "").toLowerCase() === cleaned);
-    if (!found) {
-      toast.error("No Staff account found with that email. Invite and activate them first.");
+    if (found) {
+      setTarget(found);
+      setCreatedAccount(false);
+      setStep(3);
       return;
     }
-    setTarget(found);
+
+    // Otherwise check whether the account exists at all.
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke("transfer-account", { body: { email: cleaned } });
+    setBusy(false);
+    if (error || data?.error) {
+      toast.error(data?.error || error?.message || "Could not check that email");
+      return;
+    }
+    if (!data?.exists) {
+      setNotFoundEmail(cleaned);
+      return;
+    }
+    setTarget({ user_id: data.user_id, email: cleaned, full_name: null });
+    setCreatedAccount(!!data.created);
+    setStep(3);
+  };
+
+  const createAccountAndContinue = async () => {
+    if (!notFoundEmail) return;
+    setBusy(true);
+    const { data, error } = await supabase.functions.invoke("transfer-account", {
+      body: { email: notFoundEmail, create: true },
+    });
+    setBusy(false);
+    if (error || data?.error || !data?.user_id) {
+      toast.error(data?.error || error?.message || "Could not create the account");
+      return;
+    }
+    toast.success("Account created — they can set a password via Forgot Password on the login page");
+    setTarget({ user_id: data.user_id, email: notFoundEmail, full_name: null });
+    setCreatedAccount(true);
+    setNotFoundEmail(null);
     setStep(3);
   };
 
@@ -153,18 +194,30 @@ const TransferOwnershipCard = () => {
             <Label>New Owner email</Label>
             <Input
               type="email" placeholder="staff@example.com" value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setNotFoundEmail(null); }}
               list="transfer-staff-emails"
             />
             <datalist id="transfer-staff-emails">
               {staff.map((s) => <option key={s.user_id} value={s.email ?? ""} />)}
             </datalist>
             <p className="text-xs text-muted-foreground">
-              {staff.length ? "Must be an existing Staff member of this workspace." : "No Staff accounts yet — invite one first."}
+              Any email works — if the account doesn't exist yet, you can create it here.
             </p>
+            {notFoundEmail && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/50 px-3 py-2">
+                <p className="text-sm">
+                  No account found for <span className="font-medium">{notFoundEmail}</span>.
+                </p>
+                <Button size="sm" variant="secondary" onClick={createAccountAndContinue} disabled={busy}>
+                  {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Create New Account
+                </Button>
+              </div>
+            )}
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-              <Button onClick={pickNewOwner}>Continue</Button>
+              <Button onClick={pickNewOwner} disabled={busy}>
+                {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Continue
+              </Button>
             </div>
           </div>
         )}
@@ -178,6 +231,7 @@ const TransferOwnershipCard = () => {
                 <p className="text-muted-foreground">
                   {target.full_name || target.email} will become the Owner. You ({user?.email}) will become Staff
                   with full module access. This cannot be undone by you afterwards.
+                  {createdAccount && " A new account was created for them — they can sign in using Forgot Password to set their password."}
                 </p>
               </div>
             </div>
