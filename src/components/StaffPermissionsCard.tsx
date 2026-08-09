@@ -158,6 +158,14 @@ export const StaffPermissionsCard = () => {
     if (!ownerId) return;
     const cleaned = inviteEmail.trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleaned)) { toast.error("Enter a valid email"); return; }
+    if (staff.some((s) => (s.email || "").toLowerCase() === cleaned)) {
+      toast.error("That email is already a Staff member");
+      return;
+    }
+    if (invites.some((i) => i.email.toLowerCase() === cleaned)) {
+      toast.error("That email already has a pending invitation");
+      return;
+    }
     const { data, error } = await supabase
       .from("staff_invitations")
       .insert({ owner_id: ownerId, email: cleaned })
