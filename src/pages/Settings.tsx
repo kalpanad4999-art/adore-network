@@ -3,7 +3,7 @@ import { useStudio } from "@/contexts/StudioContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Palette, Lock, ShieldCheck, Users, Bot, Crown, ChevronRight, ArrowLeft, Wallpaper, RefreshCw, Repeat,
+  Palette, Lock, ShieldCheck, Users, Bot, Crown, ChevronRight, ArrowLeft, Wallpaper, RefreshCw, Repeat, FileText,
 } from "lucide-react";
 import TransferOwnershipCard from "@/components/settings/TransferOwnershipCard";
 import AppearanceCard from "@/components/settings/AppearanceCard";
@@ -14,6 +14,7 @@ import { StaffPermissionsCard } from "@/components/StaffPermissionsCard";
 import { ChatbotKnowledgeCard } from "@/components/ChatbotKnowledgeCard";
 import { OwnerInfoCard } from "@/components/OwnerInfoCard";
 import UpdatesCard from "@/components/settings/UpdatesCard";
+import TermsConditionsCard from "@/components/settings/TermsConditionsCard";
 
 type Section = {
   slug: string;
@@ -70,6 +71,14 @@ const SECTIONS: Section[] = [
     icon: Bot,
     ownerOnly: true,
     render: () => <ChatbotKnowledgeCard />,
+  },
+  {
+    slug: "terms",
+    title: "Terms & Conditions",
+    subtitle: "Upload T&C image and require agreement on registration forms",
+    icon: FileText,
+    ownerOnly: true,
+    render: () => <TermsConditionsCard />,
   },
   {
     slug: "updates",
