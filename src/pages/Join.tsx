@@ -6,9 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import SupportChatWidget from "@/components/SupportChatWidget";
+import { useStudioMeta } from "@/hooks/useStudioMeta";
 
 interface CustomField { id: string; name: string; required: boolean; enabled: boolean; }
 interface BatchInfo { id: string; name: string; description: string | null; fee: number; start_date: string | null; required_fields: string[] | null; custom_fields: CustomField[] | null; }
@@ -24,6 +27,10 @@ const Join = () => {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "", height: "", weight: "" });
   const [customData, setCustomData] = useState<Record<string, string>>({});
+  const [agreed, setAgreed] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const meta = useStudioMeta();
+  const termsRequired = meta.termsEnabled && !!meta.termsImageUrl;
 
   useEffect(() => {
     (async () => {
@@ -47,6 +54,7 @@ const Join = () => {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
+    if (termsRequired && !agreed) { toast.error("Please agree to the Terms & Conditions to continue"); return; }
     const checks: { key: string; label: string; value: string }[] = [
       { key: "name", label: "Name", value: form.name.trim() },
       { key: "email", label: "Email", value: form.email.trim() },
@@ -224,6 +232,27 @@ const Join = () => {
                 />
               </div>
             ))}
+            {termsRequired && (
+              <div className="flex items-start gap-3 rounded-xl border-2 p-4">
+                <Checkbox
+                  id="terms-agree"
+                  checked={agreed}
+                  onCheckedChange={(v) => setAgreed(v === true)}
+                  className="mt-1"
+                  aria-label="I agree to the Terms and Conditions"
+                />
+                <label htmlFor="terms-agree" className="text-base leading-snug cursor-pointer select-none">
+                  I agree to the{" "}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); setTermsOpen(true); }}
+                    className="text-primary font-semibold underline underline-offset-2 hover:opacity-80"
+                  >
+                    Terms &amp; Conditions
+                  </button>
+                </label>
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
               <div className="flex flex-col gap-2">
                 <a
@@ -245,7 +274,7 @@ const Join = () => {
               </div>
               <Button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || (termsRequired && !agreed)}
                 className="h-14 px-12 text-base font-semibold rounded-xl"
               >
                 {submitting ? "Submitting..." : "Submit"}
@@ -254,6 +283,16 @@ const Join = () => {
           </form>
         </CardContent>
       </Card>
+      <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">Terms &amp; Conditions</DialogTitle>
+          </DialogHeader>
+          {meta.termsImageUrl && (
+            <img src={meta.termsImageUrl} alt="Terms and Conditions" className="w-full object-contain rounded-lg" />
+          )}
+        </DialogContent>
+      </Dialog>
       {token && <SupportChatWidget batchToken={token} />}
     </div>
   );

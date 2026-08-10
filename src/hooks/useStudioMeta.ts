@@ -6,6 +6,8 @@ export type StudioMeta = {
   studioName: string;
   logoUrl: string | null;
   backgroundUrl: string | null;
+  termsEnabled: boolean;
+  termsImageUrl: string | null;
 };
 
 const DEFAULTS: StudioMeta = {
@@ -13,6 +15,8 @@ const DEFAULTS: StudioMeta = {
   studioName: "TRINETRA YOGA",
   logoUrl: null,
   backgroundUrl: null,
+  termsEnabled: false,
+  termsImageUrl: null,
 };
 
 /**
@@ -37,6 +41,8 @@ export const useStudioMeta = (ownerId?: string | null): StudioMeta => {
             studioName: (row as any).studio_name || DEFAULTS.studioName,
             logoUrl: (row as any).logo_url ?? null,
             backgroundUrl: (row as any).background_url ?? null,
+            termsEnabled: !!(row as any).terms_enabled,
+            termsImageUrl: (row as any).terms_image_url ?? null,
           });
         }
       } catch { /* silent — fall back to defaults */ }
