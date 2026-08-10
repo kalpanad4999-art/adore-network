@@ -25,6 +25,8 @@ interface StudioContextValue {
   backgroundUrl: string | null;
   paymentsPinSet: boolean;
   appLockPinSet: boolean;
+  termsEnabled: boolean;
+  termsImageUrl: string | null;
   biometricEnabled: boolean;
   biometricCredentialId: string | null;
   ownerId: string | null;
@@ -47,6 +49,9 @@ interface StudioContextValue {
   verifyBiometricUnlock: () => Promise<boolean>;
   setAppLockPin: (pin: string | null) => Promise<void>;
   verifyAppLockPin: (pin: string) => Promise<boolean>;
+  uploadTermsImage: (file: File) => Promise<void>;
+  removeTermsImage: () => Promise<void>;
+  setTermsEnabled: (enabled: boolean) => Promise<void>;
 }
 
 const StudioContext = createContext<StudioContextValue | undefined>(undefined);
@@ -60,6 +65,8 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
   const [appLockPinHash, setAppLockPinHash] = useState<string | null>(null);
   const [biometricCredentialId, setBiometricCredentialId] = useState<string | null>(null);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [termsEnabled, setTermsEnabled] = useState(false);
+  const [termsImageUrl, setTermsImageUrl] = useState<string | null>(null);
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [role, setRole] = useState<"owner" | "staff" | null>(null);
@@ -117,6 +124,8 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
       setStudioName(s.studio_name || "TRINETRA YOGA");
       setLogoUrl(s.logo_url);
       setBackgroundUrl(s.background_url ?? null);
+      setTermsEnabled(!!s.terms_enabled);
+      setTermsImageUrl(s.terms_image_url ?? null);
     }
     // PIN hashes live in an owner-only table; only the owner can read them.
     if (roleRow?.role !== "staff") {
@@ -325,17 +334,43 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     return (await sha256Hex(pin)) === appLockPinHash;
   };
 
+  const uploadTermsImage = async (file: File) => {
+    if (!ownerId || !isOwner || !user) return;
+    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${user.id}/terms-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("studio-logos").upload(path, file, { upsert: true });
+    if (upErr) throw upErr;
+    const { data: pub } = supabase.storage.from("studio-logos").getPublicUrl(path);
+    await upsertSettings({ terms_image_url: pub.publicUrl });
+    setTermsImageUrl(pub.publicUrl);
+  };
+
+  const removeTermsImage = async () => {
+    if (!isOwner) return;
+    await upsertSettings({ terms_image_url: null, terms_enabled: false });
+    setTermsImageUrl(null);
+    setTermsEnabled(false);
+  };
+
+  const setTermsEnabledFn = async (enabled: boolean) => {
+    if (!isOwner) return;
+    await upsertSettings({ terms_enabled: enabled });
+    setTermsEnabled(enabled);
+  };
+
   return (
     <StudioContext.Provider value={{
       studioName, logoUrl, backgroundUrl,
       paymentsPinSet: !!paymentsPinHash,
       appLockPinSet: !!appLockPinHash,
+      termsEnabled, termsImageUrl,
       biometricEnabled, biometricCredentialId,
       ownerId, isOwner, role, authorized: role !== null, permissions, loading, refresh,
       updateName, uploadLogo, uploadBackground, setBackgroundFromUrl, removeBackground,
       setPaymentsPassword, resetPaymentsPasswordWithAccount, verifyPaymentsPin,
       enableBiometric, disableBiometric, verifyBiometricUnlock,
       setAppLockPin, verifyAppLockPin,
+      uploadTermsImage, removeTermsImage, setTermsEnabled: setTermsEnabledFn,
     }}>
       {children}
     </StudioContext.Provider>
