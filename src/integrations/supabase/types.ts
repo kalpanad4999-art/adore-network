@@ -1194,6 +1194,8 @@ export type Database = {
           logo_url: string | null
           owner_id: string
           studio_name: string
+          terms_enabled: boolean
+          terms_image_url: string | null
           updated_at: string
         }
         Insert: {
@@ -1201,6 +1203,8 @@ export type Database = {
           logo_url?: string | null
           owner_id: string
           studio_name?: string
+          terms_enabled?: boolean
+          terms_image_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -1208,6 +1212,8 @@ export type Database = {
           logo_url?: string | null
           owner_id?: string
           studio_name?: string
+          terms_enabled?: boolean
+          terms_image_url?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1274,6 +1280,8 @@ export type Database = {
           logo_url: string
           owner_id: string
           studio_name: string
+          terms_enabled: boolean
+          terms_image_url: string
         }[]
       }
       get_email_by_phone: { Args: { _phone: string }; Returns: string }
@@ -1333,6 +1341,8 @@ export type Database = {
           logo_url: string
           owner_id: string
           studio_name: string
+          terms_enabled: boolean
+          terms_image_url: string
         }[]
       }
       get_recording_by_slug: {
