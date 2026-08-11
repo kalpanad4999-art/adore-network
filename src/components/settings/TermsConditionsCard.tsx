@@ -12,19 +12,24 @@ const TermsConditionsCard = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return; }
-    if (!file.type.startsWith("image/")) { toast.error("Please select an image"); return; }
+    if (file.type !== "image/png" && file.type !== "image/jpeg") {
+      toast.error("Only PNG or JPG images are allowed");
+      return;
+    }
     setUploading(true);
     try {
       await uploadTermsImage(file);
+      setImgError(false);
       toast.success("Terms & Conditions image updated");
     } catch {
-      toast.error("Upload failed");
+      toast.error("Upload failed — please try again");
     } finally {
       setUploading(false);
     }
@@ -83,9 +88,23 @@ const TermsConditionsCard = () => {
 
         {termsImageUrl ? (
           <div className="space-y-3">
-            <div className="rounded-xl border overflow-hidden bg-muted/30 max-h-80 overflow-y-auto">
-              <img src={termsImageUrl} alt="Terms and Conditions" className="w-full object-contain" />
-            </div>
+            {imgError ? (
+              <div className="rounded-xl border-2 border-dashed border-destructive/40 p-6 text-center space-y-1">
+                <p className="font-medium text-destructive">This image could not be loaded</p>
+                <p className="text-sm text-muted-foreground">
+                  It may have been deleted from storage. Please upload a new Terms &amp; Conditions image.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-xl border overflow-hidden bg-muted/30 max-h-80 overflow-y-auto">
+                <img
+                  src={termsImageUrl}
+                  alt="Terms and Conditions"
+                  className="w-full object-contain"
+                  onError={() => setImgError(true)}
+                />
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
                 {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
@@ -110,7 +129,7 @@ const TermsConditionsCard = () => {
           </button>
         )}
 
-        <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleFile} />
+        <input ref={fileRef} type="file" accept="image/png,image/jpeg" hidden onChange={handleFile} />
       </CardContent>
     </Card>
   );
