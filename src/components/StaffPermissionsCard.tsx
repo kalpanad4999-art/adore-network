@@ -66,9 +66,10 @@ export const StaffPermissionsCard = () => {
       const permMap = new Map((perms as any[] ?? []).map((p: any) => [p.staff_user_id, p]));
       rows = staffIds.map((id) => {
         const prof: any = profMap.get(id) ?? {};
+        // Default Staff access is Members only; the Owner can grant more modules.
         const perm: any = permMap.get(id) ?? {
-          can_customers: true, can_gallery: true, can_classes: true,
-          can_payments: false, can_renewals: true, is_active: true,
+          can_customers: true, can_gallery: false, can_classes: false,
+          can_payments: false, can_renewals: false, is_active: true,
         };
         return {
           user_id: id,
