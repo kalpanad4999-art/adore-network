@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type StudioMeta = {
@@ -8,9 +8,13 @@ export type StudioMeta = {
   backgroundUrl: string | null;
   termsEnabled: boolean;
   termsImageUrl: string | null;
+  /** Re-fetch the latest settings from the database on demand. */
+  refresh: () => void;
 };
 
-const DEFAULTS: StudioMeta = {
+type StudioMetaFields = Omit<StudioMeta, "refresh">;
+
+const DEFAULTS: StudioMetaFields = {
   ownerId: null,
   studioName: "TRINETRA YOGA",
   logoUrl: null,
@@ -25,31 +29,35 @@ const DEFAULTS: StudioMeta = {
  * studio; otherwise we fall back to the primary studio owner.
  */
 export const useStudioMeta = (ownerId?: string | null): StudioMeta => {
-  const [meta, setMeta] = useState<StudioMeta>(DEFAULTS);
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const rpc = ownerId
-          ? supabase.rpc("get_public_studio_meta", { _owner: ownerId })
-          : supabase.rpc("get_default_studio_meta");
-        const { data } = await rpc;
-        const row = Array.isArray(data) ? data[0] : data;
-        if (alive && row) {
-          setMeta({
-            ownerId: (row as any).owner_id ?? ownerId ?? null,
-            studioName: (row as any).studio_name || DEFAULTS.studioName,
-            logoUrl: (row as any).logo_url ?? null,
-            backgroundUrl: (row as any).background_url ?? null,
-            termsEnabled: !!(row as any).terms_enabled,
-            termsImageUrl: (row as any).terms_image_url ?? null,
-          });
-        }
-      } catch { /* silent — fall back to defaults */ }
-    })();
-    return () => { alive = false; };
+  const [meta, setMeta] = useState<StudioMetaFields>(DEFAULTS);
+
+  const load = useCallback(async () => {
+    try {
+      const rpc = ownerId
+        ? supabase.rpc("get_public_studio_meta", { _owner: ownerId })
+        : supabase.rpc("get_default_studio_meta");
+      const { data } = await rpc;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row) {
+        setMeta({
+          ownerId: (row as any).owner_id ?? ownerId ?? null,
+          studioName: (row as any).studio_name || DEFAULTS.studioName,
+          logoUrl: (row as any).logo_url ?? null,
+          backgroundUrl: (row as any).background_url ?? null,
+          termsEnabled: !!(row as any).terms_enabled,
+          termsImageUrl: (row as any).terms_image_url ?? null,
+        });
+      }
+    } catch { /* silent — fall back to defaults */ }
   }, [ownerId]);
-  return meta;
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const refresh = useCallback(() => { void load(); }, [load]);
+
+  return useMemo(() => ({ ...meta, refresh }), [meta, refresh]);
 };
 
 /** Set <link rel="icon"> and document.title from a studio's logo/name. */

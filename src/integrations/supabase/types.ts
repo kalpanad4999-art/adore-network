@@ -1271,6 +1271,7 @@ export type Database = {
           name: string
           required_fields: string[]
           start_date: string
+          user_id: string
         }[]
       }
       get_default_studio_meta: {
@@ -1381,45 +1382,21 @@ export type Database = {
           converted: number
         }[]
       }
-      register_student_via_token:
-        | {
-            Args: {
-              _address: string
-              _email: string
-              _name: string
-              _notes: string
-              _phone: string
-              _token: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _address: string
-              _email: string
-              _height_cm?: number
-              _name: string
-              _notes: string
-              _phone: string
-              _token: string
-              _weight_kg?: number
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _address: string
-              _custom_data?: Json
-              _email: string
-              _height_cm?: number
-              _name: string
-              _notes: string
-              _phone: string
-              _token: string
-              _weight_kg?: number
-            }
-            Returns: string
-          }
+      register_student_via_token: {
+        Args: {
+          _address: string
+          _custom_data?: Json
+          _email: string
+          _height_cm?: number
+          _name: string
+          _notes: string
+          _phone: string
+          _terms_agreed?: boolean
+          _token: string
+          _weight_kg?: number
+        }
+        Returns: string
+      }
       staff_has_permission: {
         Args: { _module: string; _user_id: string }
         Returns: boolean

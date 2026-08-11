@@ -199,12 +199,13 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
 
 
   const upsertSettings = async (patch: Record<string, any>) => {
-    if (!ownerId) return;
-    await supabase.from("studio_settings").upsert({
+    if (!ownerId) throw new Error("Studio not loaded yet");
+    const { error } = await supabase.from("studio_settings").upsert({
       owner_id: ownerId,
       ...patch,
       updated_at: new Date().toISOString(),
     } as any);
+    if (error) throw error;
   };
 
   const updateName = async (name: string) => {
@@ -347,22 +348,43 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     return (await sha256Hex(pin)) === appLockPinHash;
   };
 
+  const termsPathFromUrl = (url: string | null) => {
+    if (!url) return null;
+    const marker = "/studio-logos/";
+    const i = url.indexOf(marker);
+    return i === -1 ? null : decodeURIComponent(url.slice(i + marker.length).split("?")[0]);
+  };
+
   const uploadTermsImage = async (file: File) => {
-    if (!ownerId || !isOwner || !user) return;
-    const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+    if (!ownerId || !isOwner || !user) throw new Error("Only the Owner can update Terms & Conditions");
+    if (file.type !== "image/png" && file.type !== "image/jpeg") throw new Error("Only PNG or JPG images are allowed");
+    const ext = file.type === "image/png" ? "png" : "jpg";
     const path = `${user.id}/terms-${Date.now()}.${ext}`;
+    const oldPath = termsPathFromUrl(termsImageUrl);
     const { error: upErr } = await supabase.storage.from("studio-logos").upload(path, file, { upsert: true });
     if (upErr) throw upErr;
     const { data: pub } = supabase.storage.from("studio-logos").getPublicUrl(path);
-    await upsertSettings({ terms_image_url: pub.publicUrl });
+    try {
+      await upsertSettings({ terms_image_url: pub.publicUrl });
+    } catch (e) {
+      // Don't leave an orphaned file behind if the reference can't be saved.
+      await supabase.storage.from("studio-logos").remove([path]).catch(() => {});
+      throw e;
+    }
     setTermsImageUrl(pub.publicUrl);
+    // Best-effort cleanup of the replaced image.
+    if (oldPath && oldPath !== path) {
+      supabase.storage.from("studio-logos").remove([oldPath]).catch(() => {});
+    }
   };
 
   const removeTermsImage = async () => {
     if (!isOwner) return;
+    const oldPath = termsPathFromUrl(termsImageUrl);
     await upsertSettings({ terms_image_url: null, terms_enabled: false });
     setTermsImageUrl(null);
     setTermsEnabled(false);
+    if (oldPath) supabase.storage.from("studio-logos").remove([oldPath]).catch(() => {});
   };
 
   const setTermsEnabledFn = async (enabled: boolean) => {
