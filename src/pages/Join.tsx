@@ -14,7 +14,7 @@ import SupportChatWidget from "@/components/SupportChatWidget";
 import { useStudioMeta } from "@/hooks/useStudioMeta";
 
 interface CustomField { id: string; name: string; required: boolean; enabled: boolean; }
-interface BatchInfo { id: string; name: string; description: string | null; fee: number; start_date: string | null; required_fields: string[] | null; custom_fields: CustomField[] | null; }
+interface BatchInfo { id: string; user_id: string; name: string; description: string | null; fee: number; start_date: string | null; required_fields: string[] | null; custom_fields: CustomField[] | null; }
 
 const phoneRegex = /^[+\d][\d\s\-()]{6,19}$/;
 const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -29,8 +29,15 @@ const Join = () => {
   const [customData, setCustomData] = useState<Record<string, string>>({});
   const [agreed, setAgreed] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
-  const meta = useStudioMeta();
+  const [termsImgError, setTermsImgError] = useState(false);
+  const meta = useStudioMeta(batch?.user_id ?? null);
   const termsRequired = meta.termsEnabled && !!meta.termsImageUrl;
+
+  const openTerms = () => {
+    setTermsImgError(false);
+    setTermsOpen(true);
+    meta.refresh(); // always show the latest saved Terms & Conditions image
+  };
 
   useEffect(() => {
     (async () => {
@@ -92,6 +99,7 @@ const Join = () => {
       _height_cm: heightNum,
       _weight_kg: weightNum,
       _custom_data: customClean,
+      _terms_agreed: agreed,
     });
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
