@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type StudioMeta = {
@@ -8,6 +8,8 @@ export type StudioMeta = {
   backgroundUrl: string | null;
   termsEnabled: boolean;
   termsImageUrl: string | null;
+  /** Re-fetch the latest settings from the database on demand. */
+  refresh: () => void;
 };
 
 const DEFAULTS: StudioMeta = {
@@ -17,6 +19,7 @@ const DEFAULTS: StudioMeta = {
   backgroundUrl: null,
   termsEnabled: false,
   termsImageUrl: null,
+  refresh: () => {},
 };
 
 /**
@@ -26,30 +29,33 @@ const DEFAULTS: StudioMeta = {
  */
 export const useStudioMeta = (ownerId?: string | null): StudioMeta => {
   const [meta, setMeta] = useState<StudioMeta>(DEFAULTS);
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const rpc = ownerId
-          ? supabase.rpc("get_public_studio_meta", { _owner: ownerId })
-          : supabase.rpc("get_default_studio_meta");
-        const { data } = await rpc;
-        const row = Array.isArray(data) ? data[0] : data;
-        if (alive && row) {
-          setMeta({
-            ownerId: (row as any).owner_id ?? ownerId ?? null,
-            studioName: (row as any).studio_name || DEFAULTS.studioName,
-            logoUrl: (row as any).logo_url ?? null,
-            backgroundUrl: (row as any).background_url ?? null,
-            termsEnabled: !!(row as any).terms_enabled,
-            termsImageUrl: (row as any).terms_image_url ?? null,
-          });
-        }
-      } catch { /* silent — fall back to defaults */ }
-    })();
-    return () => { alive = false; };
+
+  const load = useCallback(async () => {
+    try {
+      const rpc = ownerId
+        ? supabase.rpc("get_public_studio_meta", { _owner: ownerId })
+        : supabase.rpc("get_default_studio_meta");
+      const { data } = await rpc;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row) {
+        setMeta({
+          ownerId: (row as any).owner_id ?? ownerId ?? null,
+          studioName: (row as any).studio_name || DEFAULTS.studioName,
+          logoUrl: (row as any).logo_url ?? null,
+          backgroundUrl: (row as any).background_url ?? null,
+          termsEnabled: !!(row as any).terms_enabled,
+          termsImageUrl: (row as any).terms_image_url ?? null,
+          refresh: () => { void load(); },
+        });
+      }
+    } catch { /* silent — fall back to defaults */ }
   }, [ownerId]);
-  return meta;
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return meta.refresh === DEFAULTS.refresh ? { ...meta, refresh: () => { void load(); } } : meta;
 };
 
 /** Set <link rel="icon"> and document.title from a studio's logo/name. */
