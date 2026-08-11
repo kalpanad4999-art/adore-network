@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type StudioMeta = {
@@ -12,14 +12,15 @@ export type StudioMeta = {
   refresh: () => void;
 };
 
-const DEFAULTS: StudioMeta = {
+type StudioMetaFields = Omit<StudioMeta, "refresh">;
+
+const DEFAULTS: StudioMetaFields = {
   ownerId: null,
   studioName: "TRINETRA YOGA",
   logoUrl: null,
   backgroundUrl: null,
   termsEnabled: false,
   termsImageUrl: null,
-  refresh: () => {},
 };
 
 /**
@@ -28,7 +29,7 @@ const DEFAULTS: StudioMeta = {
  * studio; otherwise we fall back to the primary studio owner.
  */
 export const useStudioMeta = (ownerId?: string | null): StudioMeta => {
-  const [meta, setMeta] = useState<StudioMeta>(DEFAULTS);
+  const [meta, setMeta] = useState<StudioMetaFields>(DEFAULTS);
 
   const load = useCallback(async () => {
     try {
@@ -45,7 +46,6 @@ export const useStudioMeta = (ownerId?: string | null): StudioMeta => {
           backgroundUrl: (row as any).background_url ?? null,
           termsEnabled: !!(row as any).terms_enabled,
           termsImageUrl: (row as any).terms_image_url ?? null,
-          refresh: () => { void load(); },
         });
       }
     } catch { /* silent — fall back to defaults */ }
@@ -55,7 +55,9 @@ export const useStudioMeta = (ownerId?: string | null): StudioMeta => {
     void load();
   }, [load]);
 
-  return meta.refresh === DEFAULTS.refresh ? { ...meta, refresh: () => { void load(); } } : meta;
+  const refresh = useCallback(() => { void load(); }, [load]);
+
+  return useMemo(() => ({ ...meta, refresh }), [meta, refresh]);
 };
 
 /** Set <link rel="icon"> and document.title from a studio's logo/name. */
