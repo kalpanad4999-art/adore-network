@@ -230,7 +230,8 @@ const TransferOwnershipCard = () => {
                 <p className="font-medium">Confirm ownership transfer</p>
                 <p className="text-muted-foreground">
                   {target.full_name || target.email} will become the Owner. You ({user?.email}) will become Staff
-                  with full module access. This cannot be undone by you afterwards.
+                  with Members and Settings access by default — the new Owner can grant you more modules from
+                  Settings → Staff &amp; Permissions. This cannot be undone by you afterwards.
                   {createdAccount && " A new account was created for them — they can sign in using Forgot Password to set their password."}
                 </p>
               </div>

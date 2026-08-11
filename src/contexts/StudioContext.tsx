@@ -150,6 +150,19 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => { refresh(); }, [user]);
 
+  // Re-refresh role & module permissions the moment they change in the database
+  // (ownership transfer, or the Owner toggling a Staff module), so changes apply
+  // to this session immediately without a manual reload.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`studio-ctx-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${user.id}` }, () => { refresh(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "staff_permissions", filter: `staff_user_id=eq.${user.id}` }, () => { refresh(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
   useEffect(() => {
     const root = document.body;
     if (backgroundUrl) {
