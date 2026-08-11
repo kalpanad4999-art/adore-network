@@ -253,7 +253,7 @@ const Join = () => {
                   I agree to the{" "}
                   <button
                     type="button"
-                    onClick={(e) => { e.preventDefault(); setTermsOpen(true); }}
+                    onClick={(e) => { e.preventDefault(); openTerms(); }}
                     className="text-primary font-semibold underline underline-offset-2 hover:opacity-80"
                   >
                     Terms &amp; Conditions
@@ -296,8 +296,17 @@ const Join = () => {
           <DialogHeader>
             <DialogTitle className="font-display text-2xl">Terms &amp; Conditions</DialogTitle>
           </DialogHeader>
-          {meta.termsImageUrl && (
-            <img src={meta.termsImageUrl} alt="Terms and Conditions" className="w-full object-contain rounded-lg" />
+          {meta.termsImageUrl && !termsImgError ? (
+            <img
+              src={meta.termsImageUrl}
+              alt="Terms and Conditions"
+              className="w-full object-contain rounded-lg"
+              onError={() => setTermsImgError(true)}
+            />
+          ) : (
+            <p className="py-8 text-center text-muted-foreground">
+              The Terms &amp; Conditions image is currently unavailable. Please contact the studio for a copy.
+            </p>
           )}
         </DialogContent>
       </Dialog>
