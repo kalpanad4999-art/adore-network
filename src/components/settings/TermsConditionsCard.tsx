@@ -28,8 +28,11 @@ const TermsConditionsCard = () => {
       await uploadTermsImage(file);
       setImgError(false);
       toast.success("Terms & Conditions image updated");
-    } catch {
-      toast.error("Upload failed — please try again");
+    } catch (err: any) {
+      // Surface the real backend error so failures are diagnosable.
+      console.error("[TermsConditions] upload failed:", err);
+      const msg = err?.message || err?.error_description || err?.error || "Unknown error";
+      toast.error(`Upload failed: ${msg}`);
     } finally {
       setUploading(false);
     }
