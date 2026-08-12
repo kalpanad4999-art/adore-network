@@ -969,11 +969,15 @@ export type Database = {
       }
       staff_permissions: {
         Row: {
+          can_attendance: boolean
           can_classes: boolean
           can_customers: boolean
           can_gallery: boolean
+          can_insights: boolean
+          can_offers: boolean
           can_payments: boolean
           can_renewals: boolean
+          can_settings: boolean
           created_at: string
           is_active: boolean
           owner_id: string
@@ -981,11 +985,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          can_attendance?: boolean
           can_classes?: boolean
           can_customers?: boolean
           can_gallery?: boolean
+          can_insights?: boolean
+          can_offers?: boolean
           can_payments?: boolean
           can_renewals?: boolean
+          can_settings?: boolean
           created_at?: string
           is_active?: boolean
           owner_id: string
@@ -993,11 +1001,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          can_attendance?: boolean
           can_classes?: boolean
           can_customers?: boolean
           can_gallery?: boolean
+          can_insights?: boolean
+          can_offers?: boolean
           can_payments?: boolean
           can_renewals?: boolean
+          can_settings?: boolean
           created_at?: string
           is_active?: boolean
           owner_id?: string
@@ -1099,6 +1111,7 @@ export type Database = {
       students: {
         Row: {
           address: string | null
+          assigned_staff_id: string | null
           batch_id: string | null
           created_at: string
           custom_data: Json
@@ -1116,6 +1129,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          assigned_staff_id?: string | null
           batch_id?: string | null
           created_at?: string
           custom_data?: Json
@@ -1133,6 +1147,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          assigned_staff_id?: string | null
           batch_id?: string | null
           created_at?: string
           custom_data?: Json
@@ -1253,6 +1268,10 @@ export type Database = {
           owner_id: string
           status: string
         }[]
+      }
+      can_access_student: {
+        Args: { _student_id: string; _user_id: string }
+        Returns: boolean
       }
       cleanup_expired_gallery: {
         Args: { _owner: string }
