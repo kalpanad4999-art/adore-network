@@ -20,6 +20,10 @@ type StaffRow = {
   can_classes: boolean;
   can_payments: boolean;
   can_renewals: boolean;
+  can_attendance: boolean;
+  can_insights: boolean;
+  can_offers: boolean;
+  can_settings: boolean;
   is_active: boolean;
 };
 
@@ -27,11 +31,20 @@ type Invite = { id: string; email: string; accepted_at: string | null; token: st
 
 const MODULES: { key: ModuleKey; label: string }[] = [
   { key: "customers", label: "Members" },
+  { key: "attendance", label: "Attendance" },
   { key: "gallery", label: "My Gallery" },
   { key: "classes", label: "Classes" },
+  { key: "insights", label: "Insights" },
   { key: "payments", label: "Payments" },
+  { key: "offers", label: "Offers" },
   { key: "renewals", label: "Renewals" },
+  { key: "settings", label: "Settings" },
 ];
+
+const PERM_COLUMNS = [
+  "can_customers", "can_gallery", "can_classes", "can_payments", "can_renewals",
+  "can_attendance", "can_insights", "can_offers", "can_settings",
+] as const;
 
 export const StaffPermissionsCard = () => {
   const { ownerId, isOwner } = useStudio();
