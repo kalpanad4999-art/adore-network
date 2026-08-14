@@ -30,8 +30,11 @@ interface Customer {
   height_cm: number | null;
   weight_kg: number | null;
   batch_id: string | null;
+  assigned_staff_id: string | null;
   custom_data: Record<string, string> | null;
 }
+
+interface StaffOption { id: string; name: string }
 
 interface CustomField { id: string; name: string; required: boolean; enabled: boolean; }
 
@@ -64,6 +67,7 @@ const Customers = () => {
   const workspaceId = ownerId ?? user?.id ?? null;
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -84,7 +88,7 @@ const Customers = () => {
 
   const fetchCustomers = async () => {
     if (!workspaceId) return;
-    const { data } = await supabase.from("students").select("id,name,email,phone,address,notes,height_cm,weight_kg,batch_id,custom_data").eq("user_id", workspaceId).order("name");
+    const { data } = await supabase.from("students").select("id,name,email,phone,address,notes,height_cm,weight_kg,batch_id,assigned_staff_id,custom_data").eq("user_id", workspaceId).order("name");
     const rows = (data || []).map((c: any) => ({ ...c, custom_data: (c.custom_data && typeof c.custom_data === "object") ? c.custom_data : {} })) as Customer[];
     setCustomers(rows);
   };
@@ -94,7 +98,21 @@ const Customers = () => {
     const rows = (data || []).map((b: any) => ({ ...b, custom_fields: Array.isArray(b.custom_fields) ? b.custom_fields : [] })) as Batch[];
     setBatches(rows);
   };
-  useEffect(() => { fetchCustomers(); fetchBatches(); }, [workspaceId]);
+  // Staff accounts of this workspace — used for Member → Staff assignment (owner only).
+  const fetchStaff = async () => {
+    if (!workspaceId || !isOwner) { setStaffOptions([]); return; }
+    const { data: roles } = await supabase
+      .from("user_roles").select("user_id").eq("owner_id", workspaceId).eq("role", "staff");
+    const ids = (roles ?? []).map((r: any) => r.user_id);
+    if (!ids.length) { setStaffOptions([]); return; }
+    const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
+    setStaffOptions(ids.map((id: string) => {
+      const p: any = (profs ?? []).find((x: any) => x.id === id) ?? {};
+      return { id, name: p.full_name || p.email || "Staff member" };
+    }));
+  };
+
+  useEffect(() => { fetchCustomers(); fetchBatches(); fetchStaff(); }, [workspaceId, isOwner]);
 
   // Realtime sync across all authorized users on the same workspace.
   useEffect(() => {
@@ -265,6 +283,13 @@ const Customers = () => {
     }
   };
 
+  const assignStaff = async (customerId: string, staffId: string | null) => {
+    const { error } = await supabase.from("students").update({ assigned_staff_id: staffId } as any).eq("id", customerId);
+    if (error) { toast.error(error.message); return; }
+    toast.success(staffId ? "Member assigned" : "Member unassigned");
+    fetchCustomers();
+  };
+
   const moveCustomer = async (customerId: string, targetBatchId: string) => {
     const { error } = await supabase.from("students").update({ batch_id: targetBatchId }).eq("id", customerId);
     if (error) { toast.error(error.message); return; }
@@ -408,6 +433,8 @@ const Customers = () => {
                       onEdit={editCustomer}
                       onDelete={(r) => setDeleteTarget(r)}
                       onMove={moveCustomer}
+                      staffOptions={staffOptions}
+                      onAssignStaff={isOwner ? assignStaff : undefined}
                     />
                   )}
                 </AccordionContent>
