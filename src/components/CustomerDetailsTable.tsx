@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ArrowRightLeft, ArrowUpDown, ArrowUp, ArrowDown, Download, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { UserCog, ArrowRightLeft, ArrowUpDown, ArrowUp, ArrowDown, Download, Pencil, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -17,6 +17,7 @@ export interface CustomerRow {
   height_cm: number | null;
   weight_kg: number | null;
   batch_id: string | null;
+  assigned_staff_id?: string | null;
   custom_data: Record<string, string> | null;
 }
 interface CustomField { id: string; name: string; required: boolean; enabled: boolean }
@@ -30,6 +31,8 @@ interface Props {
   onEdit: (row: CustomerRow) => void;
   onDelete: (row: CustomerRow) => void;
   onMove: (customerId: string, targetBatchId: string) => void;
+  staffOptions?: { id: string; name: string }[];
+  onAssignStaff?: (customerId: string, staffId: string | null) => void;
 }
 
 interface Column {
@@ -51,7 +54,9 @@ const CORE_COLS: Record<string, { label: string; get: (r: CustomerRow) => string
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
-export default function CustomerDetailsTable({ batch, rows, allBatches, canDelete, onEdit, onDelete, onMove }: Props) {
+export default function CustomerDetailsTable({ batch, rows, allBatches, canDelete, onEdit, onDelete, onMove, staffOptions = [], onAssignStaff }: Props) {
+  const staffName = (id: string | null | undefined) =>
+    (id && staffOptions.find((s) => s.id === id)?.name) || "Unassigned";
   const columns = useMemo<Column[]>(() => {
     const req = batch.required_fields || [];
     // Always include Name first; include the other configured core fields in canonical order.
@@ -61,8 +66,11 @@ export default function CustomerDetailsTable({ batch, rows, allBatches, canDelet
     (batch.custom_fields || []).filter((f) => f.enabled !== false).forEach((f) => {
       cols.push({ key: `custom:${f.id}`, label: f.name || "Custom", width: 180, get: (r) => r.custom_data?.[f.id] || "" });
     });
+    if (onAssignStaff) {
+      cols.push({ key: "assigned_staff", label: "Assigned Staff", width: 170, get: (r) => staffName(r.assigned_staff_id) });
+    }
     return cols;
-  }, [batch.required_fields, batch.custom_fields]);
+  }, [batch.required_fields, batch.custom_fields, onAssignStaff, staffOptions]);
 
   const [widths, setWidths] = useState<Record<string, number>>({});
   const getWidth = (c: Column) => widths[c.key] ?? c.width;
@@ -158,7 +166,7 @@ export default function CustomerDetailsTable({ batch, rows, allBatches, canDelet
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
   };
 
-  const totalWidth = columns.reduce((s, c) => s + getWidth(c), 0) + 140; /* actions col */
+  const totalWidth = columns.reduce((s, c) => s + getWidth(c), 0) + 170; /* actions col */
 
   return (
     <div className="space-y-3">
@@ -217,7 +225,7 @@ export default function CustomerDetailsTable({ batch, rows, allBatches, canDelet
                   </th>
                 );
               })}
-              <th style={{ width: 140, minWidth: 140 }} className="px-3 py-2 text-right font-medium">Actions</th>
+              <th style={{ width: 170, minWidth: 170 }} className="px-3 py-2 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -239,7 +247,7 @@ export default function CustomerDetailsTable({ batch, rows, allBatches, canDelet
                     {c.get(r) || <span className="text-muted-foreground">—</span>}
                   </td>
                 ))}
-                <td className="px-3 py-2 text-right" style={{ width: 140, minWidth: 140 }}>
+                <td className="px-3 py-2 text-right" style={{ width: 170, minWidth: 170 }}>
                   <div className="inline-flex items-center gap-1">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -257,6 +265,25 @@ export default function CustomerDetailsTable({ batch, rows, allBatches, canDelet
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    {onAssignStaff && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button title="Assign staff" className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><UserCog className="h-4 w-4" /></button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Assign to staff</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => onAssignStaff(r.id, null)}>Unassigned</DropdownMenuItem>
+                          {staffOptions.length === 0 ? (
+                            <DropdownMenuItem disabled>No staff accounts</DropdownMenuItem>
+                          ) : staffOptions.map((s) => (
+                            <DropdownMenuItem key={s.id} onClick={() => onAssignStaff(r.id, s.id)}>
+                              {s.name}{r.assigned_staff_id === s.id ? " ✓" : ""}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                     <button onClick={() => onEdit(r)} title="Edit" className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"><Pencil className="h-4 w-4" /></button>
                     {canDelete && (
                       <button onClick={() => onDelete(r)} title="Delete" className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"><Trash2 className="h-4 w-4" /></button>
