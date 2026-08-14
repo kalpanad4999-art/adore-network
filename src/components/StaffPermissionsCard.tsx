@@ -72,7 +72,7 @@ export const StaffPermissionsCard = () => {
         supabase.from("profiles").select("id, email, full_name").in("id", staffIds),
         supabase
           .from("staff_permissions" as any)
-          .select("staff_user_id,owner_id,can_customers,can_gallery,can_classes,can_payments,can_renewals,is_active")
+          .select(`staff_user_id,owner_id,${PERM_COLUMNS.join(",")},is_active`)
           .in("staff_user_id", staffIds),
       ]);
       const profMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
@@ -80,21 +80,22 @@ export const StaffPermissionsCard = () => {
       rows = staffIds.map((id) => {
         const prof: any = profMap.get(id) ?? {};
         // Default Staff access is Members only; the Owner can grant more modules.
-        const perm: any = permMap.get(id) ?? {
-          can_customers: true, can_gallery: false, can_classes: false,
-          can_payments: false, can_renewals: false, is_active: true,
-        };
+        const perm: any = permMap.get(id) ?? { can_customers: true, is_active: true };
         return {
           user_id: id,
           owner_id: ownerId,
           email: prof.email ?? null,
           full_name: prof.full_name ?? null,
-          can_customers: perm.can_customers,
-          can_gallery: perm.can_gallery,
-          can_classes: perm.can_classes,
-          can_payments: perm.can_payments,
-          can_renewals: perm.can_renewals,
-          is_active: perm.is_active,
+          can_customers: !!perm.can_customers,
+          can_gallery: !!perm.can_gallery,
+          can_classes: !!perm.can_classes,
+          can_payments: !!perm.can_payments,
+          can_renewals: !!perm.can_renewals,
+          can_attendance: !!perm.can_attendance,
+          can_insights: !!perm.can_insights,
+          can_offers: !!perm.can_offers,
+          can_settings: perm.can_settings ?? true,
+          is_active: perm.is_active ?? true,
         };
       });
     }
