@@ -102,7 +102,7 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
     } else {
       const { data: perm } = await supabase
         .from("staff_permissions" as any)
-        .select("can_customers,can_gallery,can_classes,can_payments,can_renewals,is_active")
+        .select("can_customers,can_gallery,can_classes,can_payments,can_renewals,can_attendance,can_insights,can_offers,can_settings,is_active")
         .eq("staff_user_id", user.id)
         .maybeSingle();
       const p = (perm ?? null) as any;
@@ -112,7 +112,8 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
         setPermissions({
           customers: !!p.can_customers, gallery: !!p.can_gallery, classes: !!p.can_classes,
           payments: !!p.can_payments, renewals: !!p.can_renewals,
-          attendance: !!p.can_customers || !!p.can_classes,
+          attendance: !!p.can_attendance, insights: !!p.can_insights,
+          offers: !!p.can_offers, settings: !!p.can_settings,
         });
       }
     }
