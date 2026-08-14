@@ -77,7 +77,8 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const NO_ACCESS: ModulePermissions = {
-    customers: false, gallery: false, classes: false, payments: false, renewals: false, attendance: false,
+    customers: false, gallery: false, classes: false, payments: false, renewals: false,
+    attendance: false, insights: false, offers: false, settings: false,
   };
 
   const refresh = async () => {
