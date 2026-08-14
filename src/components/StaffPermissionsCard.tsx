@@ -20,6 +20,10 @@ type StaffRow = {
   can_classes: boolean;
   can_payments: boolean;
   can_renewals: boolean;
+  can_attendance: boolean;
+  can_insights: boolean;
+  can_offers: boolean;
+  can_settings: boolean;
   is_active: boolean;
 };
 
@@ -27,11 +31,20 @@ type Invite = { id: string; email: string; accepted_at: string | null; token: st
 
 const MODULES: { key: ModuleKey; label: string }[] = [
   { key: "customers", label: "Members" },
+  { key: "attendance", label: "Attendance" },
   { key: "gallery", label: "My Gallery" },
   { key: "classes", label: "Classes" },
+  { key: "insights", label: "Insights" },
   { key: "payments", label: "Payments" },
+  { key: "offers", label: "Offers" },
   { key: "renewals", label: "Renewals" },
+  { key: "settings", label: "Settings" },
 ];
+
+const PERM_COLUMNS = [
+  "can_customers", "can_gallery", "can_classes", "can_payments", "can_renewals",
+  "can_attendance", "can_insights", "can_offers", "can_settings",
+] as const;
 
 export const StaffPermissionsCard = () => {
   const { ownerId, isOwner } = useStudio();
@@ -59,7 +72,7 @@ export const StaffPermissionsCard = () => {
         supabase.from("profiles").select("id, email, full_name").in("id", staffIds),
         supabase
           .from("staff_permissions" as any)
-          .select("staff_user_id,owner_id,can_customers,can_gallery,can_classes,can_payments,can_renewals,is_active")
+          .select(`staff_user_id,owner_id,${PERM_COLUMNS.join(",")},is_active`)
           .in("staff_user_id", staffIds),
       ]);
       const profMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
@@ -67,21 +80,22 @@ export const StaffPermissionsCard = () => {
       rows = staffIds.map((id) => {
         const prof: any = profMap.get(id) ?? {};
         // Default Staff access is Members only; the Owner can grant more modules.
-        const perm: any = permMap.get(id) ?? {
-          can_customers: true, can_gallery: false, can_classes: false,
-          can_payments: false, can_renewals: false, is_active: true,
-        };
+        const perm: any = permMap.get(id) ?? { can_customers: true, is_active: true };
         return {
           user_id: id,
           owner_id: ownerId,
           email: prof.email ?? null,
           full_name: prof.full_name ?? null,
-          can_customers: perm.can_customers,
-          can_gallery: perm.can_gallery,
-          can_classes: perm.can_classes,
-          can_payments: perm.can_payments,
-          can_renewals: perm.can_renewals,
-          is_active: perm.is_active,
+          can_customers: !!perm.can_customers,
+          can_gallery: !!perm.can_gallery,
+          can_classes: !!perm.can_classes,
+          can_payments: !!perm.can_payments,
+          can_renewals: !!perm.can_renewals,
+          can_attendance: !!perm.can_attendance,
+          can_insights: !!perm.can_insights,
+          can_offers: !!perm.can_offers,
+          can_settings: perm.can_settings ?? true,
+          is_active: perm.is_active ?? true,
         };
       });
     }
@@ -118,11 +132,7 @@ export const StaffPermissionsCard = () => {
       .upsert({
         staff_user_id: row.user_id,
         owner_id: row.owner_id,
-        can_customers: row.can_customers,
-        can_gallery: row.can_gallery,
-        can_classes: row.can_classes,
-        can_payments: row.can_payments,
-        can_renewals: row.can_renewals,
+        ...Object.fromEntries(PERM_COLUMNS.map((c) => [c, (row as any)[c]])),
         is_active: row.is_active,
         ...patch,
       } as any, { onConflict: "staff_user_id" });
