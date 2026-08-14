@@ -132,11 +132,7 @@ export const StaffPermissionsCard = () => {
       .upsert({
         staff_user_id: row.user_id,
         owner_id: row.owner_id,
-        can_customers: row.can_customers,
-        can_gallery: row.can_gallery,
-        can_classes: row.can_classes,
-        can_payments: row.can_payments,
-        can_renewals: row.can_renewals,
+        ...Object.fromEntries(PERM_COLUMNS.map((c) => [c, (row as any)[c]])),
         is_active: row.is_active,
         ...patch,
       } as any, { onConflict: "staff_user_id" });
