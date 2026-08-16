@@ -30,6 +30,9 @@ const FALLBACK =
 const ASK_PHONE =
   "To share your membership details securely, please enter your registered mobile number.";
 
+const NEEDS_STAFF =
+  "For privacy reasons I can't share personal membership, payment or attendance details in this public chat. Please contact Trinetra Yoga directly (or ask at the studio desk) and our team will help you right away.";
+
 const NOT_FOUND =
   "I couldn't find a member registered with that mobile number. Please check the number or contact Trinetra Yoga directly.";
 
@@ -51,6 +54,31 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+
+/**
+ * Member-specific data is released ONLY to an authenticated workspace user
+ * (the Owner, or Staff with Members access) of this studio. A phone number
+ * supplied by an anonymous visitor is NOT proof of identity, so the public
+ * widget never receives personal payment/attendance data.
+ */
+async function authorizedForMemberData(req: Request, ownerId: string): Promise<boolean> {
+  const auth = req.headers.get("Authorization") ?? "";
+  const token = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : "";
+  if (!token) return false;
+  const { data: userRes, error } = await admin.auth.getUser(token);
+  const uid = userRes?.user?.id;
+  if (error || !uid) return false;
+
+  const { data: role } = await admin
+    .from("user_roles").select("role,owner_id").eq("user_id", uid).maybeSingle();
+  if (!role) return false;
+  if (role.role === "owner") return uid === ownerId;
+  if (role.owner_id !== ownerId) return false;
+
+  const { data: perms } = await admin
+    .from("staff_permissions").select("is_active,can_customers").eq("staff_user_id", uid).maybeSingle();
+  return !!perms?.is_active && !!perms?.can_customers;
+}
 
 async function resolveOwnerId(ownerId?: string, batchToken?: string): Promise<string | null> {
   if (ownerId) return ownerId;
@@ -278,15 +306,23 @@ Deno.serve(async (req) => {
 
     const needsMember = !!userQuestion && MEMBER_INTENT.test(userQuestion);
 
+    // Member lookups are only performed for authenticated studio users.
+    const mayLookUpMember = await authorizedForMemberData(req, ownerId);
+
+    if (!mayLookUpMember && (needsMember || (phone && isBarePhone))) {
+      if (!testMode) await logHistory(ownerId, null, userQuestion || "member lookup", NEEDS_STAFF, null);
+      return json({ reply: NEEDS_STAFF, source: "policy" });
+    }
+
     // 2) Member-specific question without a phone number -> ask for it.
     if (needsMember && !phone) {
       if (!testMode) await logHistory(ownerId, null, userQuestion, ASK_PHONE, null);
       return json({ reply: ASK_PHONE, source: "verify" });
     }
 
-    // 3) With a phone number, verify the member.
+    // 3) With a phone number, look up the member (staff/owner only).
     let member: any = null;
-    if (phone) {
+    if (phone && mayLookUpMember) {
       member = await findCustomer(ownerId, phone);
       if (!member) {
         if (!testMode) await logHistory(ownerId, phone, userQuestion || phone, NOT_FOUND, null);
