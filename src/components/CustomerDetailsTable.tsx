@@ -17,7 +17,7 @@ export interface CustomerRow {
   height_cm: number | null;
   weight_kg: number | null;
   batch_id: string | null;
-  assigned_staff_id?: string | null;
+  assigned_staff_id: string | null;
   custom_data: Record<string, string> | null;
 }
 interface CustomField { id: string; name: string; required: boolean; enabled: boolean }
