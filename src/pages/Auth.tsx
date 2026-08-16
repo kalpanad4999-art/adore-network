@@ -207,12 +207,12 @@ const Auth = () => {
 
   const handleForgotPassword = async () => {
     const target = identifier.trim();
-    let targetEmail = target;
+    const targetEmail = target;
     if (target && !isEmail(target)) {
-      const resolved = await resolveEmailFromIdentifier(target);
-      if (!resolved) { toast.error("Enter your email address for password reset"); return; }
-      targetEmail = resolved;
+      toast.error("Enter your email address for password reset");
+      return;
     }
+
     const emailResult = emailSchema.safeParse(targetEmail);
     if (!emailResult.success) { toast.error("Please enter your email address first"); return; }
     try {
