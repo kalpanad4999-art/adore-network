@@ -76,14 +76,14 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><PermissionGuard module="customers"><Customers /></PermissionGuard></ProtectedRoute>} />
             <Route path="/gallery" element={<ProtectedRoute><PermissionGuard module="gallery"><Gallery /></PermissionGuard></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute><PermissionGuard module="attendance"><Attendance /></PermissionGuard></ProtectedRoute>} />
-            <Route path="/settings/biometric" element={<ProtectedRoute><BiometricSettings /></ProtectedRoute>} />
+            <Route path="/settings/biometric" element={<ProtectedRoute><PermissionGuard module="attendance"><BiometricSettings /></PermissionGuard></ProtectedRoute>} />
             <Route path="/media" element={<ProtectedRoute><PermissionGuard module="classes"><Media /></PermissionGuard></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute><PermissionGuard module="payments"><PaymentsGuard><Payments /></PaymentsGuard></PermissionGuard></ProtectedRoute>} />
             <Route path="/renewals" element={<ProtectedRoute><PermissionGuard module="renewals"><Renewals /></PermissionGuard></ProtectedRoute>} />
-            <Route path="/offers" element={<ProtectedRoute><PermissionGuard module="payments"><Offers /></PermissionGuard></ProtectedRoute>} />
-            <Route path="/insights" element={<ProtectedRoute><PermissionGuard module="customers"><LearningInsights /></PermissionGuard></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/settings/:section" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/offers" element={<ProtectedRoute><PermissionGuard module="offers"><Offers /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/insights" element={<ProtectedRoute><PermissionGuard module="insights"><LearningInsights /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><PermissionGuard module="settings"><Settings /></PermissionGuard></ProtectedRoute>} />
+            <Route path="/settings/:section" element={<ProtectedRoute><PermissionGuard module="settings"><Settings /></PermissionGuard></ProtectedRoute>} />
             <Route path="/students" element={<Navigate to="/" replace />} />
             <Route path="/classes" element={<Navigate to="/media" replace />} />
             <Route path="*" element={<NotFound />} />

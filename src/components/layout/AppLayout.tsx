@@ -20,11 +20,11 @@ const navItems: { to: string; label: string; icon: any; module: ModuleKey | null
   { to: "/attendance", label: "Attendance", icon: Fingerprint, module: "attendance" },
   { to: "/gallery", label: "My Gallery", icon: ImageIcon, module: "gallery" },
   { to: "/media", label: "Classes", icon: PlayCircle, module: "classes" },
-  { to: "/insights", label: "Insights", icon: LineChart, module: "customers" },
+  { to: "/insights", label: "Insights", icon: LineChart, module: "insights" },
   { to: "/payments", label: "Payments", icon: IndianRupee, module: "payments" },
-  { to: "/offers", label: "Offers", icon: Gift, module: "payments" },
+  { to: "/offers", label: "Offers", icon: Gift, module: "offers" },
   { to: "/renewals", label: "Renewals", icon: CalendarClock, module: "renewals" },
-  { to: "/settings", label: "Settings", icon: SettingsIcon, module: null },
+  { to: "/settings", label: "Settings", icon: SettingsIcon, module: "settings" },
 ];
 
 const InviteStaffDialog = () => {
