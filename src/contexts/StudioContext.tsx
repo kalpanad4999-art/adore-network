@@ -73,6 +73,8 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
   const [ownerId, setOwnerId] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [role, setRole] = useState<"owner" | "staff" | null>(null);
+  const [roleError, setRoleError] = useState(false);
+
   const [permissions, setPermissions] = useState<ModulePermissions>(ALL_ALLOWED);
   const [loading, setLoading] = useState(true);
 
