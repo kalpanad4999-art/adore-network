@@ -36,6 +36,8 @@ interface StudioContextValue {
   isOwner: boolean;
   role: "owner" | "staff" | null;
   authorized: boolean;
+  roleError: boolean;
+
   permissions: ModulePermissions;
   loading: boolean;
   refresh: () => Promise<void>;
