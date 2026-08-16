@@ -84,17 +84,29 @@ export const StudioProvider = ({ children }: { children: ReactNode }) => {
   const refresh = async () => {
     if (!user) { setLoading(false); return; }
     setLoading(true);
-    const { data: roleRow } = await supabase
-      .from("user_roles")
-      .select("owner_id, role")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    // Retry once: a transient network/permission hiccup must never be mistaken
+    // for "this account has no role" (which would show the not-authorized screen).
+    let roleRow: { owner_id: string | null; role: string | null } | null = null;
+    let roleErr: unknown = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("owner_id, role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!error) { roleRow = (data as any) ?? null; roleErr = null; break; }
+      roleErr = error;
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 400));
+    }
+    if (roleErr) console.error("Failed to load workspace role", roleErr);
+    setRoleError(!!roleErr);
     const nextRole = (roleRow?.role as "owner" | "staff" | undefined) ?? null;
     setRole(nextRole);
     const owner = roleRow?.owner_id || (nextRole === "owner" ? user.id : null);
     setOwnerId(owner);
     const isOwnerRole = nextRole === "owner";
     setIsOwner(isOwnerRole);
+
     if (isOwnerRole) {
       setPermissions(ALL_ALLOWED);
     } else if (!nextRole) {
