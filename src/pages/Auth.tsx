@@ -65,18 +65,26 @@ const Auth = () => {
   }, [user, authLoading, navigate]);
 
 
-  const resolveEmailFromIdentifier = async (raw: string): Promise<string | null> => {
-    const v = raw.trim();
-    if (!v) return null;
-    if (isEmail(v)) {
-      const r = emailSchema.safeParse(v);
-      return r.success ? r.data : null;
+  // Phone sign-in happens entirely server-side: the account email is never
+  // returned to the browser, so a phone number alone reveals nothing.
+  const signInWithPhone = async (rawPhone: string) => {
+    const r = phoneSchema.safeParse(rawPhone.trim());
+    if (!r.success) { toast.error(r.error.issues[0].message); return; }
+    const { data, error } = await supabase.functions.invoke("phone-login", {
+      body: { phone: r.data, password },
+    });
+    const payload: any = data ?? {};
+    if (error || payload?.error || !payload?.access_token) {
+      toast.error(payload?.error || "Incorrect credentials. Please try again.");
+      return;
     }
-    const r = phoneSchema.safeParse(v);
-    if (!r.success) return null;
-    const { data, error } = await supabase.rpc("get_email_by_phone", { _phone: r.data });
-    if (error) return null;
-    return (data as string | null) ?? null;
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: payload.access_token,
+      refresh_token: payload.refresh_token,
+    });
+    if (sessionError) { toast.error(friendlyAuthError(sessionError)); return; }
+    toast.success("Welcome back!");
+    navigate("/", { replace: true });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,15 +99,21 @@ const Auth = () => {
     setLoading(true);
     try {
       if (isLogin) {
-        if (!identifier.trim()) {
+        const rawIdentifier = identifier.trim();
+        if (!rawIdentifier) {
           toast.error("Enter your email or phone number");
           return;
         }
-        const resolvedEmail = await resolveEmailFromIdentifier(identifier);
-        if (!resolvedEmail) {
-          toast.error("No account found for that email or phone number");
+        if (!isEmail(rawIdentifier)) {
+          await signInWithPhone(rawIdentifier);
           return;
         }
+        const parsed = emailSchema.safeParse(rawIdentifier);
+        if (!parsed.success) {
+          toast.error(parsed.error.issues[0].message);
+          return;
+        }
+        const resolvedEmail = parsed.data;
         const { error } = await supabase.auth.signInWithPassword({
           email: resolvedEmail,
           password,
@@ -114,6 +128,7 @@ const Auth = () => {
         toast.success("Welcome back!");
         navigate("/", { replace: true });
       } else {
+
         const nameResult = nameSchema.safeParse(fullName);
         if (!nameResult.success) { toast.error(nameResult.error.issues[0].message); return; }
         const emailResult = emailSchema.safeParse(email);
