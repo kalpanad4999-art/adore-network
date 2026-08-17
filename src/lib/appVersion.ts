@@ -1,10 +1,15 @@
 /**
  * App version detection.
  *
- * Vite emits hashed asset filenames on every deploy, so the set of script/style
- * URLs referenced by index.html is a reliable build fingerprint. We fetch the
- * deployed index.html with cache-busting and compare the fingerprint against the
- * one the running app booted with.
+ * Vite emits a hashed entry bundle on every deploy, so the entry script URL in
+ * index.html is a reliable build fingerprint.
+ *
+ * IMPORTANT: the running page's DOM contains extra scripts/styles that are NOT
+ * in index.html (dynamically imported route chunks, injected badge scripts,
+ * runtime-inserted <style>/<link> tags). Fingerprinting the whole DOM therefore
+ * never matched the fingerprint of the fetched index.html, which made the app
+ * report "update available" forever (and auto-reload in a loop). We now compare
+ * only the build's entry assets, extracted the same way on both sides.
  */
 
 const STORAGE_KEY = "trinetra.app.buildId";
@@ -16,20 +21,39 @@ const hashString = (input: string) => {
   return (h >>> 0).toString(36);
 };
 
-const fingerprintFromHtml = (html: string) => {
-  const refs = Array.from(html.matchAll(/(?:src|href)="([^"]+\.(?:js|css)(?:\?[^"]*)?)"/g)).map((m) => m[1]);
-  const unique = Array.from(new Set(refs)).sort();
-  return unique.length ? hashString(unique.join("|")) : hashString(html.length + "");
+/** `/assets/index-B1x9.js?foo` -> `index-B1x9.js`; anything else -> null. */
+const assetFile = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  const clean = url.split("?")[0].split("#")[0];
+  if (!/\/assets\//.test(clean)) return null;
+  const file = clean.substring(clean.lastIndexOf("/") + 1);
+  return /\.(js|css)$/.test(file) && /-[A-Za-z0-9_]{6,}\.(js|css)$/.test(file) ? file : null;
 };
 
-/** Fingerprint of the build currently running in this tab (from the live DOM). */
-export const currentBuildId = (): string => {
-  if (typeof document === "undefined") return "dev";
-  const refs = Array.from(document.querySelectorAll<HTMLElement>("script[src], link[rel=stylesheet][href]"))
-    .map((el) => el.getAttribute("src") || el.getAttribute("href") || "")
-    .filter(Boolean);
-  const unique = Array.from(new Set(refs)).sort();
-  return unique.length ? hashString(unique.join("|")) : "dev";
+const idFromFiles = (files: (string | null)[]): string | null => {
+  const unique = Array.from(new Set(files.filter(Boolean) as string[])).sort();
+  return unique.length ? hashString(unique.join("|")) : null;
+};
+
+/** Entry assets referenced directly by the deployed index.html. */
+const fingerprintFromHtml = (html: string): string | null => {
+  const refs = Array.from(html.matchAll(/(?:src|href)\s*=\s*["']([^"']+)["']/g)).map((m) => m[1]);
+  return idFromFiles(refs.map(assetFile));
+};
+
+/**
+ * Fingerprint of the build running in this tab. Only the entry <script
+ * type="module"> and the stylesheet links emitted by the build are used, so it
+ * matches what index.html declares.
+ */
+export const currentBuildId = (): string | null => {
+  if (typeof document === "undefined") return null;
+  const nodes = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      "script[type='module'][src], link[rel='modulepreload'][href], link[rel='stylesheet'][href]",
+    ),
+  );
+  return idFromFiles(nodes.map((el) => assetFile(el.getAttribute("src") || el.getAttribute("href"))));
 };
 
 /** Fingerprint of the build currently deployed on the server. */
@@ -51,16 +75,14 @@ export const fetchDeployedBuildId = async (): Promise<string | null> => {
 };
 
 /**
- * Baseline for comparison: the build actually running in this tab.
- * Falling back to localStorage alone was unreliable — a stale stored id could
- * mask a new deploy (or fire false positives), so the live DOM wins.
+ * Baseline for comparison: the build actually running in this tab, falling back
+ * to the last id we stored (e.g. if the DOM lookup yields nothing).
  */
-export const getKnownBuildId = () => {
+export const getKnownBuildId = (): string | null => {
   const live = currentBuildId();
-  if (live && live !== "dev") return live;
+  if (live) return live;
   try { return localStorage.getItem(STORAGE_KEY); } catch { return null; }
 };
-
 
 export const rememberBuildId = (id: string) => {
   try { localStorage.setItem(STORAGE_KEY, id); } catch { /* ignore */ }
