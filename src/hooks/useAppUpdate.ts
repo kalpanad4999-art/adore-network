@@ -25,6 +25,8 @@ export const useAppUpdate = () => {
       setLastChecked(new Date());
       if (!deployed) return false;
       const known = getKnownBuildId();
+      // No hashed build assets on the page (dev server / unexpected markup):
+      // we can't compare reliably, so never claim an update is available.
       if (!known) {
         rememberBuildId(deployed);
         return false;
