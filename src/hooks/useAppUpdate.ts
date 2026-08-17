@@ -44,6 +44,7 @@ export const useAppUpdate = () => {
         setUpdateAvailable(true);
         return true;
       }
+      rememberBuildId(deployed);
       setUpdateAvailable(false);
       return false;
     } finally {
