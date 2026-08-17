@@ -51,10 +51,11 @@ const PublicRecordings = () => {
     (async () => {
       const [r, s] = await Promise.all([
         supabase.rpc("get_public_recordings", { _owner: ownerId }),
-        supabase.from("studio_settings").select("studio_name").eq("owner_id", ownerId).maybeSingle(),
+        supabase.rpc("get_public_studio_meta", { _owner: ownerId }),
       ]);
       setItems((r.data as R[]) || []);
-      if (s.data?.studio_name) setStudioName(s.data.studio_name);
+      const meta = Array.isArray(s.data) ? s.data[0] : null;
+      if (meta?.studio_name) setStudioName(meta.studio_name);
       setLoading(false);
     })();
   }, [ownerId]);
