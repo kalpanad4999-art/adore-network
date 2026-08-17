@@ -39,10 +39,11 @@ const PublicGallery = () => {
     (async () => {
       const [g, s] = await Promise.all([
         supabase.rpc("get_public_gallery", { _owner: ownerId }),
-        supabase.from("studio_settings").select("studio_name").eq("owner_id", ownerId).maybeSingle(),
+        supabase.rpc("get_public_studio_meta", { _owner: ownerId }),
       ]);
       setItems((g.data as G[]) || []);
-      if (s.data?.studio_name) setStudioName(s.data.studio_name);
+      const meta = Array.isArray(s.data) ? s.data[0] : null;
+      if (meta?.studio_name) setStudioName(meta.studio_name);
       setLoading(false);
     })();
   }, [ownerId]);
