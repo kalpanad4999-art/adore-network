@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Pencil, Trash2, Layers, UserPlus, QrCode, Copy, ArrowRightLeft, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Layers, UserPlus, QrCode, Copy, ArrowRightLeft, X, Camera, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { QRCodeSVG } from "qrcode.react";
@@ -32,6 +32,7 @@ interface Customer {
   batch_id: string | null;
   assigned_staff_id: string | null;
   custom_data: Record<string, string> | null;
+  photo_path: string | null;
 }
 
 interface StaffOption { id: string; name: string }
@@ -82,13 +83,23 @@ const Customers = () => {
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
   const [custForm, setCustForm] = useState({ name: "", email: "", phone: "", address: "", notes: "", height: "", weight: "" });
   const [custCustom, setCustCustom] = useState<Record<string, string>>({});
+  const [memberPhoto, setMemberPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [savingMember, setSavingMember] = useState(false);
+
+  useEffect(() => {
+    if (!memberPhoto) return;
+    const url = URL.createObjectURL(memberPhoto);
+    setPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [memberPhoto]);
 
   // QR dialog
   const [qrBatch, setQrBatch] = useState<Batch | null>(null);
 
   const fetchCustomers = async () => {
     if (!workspaceId) return;
-    const { data } = await supabase.from("students").select("id,name,email,phone,address,notes,height_cm,weight_kg,batch_id,assigned_staff_id,custom_data").eq("user_id", workspaceId).order("name");
+    const { data } = await supabase.from("students").select("id,name,email,phone,address,notes,height_cm,weight_kg,batch_id,assigned_staff_id,custom_data,photo_path").eq("user_id", workspaceId).order("name");
     const rows = (data || []).map((c: any) => ({ ...c, custom_data: (c.custom_data && typeof c.custom_data === "object") ? c.custom_data : {} })) as Customer[];
     setCustomers(rows);
   };
@@ -211,6 +222,7 @@ const Customers = () => {
 
   // ---------- Customer CRUD ----------
   const openAddCustomer = (batchId: string) => {
+    setMemberPhoto(null); setPhotoPreview(null);
     setEditingCustId(null);
     setActiveBatchId(batchId);
     setCustForm({ name: "", email: "", phone: "", address: "", notes: "", height: "", weight: "" });
@@ -219,6 +231,12 @@ const Customers = () => {
   };
 
   const editCustomer = (c: Customer) => {
+    setMemberPhoto(null); setPhotoPreview(null);
+    if (c.photo_path) {
+      supabase.storage.from("member-photos").createSignedUrl(c.photo_path, 300).then(({ data }) => {
+        setPhotoPreview(data?.signedUrl ?? null);
+      });
+    }
     setEditingCustId(c.id);
     setActiveBatchId(c.batch_id);
     setCustForm({ name: c.name, email: c.email || "", phone: c.phone || "", address: c.address || "", notes: c.notes || "", height: c.height_cm?.toString() || "", weight: c.weight_kg?.toString() || "" });
@@ -255,13 +273,38 @@ const Customers = () => {
       weight_kg: weightNum,
       custom_data: customDataClean as any,
     };
-    const { error } = editingCustId
-      ? await supabase.from("students").update(payload).eq("id", editingCustId)
-      : await supabase.from("students").insert(payload);
-    if (error) { toast.error(error.message); return; }
-    toast.success(editingCustId ? "Member updated" : "Member added");
-    setCustOpen(false); setEditingCustId(null); setActiveBatchId(null); setCustCustom({});
-    fetchCustomers();
+    setSavingMember(true);
+    try {
+      const { data, error } = editingCustId
+        ? await supabase.from("students").update(payload).eq("id", editingCustId).select("id,photo_path").single()
+        : await supabase.from("students").insert(payload).select("id,photo_path").single();
+      if (error || !data) throw error ?? new Error("Could not save member");
+      if (memberPhoto) {
+        const path = `${workspaceId}/${data.id}/${crypto.randomUUID()}.${memberPhoto.type === "image/png" ? "png" : "jpg"}`;
+        const { error: uploadError } = await supabase.storage.from("member-photos").upload(path, memberPhoto, { contentType: memberPhoto.type });
+        if (uploadError) throw uploadError;
+        const { error: linkError } = await supabase.from("students").update({ photo_path: path }).eq("id", data.id);
+        if (linkError) {
+          await supabase.storage.from("member-photos").remove([path]);
+          throw linkError;
+        }
+        if (data.photo_path) await supabase.storage.from("member-photos").remove([data.photo_path]);
+      }
+      toast.success(editingCustId ? "Member updated" : "Member added");
+      setCustOpen(false); setEditingCustId(null); setActiveBatchId(null); setCustCustom({}); setMemberPhoto(null); setPhotoPreview(null);
+      fetchCustomers();
+    } catch (err: any) {
+      toast.error(err?.message || "Member saved, but the photo could not be uploaded. Please retry.");
+      fetchCustomers();
+    } finally { setSavingMember(false); }
+  };
+
+  const selectMemberPhoto = (file?: File) => {
+    if (!file) return;
+    if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      toast.error("Choose a JPG or PNG photo under 5 MB"); return;
+    }
+    setMemberPhoto(file);
   };
 
   const confirmDeleteCustomer = async () => {
@@ -454,6 +497,15 @@ const Customers = () => {
           </DialogHeader>
           <form onSubmit={submitCustomer} className="space-y-4">
             <div className="space-y-2"><Label>Name</Label><Input value={custForm.name} onChange={(e) => setCustForm({ ...custForm, name: e.target.value })} maxLength={100} required /></div>
+            <div className="space-y-2">
+              <Label>Member Photo</Label>
+              {photoPreview && <img src={photoPreview} alt="Member photo preview" className="h-24 w-24 rounded-md border border-border object-cover" />}
+              <div className="flex flex-wrap gap-2">
+                <Button asChild type="button" variant="outline" size="sm"><label className="cursor-pointer"><Camera className="mr-2 h-4 w-4" />Take Photo<input className="sr-only" type="file" accept="image/jpeg,image/png" capture="user" onChange={(e) => selectMemberPhoto(e.target.files?.[0])} /></label></Button>
+                <Button asChild type="button" variant="outline" size="sm"><label className="cursor-pointer"><Upload className="mr-2 h-4 w-4" />Upload Photo<input className="sr-only" type="file" accept="image/jpeg,image/png" onChange={(e) => selectMemberPhoto(e.target.files?.[0])} /></label></Button>
+              </div>
+              <p className="text-xs text-muted-foreground">{memberPhoto || (editingCustId && customers.find((c) => c.id === editingCustId)?.photo_path) ? "Face photo registered" : "No photo registered"}</p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Email</Label><Input type="email" value={custForm.email} onChange={(e) => setCustForm({ ...custForm, email: e.target.value })} maxLength={255} /></div>
               <div className="space-y-2"><Label>Phone</Label><Input type="tel" value={custForm.phone} onChange={(e) => setCustForm({ ...custForm, phone: e.target.value })} maxLength={20} /></div>
@@ -475,7 +527,7 @@ const Customers = () => {
                 />
               </div>
             ))}
-            <Button type="submit" className="w-full">{editingCustId ? "Update" : "Add"} Customer</Button>
+            <Button type="submit" disabled={savingMember} className="w-full">{savingMember ? "Saving…" : editingCustId ? "Update" : "Add"} Customer</Button>
           </form>
         </DialogContent>
       </Dialog>
