@@ -20,6 +20,7 @@ import { fmtDate } from "@/lib/date";
 import CustomerDetailsTable from "@/components/CustomerDetailsTable";
 import PhotoCameraDialog from "@/components/PhotoCameraDialog";
 import { validateReferencePhoto } from "@/lib/referencePhoto";
+import { enrollMemberFace, recognitionImage } from "@/lib/photoAttendance";
 
 
 interface Customer {
@@ -285,14 +286,19 @@ const Customers = () => {
         : await supabase.from("students").insert(payload).select("id,photo_path").single();
       if (error || !data) throw error ?? new Error("Could not save member");
       if (memberPhoto) {
-        const path = `${workspaceId}/${data.id}/${crypto.randomUUID()}.${memberPhoto.type === "image/png" ? "png" : memberPhoto.type === "image/webp" ? "webp" : "jpg"}`;
-        const { error: uploadError } = await supabase.storage.from("member-photos").upload(path, memberPhoto, { contentType: memberPhoto.type });
+        const preparedPhoto = await recognitionImage(memberPhoto);
+        const path = `${workspaceId}/${data.id}/${crypto.randomUUID()}.${preparedPhoto.type === "image/png" ? "png" : "jpg"}`;
+        const { error: uploadError } = await supabase.storage.from("member-photos").upload(path, preparedPhoto, { contentType: preparedPhoto.type });
         if (uploadError) throw uploadError;
-        const { error: linkError } = await supabase.from("students").update({ photo_path: path }).eq("id", data.id);
-        if (linkError) {
+        try {
+          // Enroll before linking, so a failed service never labels an unrecognized photo as registered.
+          await enrollMemberFace(data.id, activeBatchId, path);
+        } catch (enrollError) {
           await supabase.storage.from("member-photos").remove([path]);
-          throw linkError;
+          throw enrollError;
         }
+        const { error: linkError } = await supabase.from("students").update({ photo_path: path }).eq("id", data.id);
+        if (linkError) throw linkError;
         if (data.photo_path) await supabase.storage.from("member-photos").remove([data.photo_path]);
       }
       toast.success(editingCustId ? "Member updated" : "Member added");
