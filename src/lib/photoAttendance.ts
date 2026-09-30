@@ -84,8 +84,8 @@ export const photoRecognitionService: PhotoRecognitionService = {
 export const uniqueBatchMatches = (result: RecognitionResult, memberIds: string[]): RecognitionResult => {
   const allowed = new Set(memberIds);
   return {
-    available: result.available,
-    unavailableReason: result.unavailableReason,
+    ...(result.available !== undefined ? { available: result.available } : {}),
+    ...(result.unavailableReason ? { unavailableReason: result.unavailableReason } : {}),
     recognizedIds: [...new Set(result.recognizedIds)].filter((id) => allowed.has(id)),
     unknownFaces: Math.max(0, Math.floor(result.unknownFaces)),
     ...(result.matches ? { matches: result.matches.filter((m) => allowed.has(m.memberId)) } : {}),

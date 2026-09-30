@@ -11,4 +11,9 @@ describe("photo attendance", () => {
     expect(uniqueBatchMatches({ recognizedIds: ["a", "outside"], unknownFaces: 1, matches: [{ memberId: "a", similarity: 98 }, { memberId: "outside", similarity: 97 }] }, ["a"]))
       .toEqual({ recognizedIds: ["a"], unknownFaces: 1, matches: [{ memberId: "a", similarity: 98 }] });
   });
+
+  it("keeps the unavailable state without inventing any matches", () => {
+    expect(uniqueBatchMatches({ available: false, unavailableReason: "Not connected", recognizedIds: [], unknownFaces: 0 }, ["a"]))
+      .toEqual({ available: false, unavailableReason: "Not connected", recognizedIds: [], unknownFaces: 0 });
+  });
 });
