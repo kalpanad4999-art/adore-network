@@ -63,6 +63,7 @@ const Attendance = () => {
   const [mode, setMode] = useState<"manual" | "photo">("manual");
   const [photoStep, setPhotoStep] = useState<1 | 2 | 3>(1);
   const [photoDate, setPhotoDate] = useState(today());
+  const [photoDateText, setPhotoDateText] = useState(fmtDate(today()));
   const [groupPhotos, setGroupPhotos] = useState<File[]>([]);
   const [recognizing, setRecognizing] = useState(false);
   const [recognizedIds, setRecognizedIds] = useState<string[]>([]);
@@ -318,7 +319,7 @@ const Attendance = () => {
                   {batches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {mode === "photo" && <div className="max-w-xs space-y-1"><Label htmlFor="photo-date">Date</Label><Input id="photo-date" type="date" value={photoDate} onChange={(e) => { setPhotoDate(e.target.value); resetPhoto(); }} /></div>}
+              {mode === "photo" && <div className="max-w-xs space-y-1"><Label htmlFor="photo-date">Date (DD/MM/YYYY)</Label><Input id="photo-date" inputMode="numeric" placeholder="DD/MM/YYYY" maxLength={10} value={photoDateText} onChange={(e) => { const text = e.target.value; setPhotoDateText(text); const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text); const d = m ? new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])) : null; setPhotoDate(d && fmtDate(d) === text ? `${m?.[3]}-${m?.[2]}-${m?.[1]}` : ""); resetPhoto(); }} /></div>}
               {selectedBatch && (
                 <p className="text-xs text-muted-foreground">
                   {studentsInBatch.length} member(s) in this batch{mode === "photo" && ` · ${studentsInBatch.filter((s) => s.photo_path).length} with photos`}
@@ -341,7 +342,7 @@ const Attendance = () => {
             </CardContent></Card>}
             {photoStep === 3 && <Card><CardHeader><CardTitle>Review Attendance · {batchName} · {fmtDate(photoDate)}</CardTitle></CardHeader><CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">{recognitionSucceeded ? `${recognizedIds.length} recognized · ${studentsInBatch.length - recognizedIds.length} not detected. Not detected does not mean absent.` : "Recognition unavailable · No members were identified. Review the photos and decide each member’s status manually."}</p>
-              <div className="space-y-2">{studentsInBatch.map((s) => <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2"><div><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{recognizedIds.includes(s.id) ? "Recognized" : "Not detected"}{!s.photo_path && " · No reference photo"}</p></div><div className="flex gap-1"><Button size="sm" variant={decisions[s.id] === "present" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "present" }))}>Present</Button><Button size="sm" variant={decisions[s.id] === "absent" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "absent" }))}>Absent</Button></div></div>)}</div>
+              <div className="space-y-2">{studentsInBatch.map((s) => <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2"><div><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{recognizedIds.includes(s.id) ? "Recognized" : recognitionSucceeded ? "Not detected · Could be outside the photo, obscured, poorly lit, turned away, too small, unrecognized, or absent" : "Needs review"}{!s.photo_path && " · No reference photo"}</p></div><div className="flex gap-1"><Button size="sm" variant={decisions[s.id] === "present" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "present" }))}>Present</Button><Button size="sm" variant={decisions[s.id] === "absent" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "absent" }))}>Absent</Button></div></div>)}</div>
               {unknownFaces > 0 && <div className="text-sm text-muted-foreground">{Array.from({ length: unknownFaces }, (_, i) => <p key={i}>? Face {i + 1} · Unknown <Button size="sm" variant="ghost" onClick={() => setUnknownFaces((n) => n - 1)}>Ignore</Button><Button size="sm" variant="ghost" onClick={() => setPhotoStep(2)}>Review photos</Button></p>)}</div>}
               <div className="border-t border-border pt-3 text-sm">Total {studentsInBatch.length} · Present {Object.values(decisions).filter((v) => v === "present").length} · Absent {Object.values(decisions).filter((v) => v === "absent").length} · Needs review {unresolved}</div>
               <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setPhotoStep(2)}>Back to photos</Button><Button disabled={unresolved > 0 || !studentsInBatch.length || alreadySubmitted} onClick={() => setSubmitOpen(true)}>Submit Attendance</Button></div>
