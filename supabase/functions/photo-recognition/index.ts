@@ -4,14 +4,13 @@ import { RekognitionClient, CreateCollectionCommand, DeleteFacesCommand, IndexFa
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const types = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const maxBytes = 5 * 1024 * 1024;
 const MATCH_THRESHOLD = 92;
 const MATCH_MARGIN = 5;
 const mime = new Set(['image/jpeg', 'image/png']);
 
 async function imageBytes(file: File): Promise<Uint8Array> {
-  if (!mime.has(file.type) || file.size === 0 || file.size > maxBytes) throw new Error('Use JPG, PNG or WEBP photos under 5 MB each');
+  if (!mime.has(file.type) || file.size === 0 || file.size > maxBytes) throw new Error('Use JPG or PNG photos under 5 MB each');
   return new Uint8Array(await file.arrayBuffer());
 }
 
@@ -89,7 +88,7 @@ Deno.serve(async (req) => {
     const photos = form.getAll('photos');
     if (!photos.length || photos.length > 10 || photos.some((p) => !(p instanceof File))) return json({ error: 'Add 1–10 photos' }, 400);
     const files = photos as File[];
-    if (files.some((f) => !mime.has(f.type) || !f.size || f.size > maxBytes)) return json({ error: 'Use JPG, PNG or WEBP photos under 5 MB each' }, 400);
+    if (files.some((f) => !mime.has(f.type) || !f.size || f.size > maxBytes)) return json({ error: 'Use JPG or PNG photos under 5 MB each' }, 400);
     const { data: members, error: membersError } = await admin.from('students').select('id,photo_path,assigned_staff_id,batch_id').eq('user_id', ownerId).eq('batch_id', batchId);
     if (membersError) throw membersError;
     const eligible = (members ?? []).filter((m) => role.role === 'owner' || m.assigned_staff_id === uid);
