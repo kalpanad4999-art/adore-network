@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { photoRecognitionService, uniqueBatchMatches } from "@/lib/photoAttendance";
+import { uniqueBatchMatches } from "@/lib/photoAttendance";
 
 describe("photo attendance", () => {
   it("keeps only unique matches in the selected batch", () => {
@@ -7,8 +7,8 @@ describe("photo attendance", () => {
       .toEqual({ recognizedIds: ["a", "b"], unknownFaces: 2 });
   });
 
-  it("never invents a match when no recognition provider is available", async () => {
-    await expect(photoRecognitionService.recognize({ batchId: "b", date: "2026-09-30", photos: [], memberIds: ["a"] }))
-      .rejects.toThrow("not connected");
+  it("never exposes a match outside the selected batch", () => {
+    expect(uniqueBatchMatches({ recognizedIds: ["a", "outside"], unknownFaces: 1, matches: [{ memberId: "a", similarity: 98 }, { memberId: "outside", similarity: 97 }] }, ["a"]))
+      .toEqual({ recognizedIds: ["a"], unknownFaces: 1, matches: [{ memberId: "a", similarity: 98 }] });
   });
 });

@@ -1,0 +1,1 @@
+CREATE POLICY "Server manages face enrollments" ON public.member_face_enrollments FOR ALL TO service_role USING (true) WITH CHECK (true);

@@ -69,6 +69,7 @@ const Attendance = () => {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [recognizing, setRecognizing] = useState(false);
   const [recognizedIds, setRecognizedIds] = useState<string[]>([]);
+  const [matchConfidence, setMatchConfidence] = useState<Record<string, number>>({});
   const [unknownFaces, setUnknownFaces] = useState(0);
   const [recognitionSucceeded, setRecognitionSucceeded] = useState(false);
   const [decisions, setDecisions] = useState<Record<string, "present" | "absent">>({});
@@ -167,7 +168,7 @@ const Attendance = () => {
   };
 
   const resetPhoto = () => {
-    setPhotoStep(1); setGroupPhotos([]); setDecisions({}); setRecognizedIds([]); setUnknownFaces(0); setRecognitionSucceeded(false);
+    setPhotoStep(1); setGroupPhotos([]); setDecisions({}); setRecognizedIds([]); setMatchConfidence({}); setUnknownFaces(0); setRecognitionSucceeded(false);
   };
   const addPhotos = (files: File[] | FileList | null) => {
     if (!files) return;
@@ -184,11 +185,12 @@ const Attendance = () => {
         batchId: selectedBatch, date: photoDate, photos: groupPhotos, memberIds: studentsInBatch.map((s) => s.id),
       }), studentsInBatch.map((s) => s.id));
       setRecognizedIds(result.recognizedIds);
+      setMatchConfidence(Object.fromEntries((result.matches ?? []).map((m) => [m.memberId, m.similarity])));
       setRecognitionSucceeded(true);
       setUnknownFaces(result.unknownFaces);
       setDecisions(Object.fromEntries(result.recognizedIds.map((id) => [id, "present"])));
     } catch (err: any) {
-      setRecognizedIds([]); setUnknownFaces(0); setDecisions({});
+      setRecognizedIds([]); setMatchConfidence({}); setUnknownFaces(0); setDecisions({});
       setRecognitionSucceeded(false);
       toast.error(err?.message || "Recognition unavailable. Review manually.");
     } finally {
@@ -312,7 +314,6 @@ const Attendance = () => {
             <Button className="h-auto min-h-10 whitespace-normal px-2 text-center" variant={mode === "manual" ? "default" : "outline"} onClick={() => setMode("manual")}>Manual Attendance</Button>
             <Button className="h-auto min-h-10 whitespace-normal px-2 text-center" variant={mode === "photo" ? "default" : "outline"} onClick={() => setMode("photo")}><Camera className="mr-1 h-4 w-4 shrink-0" />AI Photo Attendance</Button>
           </div>
-          {mode === "photo" && <p className="text-sm text-muted-foreground">Face recognition is not connected. Photos stay on this device; review and mark members manually until a recognition service is available.</p>}
           <Card>
             <CardHeader><CardTitle>Select Batch</CardTitle></CardHeader>
             <CardContent className="space-y-3">
@@ -345,7 +346,7 @@ const Attendance = () => {
             </CardContent></Card>}
             {photoStep === 3 && <Card><CardHeader><CardTitle>Review Attendance · {batchName} · {fmtDate(photoDate)}</CardTitle></CardHeader><CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">{recognitionSucceeded ? `${recognizedIds.length} recognized · ${studentsInBatch.length - recognizedIds.length} not detected. Not detected does not mean absent.` : "Recognition unavailable · No members were identified. Review the photos and decide each member’s status manually."}</p>
-              <div className="space-y-2">{studentsInBatch.map((s) => <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2"><div><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{recognizedIds.includes(s.id) ? "Recognized" : recognitionSucceeded ? "Not detected · Could be outside the photo, obscured, poorly lit, turned away, too small, unrecognized, or absent" : "Needs review"}{!s.photo_path && " · No reference photo"}</p></div><div className="flex gap-1"><Button size="sm" variant={decisions[s.id] === "present" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "present" }))}>Present</Button><Button size="sm" variant={decisions[s.id] === "absent" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "absent" }))}>Absent</Button></div></div>)}</div>
+               <div className="space-y-2">{studentsInBatch.map((s) => <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2"><div><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{recognizedIds.includes(s.id) ? `Recognized · ${matchConfidence[s.id] ?? 0}% similarity` : recognitionSucceeded ? "Not detected · Could be outside the photo, obscured, poorly lit, turned away, too small, unrecognized, or absent" : "Needs review"}{!s.photo_path && " · No reference photo"}</p></div><div className="flex gap-1"><Button size="sm" variant={decisions[s.id] === "present" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "present" }))}>Present</Button><Button size="sm" variant={decisions[s.id] === "absent" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "absent" }))}>Absent</Button></div></div>)}</div>
               {unknownFaces > 0 && <div className="text-sm text-muted-foreground">{Array.from({ length: unknownFaces }, (_, i) => <p key={i}>? Face {i + 1} · Unknown <Button size="sm" variant="ghost" onClick={() => setUnknownFaces((n) => n - 1)}>Ignore</Button><Button size="sm" variant="ghost" onClick={() => setPhotoStep(2)}>Review photos</Button></p>)}</div>}
               <div className="border-t border-border pt-3 text-sm">Total {studentsInBatch.length} · Present {Object.values(decisions).filter((v) => v === "present").length} · Absent {Object.values(decisions).filter((v) => v === "absent").length} · Needs review {unresolved}</div>
               <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setPhotoStep(2)}>Back to photos</Button><Button disabled={unresolved > 0 || !studentsInBatch.length || alreadySubmitted} onClick={() => setSubmitOpen(true)}>Submit Attendance</Button></div>

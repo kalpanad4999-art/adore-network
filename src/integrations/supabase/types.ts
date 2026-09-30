@@ -671,6 +671,51 @@ export type Database = {
         }
         Relationships: []
       }
+      member_face_enrollments: {
+        Row: {
+          batch_id: string
+          created_at: string
+          owner_id: string
+          photo_path: string
+          provider_face_id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          owner_id: string
+          photo_path: string
+          provider_face_id: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          owner_id?: string
+          photo_path?: string
+          provider_face_id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_face_enrollments_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_face_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offer_redemptions: {
         Row: {
           coupon_id: string | null
