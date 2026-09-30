@@ -184,6 +184,12 @@ const Attendance = () => {
       const result = uniqueBatchMatches(await photoRecognitionService.recognize({
         batchId: selectedBatch, date: photoDate, photos: groupPhotos, memberIds: studentsInBatch.map((s) => s.id),
       }), studentsInBatch.map((s) => s.id));
+      if (result.available === false) {
+        setRecognizedIds([]); setMatchConfidence({}); setUnknownFaces(0); setDecisions({});
+        setRecognitionSucceeded(false);
+        toast.info(result.unavailableReason || "Recognition unavailable. Review attendance manually.");
+        return;
+      }
       setRecognizedIds(result.recognizedIds);
       setMatchConfidence(Object.fromEntries((result.matches ?? []).map((m) => [m.memberId, m.similarity])));
       setRecognitionSucceeded(true);

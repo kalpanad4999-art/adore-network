@@ -23,8 +23,8 @@ Deno.serve(async (req) => {
     const accessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
     const secretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
     const region = Deno.env.get('AWS_REGION');
-    if (!url || !key) return json({ error: 'Recognition storage is not configured' }, 503);
-    if (!accessKeyId || !secretAccessKey || !region) return json({ error: 'Face recognition is not connected. Review photos and mark members manually.' }, 503);
+    if (!url || !key) return json({ available: false, error: 'Recognition storage is not configured. Review photos and mark members manually.' });
+    if (!accessKeyId || !secretAccessKey || !region) return json({ available: false, error: 'Face recognition is not connected. Review photos and mark members manually.' });
     const token = req.headers.get('Authorization')?.replace(/^Bearer\s+/i, '').trim();
     if (!token) return json({ error: 'Sign in to use face recognition' }, 401);
     const admin = createClient(url, key, { auth: { persistSession: false } });
