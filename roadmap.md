@@ -1,0 +1,6 @@
+# Attendance update
+- [x] Inspect existing member, batch, attendance, permissions, and storage flows.
+- [ ] Add private member reference photos to existing member records.
+- [ ] Replace simulated verification with photo-based review and preserve manual attendance.
+- [ ] Validate attendance saving, duplicate handling, and signed-in flow.
+- [ ] Connect a real, vetted recognition service (blocked: no service endpoint or provider is configured).
