@@ -8,9 +8,10 @@ const types = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const maxBytes = 5 * 1024 * 1024;
 const MATCH_THRESHOLD = 92;
 const MATCH_MARGIN = 5;
+const mime = new Set(['image/jpeg', 'image/png']);
 
 async function imageBytes(file: File): Promise<Uint8Array> {
-  if (!types.has(file.type) || file.size === 0 || file.size > maxBytes) throw new Error('Use JPG, PNG or WEBP photos under 5 MB each');
+  if (!mime.has(file.type) || file.size === 0 || file.size > maxBytes) throw new Error('Use JPG, PNG or WEBP photos under 5 MB each');
   return new Uint8Array(await file.arrayBuffer());
 }
 
@@ -88,15 +89,15 @@ Deno.serve(async (req) => {
     const photos = form.getAll('photos');
     if (!photos.length || photos.length > 10 || photos.some((p) => !(p instanceof File))) return json({ error: 'Add 1–10 photos' }, 400);
     const files = photos as File[];
-    if (files.some((f) => !types.has(f.type) || !f.size || f.size > maxBytes)) return json({ error: 'Use JPG, PNG or WEBP photos under 5 MB each' }, 400);
-    const { data: members, error: membersError } = await admin.from('students').select('id,photo_path,assigned_staff_id').eq('user_id', ownerId).eq('batch_id', batchId);
+    if (files.some((f) => !mime.has(f.type) || !f.size || f.size > maxBytes)) return json({ error: 'Use JPG, PNG or WEBP photos under 5 MB each' }, 400);
+    const { data: members, error: membersError } = await admin.from('students').select('id,photo_path,assigned_staff_id,batch_id').eq('user_id', ownerId).eq('batch_id', batchId);
     if (membersError) throw membersError;
     const eligible = (members ?? []).filter((m) => role.role === 'owner' || m.assigned_staff_id === uid);
     const ids = eligible.map((m) => m.id);
     if (!ids.length) return json({ error: 'No accessible members in this batch' }, 403);
     const { data: enrolled, error: enrollmentError } = await admin.from('member_face_enrollments').select('student_id,photo_path,provider_face_id').eq('owner_id', ownerId).eq('batch_id', batchId).in('student_id', ids);
     if (enrollmentError) throw enrollmentError;
-    const validFaces = new Map((enrolled ?? []).filter((e) => eligible.some((m) => m.id === e.student_id && m.photo_path === e.photo_path)).map((e) => [e.provider_face_id, e.student_id]));
+    const validFaces = new Map((enrolled ?? []).filter((e) => eligible.some((m) => m.id === e.student_id && m.photo_path === e.photo_path && m.batch_id === batchId)).map((e) => [e.provider_face_id, e.student_id]));
     if (!validFaces.size) return json({ error: 'No enrolled face photos in this batch. Save member photos first.' }, 422);
     await ensureCollection();
     const candidates: { memberId: string; similarity: number }[] = [];
@@ -111,7 +112,7 @@ Deno.serve(async (req) => {
           if (faceId) temporary.push(faceId);
         }
         for (const faceId of temporary) {
-          const searched = await client.send(new SearchFacesCommand({ CollectionId: collection, FaceId: faceId, FaceMatchThreshold: MATCH_THRESHOLD, MaxFaces: 20 }));
+          const searched = await client.send(new SearchFacesCommand({ CollectionId: collection, FaceId: faceId, FaceMatchThreshold: MATCH_THRESHOLD, MaxFaces: 100 }));
           const matches = (searched.FaceMatches ?? []).map((m) => ({ memberId: validFaces.get(m.Face?.FaceId ?? ''), similarity: m.Similarity ?? 0 })).filter((m): m is { memberId: string; similarity: number } => !!m.memberId).sort((a, b) => b.similarity - a.similarity);
           if (!matches.length || (matches[1] && matches[0].similarity - matches[1].similarity < MATCH_MARGIN)) unknownFaces++;
           else candidates.push(matches[0]);
