@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, IndianRupee, LogOut, Menu, X, UserPlus, Mail, Trash2, Settings as SettingsIcon, PlayCircle, Image as ImageIcon, CalendarClock, Fingerprint, Gift, LineChart } from "lucide-react";
+import { Users, IndianRupee, LogOut, Menu, X, UserPlus, Mail, Trash2, Settings as SettingsIcon, PlayCircle, Image as ImageIcon, CalendarClock, Camera, Gift, LineChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,7 @@ import { ModuleKey } from "@/contexts/StudioContext";
 
 const navItems: { to: string; label: string; icon: any; module: ModuleKey | null }[] = [
   { to: "/", label: "Members", icon: Users, module: "customers" },
-  { to: "/attendance", label: "Attendance", icon: Fingerprint, module: "attendance" },
+  { to: "/attendance", label: "Attendance", icon: Camera, module: "attendance" },
   { to: "/gallery", label: "My Gallery", icon: ImageIcon, module: "gallery" },
   { to: "/media", label: "Classes", icon: PlayCircle, module: "classes" },
   { to: "/insights", label: "Insights", icon: LineChart, module: "insights" },
