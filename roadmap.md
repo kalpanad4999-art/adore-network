@@ -6,3 +6,5 @@
 - [ ] Connect Amazon Rekognition credentials through a workspace administrator (blocked: this account cannot create a connection; no existing connection is available). Secure enrollment and batch-only matching are implemented but cannot run until connected; the unavailable state now falls back to review without a fatal 503.
 - [x] Separate live camera preview/capture/retake from the photo picker for member and batch photos; allow JPG, PNG, WEBP.
 - [x] Check member reference photos locally for one sufficiently large face before accepting them.
+- [x] Correct private member-photo upload/read/remove policies to check the storage object's path against the existing member and Owner/assigned Staff permissions; keep face-enrollment records service-only.
+- [ ] Verify Owner photo upload → enrollment → signed photo retrieval (blocked: Owner test session cannot be minted by this workspace role; AWS recognition is not connected). The current signed-in Staff account has attendance access but not member-editing access, so it must not upload reference photos.
