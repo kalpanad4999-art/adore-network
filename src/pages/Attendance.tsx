@@ -296,8 +296,8 @@ const Attendance = () => {
       </div>
 
 
-      <Tabs defaultValue="mark" className="w-full">
-        <TabsList>
+      <Tabs defaultValue="mark" className="w-full min-w-0">
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
           <TabsTrigger value="mark">Mark Attendance</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="reports">Reports & History</TabsTrigger>
@@ -305,9 +305,9 @@ const Attendance = () => {
 
         {/* MARK ---------------------------------------------------------- */}
         <TabsContent value="mark" className="space-y-4">
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Attendance method">
-            <Button variant={mode === "manual" ? "default" : "outline"} onClick={() => setMode("manual")}>Manual Attendance</Button>
-            <Button variant={mode === "photo" ? "default" : "outline"} onClick={() => setMode("photo")}><Camera className="mr-2 h-4 w-4" />AI Photo Attendance</Button>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Attendance method">
+            <Button className="h-auto min-h-10 whitespace-normal px-2 text-center" variant={mode === "manual" ? "default" : "outline"} onClick={() => setMode("manual")}>Manual Attendance</Button>
+            <Button className="h-auto min-h-10 whitespace-normal px-2 text-center" variant={mode === "photo" ? "default" : "outline"} onClick={() => setMode("photo")}><Camera className="mr-1 h-4 w-4 shrink-0" />AI Photo Attendance</Button>
           </div>
           {mode === "photo" && <p className="text-sm text-muted-foreground">Face recognition is not connected. Photos stay on this device; review and mark members manually until a recognition service is available.</p>}
           <Card>
