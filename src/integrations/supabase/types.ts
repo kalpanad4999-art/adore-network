@@ -1123,6 +1123,7 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          photo_path: string | null
           updated_at: string
           user_id: string
           weight_kg: number | null
@@ -1141,6 +1142,7 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          photo_path?: string | null
           updated_at?: string
           user_id: string
           weight_kg?: number | null
@@ -1159,6 +1161,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          photo_path?: string | null
           updated_at?: string
           user_id?: string
           weight_kg?: number | null
