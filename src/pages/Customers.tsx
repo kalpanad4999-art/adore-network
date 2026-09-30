@@ -32,7 +32,7 @@ interface Customer {
   batch_id: string | null;
   assigned_staff_id: string | null;
   custom_data: Record<string, string> | null;
-  photo_path: string | null;
+  photo_path?: string | null;
 }
 
 interface StaffOption { id: string; name: string }
@@ -294,7 +294,7 @@ const Customers = () => {
       setCustOpen(false); setEditingCustId(null); setActiveBatchId(null); setCustCustom({}); setMemberPhoto(null); setPhotoPreview(null);
       fetchCustomers();
     } catch (err: any) {
-      toast.error(err?.message || "Member saved, but the photo could not be uploaded. Please retry.");
+      toast.error(err?.message || "The member could not be saved. Please retry.");
       fetchCustomers();
     } finally { setSavingMember(false); }
   };
@@ -504,7 +504,7 @@ const Customers = () => {
                 <Button asChild type="button" variant="outline" size="sm"><label className="cursor-pointer"><Camera className="mr-2 h-4 w-4" />Take Photo<input className="sr-only" type="file" accept="image/jpeg,image/png" capture="user" onChange={(e) => selectMemberPhoto(e.target.files?.[0])} /></label></Button>
                 <Button asChild type="button" variant="outline" size="sm"><label className="cursor-pointer"><Upload className="mr-2 h-4 w-4" />Upload Photo<input className="sr-only" type="file" accept="image/jpeg,image/png" onChange={(e) => selectMemberPhoto(e.target.files?.[0])} /></label></Button>
               </div>
-              <p className="text-xs text-muted-foreground">{memberPhoto || (editingCustId && customers.find((c) => c.id === editingCustId)?.photo_path) ? "Face photo registered" : "No photo registered"}</p>
+              <p className="text-xs text-muted-foreground">{memberPhoto || (editingCustId && customers.find((c) => c.id === editingCustId)?.photo_path) ? "✓ Face Photo Registered" : "No photo registered"}</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Email</Label><Input type="email" value={custForm.email} onChange={(e) => setCustForm({ ...custForm, email: e.target.value })} maxLength={255} /></div>

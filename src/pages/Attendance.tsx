@@ -67,6 +67,7 @@ const Attendance = () => {
   const [recognizing, setRecognizing] = useState(false);
   const [recognizedIds, setRecognizedIds] = useState<string[]>([]);
   const [unknownFaces, setUnknownFaces] = useState(0);
+  const [recognitionSucceeded, setRecognitionSucceeded] = useState(false);
   const [decisions, setDecisions] = useState<Record<string, "present" | "absent">>({});
   const [submitOpen, setSubmitOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -163,7 +164,7 @@ const Attendance = () => {
   };
 
   const resetPhoto = () => {
-    setPhotoStep(1); setGroupPhotos([]); setDecisions({}); setRecognizedIds([]); setUnknownFaces(0);
+    setPhotoStep(1); setGroupPhotos([]); setDecisions({}); setRecognizedIds([]); setUnknownFaces(0); setRecognitionSucceeded(false);
   };
   const addPhotos = (files: FileList | null) => {
     if (!files) return;
@@ -179,10 +180,12 @@ const Attendance = () => {
         batchId: selectedBatch, date: photoDate, photos: groupPhotos, memberIds: studentsInBatch.map((s) => s.id),
       }), studentsInBatch.map((s) => s.id));
       setRecognizedIds(result.recognizedIds);
+      setRecognitionSucceeded(true);
       setUnknownFaces(result.unknownFaces);
       setDecisions(Object.fromEntries(result.recognizedIds.map((id) => [id, "present"])));
     } catch (err: any) {
       setRecognizedIds([]); setUnknownFaces(0); setDecisions({});
+      setRecognitionSucceeded(false);
       toast.error(err?.message || "Recognition unavailable. Review manually.");
     } finally {
       setRecognizing(false); setPhotoStep(3);
@@ -195,7 +198,7 @@ const Attendance = () => {
       const { data: existing, error: checkError } = await supabase.from("attendance").select("student_id").eq("user_id", ownerId).eq("batch_id", selectedBatch).eq("attendance_date", photoDate);
       if (checkError) throw checkError;
       if (existing?.length) throw new Error("Attendance already exists for this batch and date. No duplicate records were created.");
-      const rows = studentsInBatch.map((s) => ({ user_id: ownerId, batch_id: selectedBatch, student_id: s.id, attendance_date: photoDate, status: decisions[s.id], method: "ai_photo", marked_by: user?.id ?? null }));
+      const rows = studentsInBatch.map((s) => ({ user_id: ownerId, batch_id: selectedBatch, student_id: s.id, attendance_date: photoDate, status: decisions[s.id], method: recognitionSucceeded ? "ai_photo" : "manual", marked_by: user?.id ?? null }));
       const { error } = await supabase.from("attendance").insert(rows);
       if (error) throw error;
       toast.success("Attendance submitted"); setSubmitOpen(false); resetPhoto(); await loadData();
@@ -305,7 +308,7 @@ const Attendance = () => {
             <Button variant={mode === "manual" ? "default" : "outline"} onClick={() => setMode("manual")}>Manual Attendance</Button>
             <Button variant={mode === "photo" ? "default" : "outline"} onClick={() => setMode("photo")}><Camera className="mr-2 h-4 w-4" />AI Photo Attendance</Button>
           </div>
-          {mode === "photo" && <p className="text-sm text-muted-foreground">Take attendance using batch photos and AI face recognition.</p>}
+          {mode === "photo" && <p className="text-sm text-muted-foreground">Face recognition is not connected. Photos stay on this device; review and mark members manually until a recognition service is available.</p>}
           <Card>
             <CardHeader><CardTitle>Select Batch</CardTitle></CardHeader>
             <CardContent className="space-y-3">
@@ -337,9 +340,9 @@ const Attendance = () => {
               <div className="flex gap-2"><Button variant="outline" onClick={() => setPhotoStep(1)}>Back</Button><Button onClick={beginReview} disabled={!groupPhotos.length || recognizing || alreadySubmitted}>{recognizing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Recognize Faces</Button></div>
             </CardContent></Card>}
             {photoStep === 3 && <Card><CardHeader><CardTitle>Review Attendance · {batchName} · {fmtDate(photoDate)}</CardTitle></CardHeader><CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">{recognizedIds.length} recognized · {studentsInBatch.length - recognizedIds.length} not detected. Not detected does not mean absent.</p>
+              <p className="text-sm text-muted-foreground">{recognitionSucceeded ? `${recognizedIds.length} recognized · ${studentsInBatch.length - recognizedIds.length} not detected. Not detected does not mean absent.` : "Recognition unavailable · No members were identified. Review the photos and decide each member’s status manually."}</p>
               <div className="space-y-2">{studentsInBatch.map((s) => <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2"><div><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{recognizedIds.includes(s.id) ? "Recognized" : "Not detected"}{!s.photo_path && " · No reference photo"}</p></div><div className="flex gap-1"><Button size="sm" variant={decisions[s.id] === "present" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "present" }))}>Present</Button><Button size="sm" variant={decisions[s.id] === "absent" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "absent" }))}>Absent</Button></div></div>)}</div>
-              {unknownFaces > 0 && <p className="text-sm text-muted-foreground">{unknownFaces} unknown face(s) could not be matched with members in this batch. Ignore or review the photos; no member is added.</p>}
+              {unknownFaces > 0 && <div className="text-sm text-muted-foreground">{Array.from({ length: unknownFaces }, (_, i) => <p key={i}>? Face {i + 1} · Unknown <Button size="sm" variant="ghost" onClick={() => setUnknownFaces((n) => n - 1)}>Ignore</Button><Button size="sm" variant="ghost" onClick={() => setPhotoStep(2)}>Review photos</Button></p>)}</div>}
               <div className="border-t border-border pt-3 text-sm">Total {studentsInBatch.length} · Present {Object.values(decisions).filter((v) => v === "present").length} · Absent {Object.values(decisions).filter((v) => v === "absent").length} · Needs review {unresolved}</div>
               <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setPhotoStep(2)}>Back to photos</Button><Button disabled={unresolved > 0 || !studentsInBatch.length || alreadySubmitted} onClick={() => setSubmitOpen(true)}>Submit Attendance</Button></div>
             </CardContent></Card>}
