@@ -290,15 +290,18 @@ const Customers = () => {
         const path = `${workspaceId}/${data.id}/${crypto.randomUUID()}.${preparedPhoto.type === "image/png" ? "png" : "jpg"}`;
         const { error: uploadError } = await supabase.storage.from("member-photos").upload(path, preparedPhoto, { contentType: preparedPhoto.type });
         if (uploadError) throw uploadError;
+        const { error: linkError } = await supabase.from("students").update({ photo_path: path }).eq("id", data.id);
+        if (linkError) {
+          await supabase.storage.from("member-photos").remove([path]);
+          throw linkError;
+        }
         try {
-          // Enroll before linking, so a failed service never labels an unrecognized photo as registered.
           await enrollMemberFace(data.id, activeBatchId, path);
         } catch (enrollError) {
+          await supabase.from("students").update({ photo_path: data.photo_path }).eq("id", data.id);
           await supabase.storage.from("member-photos").remove([path]);
           throw enrollError;
         }
-        const { error: linkError } = await supabase.from("students").update({ photo_path: path }).eq("id", data.id);
-        if (linkError) throw linkError;
         if (data.photo_path) await supabase.storage.from("member-photos").remove([data.photo_path]);
       }
       toast.success(editingCustId ? "Member updated" : "Member added");
