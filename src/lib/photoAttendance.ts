@@ -5,6 +5,8 @@ export type RecognitionResult = {
   recognizedIds: string[];
   unknownFaces: number;
   matches?: { memberId: string; similarity: number }[];
+  available?: boolean;
+  unavailableReason?: string;
 };
 
 export type RecognitionRequest = {
@@ -49,7 +51,10 @@ export async function recognitionImage(file: File): Promise<File> {
 export async function enrollMemberFace(memberId: string, batchId: string, photoPath: string): Promise<void> {
   const form = new FormData();
   form.set("action", "enroll"); form.set("memberId", memberId); form.set("batchId", batchId); form.set("photoPath", photoPath);
-  await photoRequest(form);
+  const result = await photoRequest(form);
+  if (result.available === false || result.enrolled !== true) {
+    throw new Error(result.error || "Face recognition is not connected. The member photo was not enrolled.");
+  }
 }
 
 export const photoRecognitionService: PhotoRecognitionService = {
@@ -59,7 +64,16 @@ export const photoRecognitionService: PhotoRecognitionService = {
     form.set("action", "recognize"); form.set("batchId", request.batchId); form.set("date", request.date);
     for (const file of request.photos) form.append("photos", await recognitionImage(file));
     const result = await photoRequest(form);
+    if (result.available === false) {
+      return {
+        available: false,
+        unavailableReason: result.error || "Face recognition is not connected. Review photos and mark members manually.",
+        recognizedIds: [],
+        unknownFaces: 0,
+      };
+    }
     return uniqueBatchMatches({
+      available: true,
       matches: result.matches,
       recognizedIds: Array.isArray(result.matches) ? result.matches.map((m: { memberId: string }) => m.memberId) : [],
       unknownFaces: result.unknownFaces ?? 0,
@@ -70,6 +84,8 @@ export const photoRecognitionService: PhotoRecognitionService = {
 export const uniqueBatchMatches = (result: RecognitionResult, memberIds: string[]): RecognitionResult => {
   const allowed = new Set(memberIds);
   return {
+    available: result.available,
+    unavailableReason: result.unavailableReason,
     recognizedIds: [...new Set(result.recognizedIds)].filter((id) => allowed.has(id)),
     unknownFaces: Math.max(0, Math.floor(result.unknownFaces)),
     ...(result.matches ? { matches: result.matches.filter((m) => allowed.has(m.memberId)) } : {}),
