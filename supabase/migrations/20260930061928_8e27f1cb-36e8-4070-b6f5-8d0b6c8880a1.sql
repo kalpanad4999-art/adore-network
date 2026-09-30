@@ -1,0 +1,3 @@
+DROP POLICY IF EXISTS "Attendance staff reads owner students" ON public.students;
+DROP POLICY IF EXISTS "Workspace reads private member photos" ON storage.objects;
+CREATE POLICY "Workspace reads private member photos" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'member-photos' AND ((storage.foldername(name))[1] = auth.uid()::text AND public.has_role(auth.uid(), 'owner') OR ((storage.foldername(name))[1] = public.get_owner_id(auth.uid())::text AND EXISTS (SELECT 1 FROM public.students s WHERE s.id::text = (storage.foldername(name))[2] AND s.user_id::text = (storage.foldername(name))[1] AND s.assigned_staff_id = auth.uid() AND (public.staff_has_permission(auth.uid(), 'customers') OR public.staff_has_permission(auth.uid(), 'attendance'))))));
