@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudio } from "@/contexts/StudioContext";
@@ -12,9 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Fingerprint, CheckCircle2, XCircle, Search, Download, Printer, Cog, Loader2, Trash2, Settings2 } from "lucide-react";
+import { Camera, ImagePlus, CheckCircle2, Search, Download, Printer, Loader2, Trash2, Settings2, X } from "lucide-react";
 import { toast } from "sonner";
-import { verifyBiometric } from "@/lib/biometric";
+import { photoRecognitionService, uniqueBatchMatches } from "@/lib/photoAttendance";
 import { fmtDate, fmtDateTime } from "@/lib/date";
 
 const AUTO_DELETE_KEY = "attendance_auto_delete_days_v1";
@@ -33,7 +32,7 @@ const readAutoDeleteDays = (): AutoDeleteDays => {
 };
 
 type Batch = { id: string; name: string };
-type Student = { id: string; name: string; batch_id: string | null; email: string | null; phone: string | null };
+type Student = { id: string; name: string; batch_id: string | null; email: string | null; phone: string | null; photo_path: string | null };
 type AttendanceRow = {
   id: string;
   batch_id: string;
@@ -44,7 +43,7 @@ type AttendanceRow = {
   method: string;
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const OFFLINE_KEY = "attendance_offline_queue_v1";
 
 const readQueue = (): any[] => {
@@ -54,15 +53,23 @@ const writeQueue = (rows: any[]) => localStorage.setItem(OFFLINE_KEY, JSON.strin
 
 const Attendance = () => {
   const { user } = useAuth();
-  const { ownerId, isOwner, biometricEnabled, biometricCredentialId } = useStudio();
+  const { ownerId, isOwner } = useStudio();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [records, setRecords] = useState<AttendanceRow[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<string>("");
   const [selectedStudent, setSelectedStudent] = useState<string>("");
-  const [verifyOpen, setVerifyOpen] = useState(false);
-  const [verifying, setVerifying] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [mode, setMode] = useState<"manual" | "photo">("manual");
+  const [photoStep, setPhotoStep] = useState<1 | 2 | 3>(1);
+  const [photoDate, setPhotoDate] = useState(today());
+  const [groupPhotos, setGroupPhotos] = useState<File[]>([]);
+  const [recognizing, setRecognizing] = useState(false);
+  const [recognizedIds, setRecognizedIds] = useState<string[]>([]);
+  const [unknownFaces, setUnknownFaces] = useState(0);
+  const [decisions, setDecisions] = useState<Record<string, "present" | "absent">>({});
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [filterDate, setFilterDate] = useState(today());
   const [filterBatch, setFilterBatch] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -84,7 +91,7 @@ const Attendance = () => {
     }
     const [b, s, a] = await Promise.all([
       supabase.from("batches").select("id,name").eq("user_id", ownerId).order("name"),
-      supabase.from("students").select("id,name,batch_id,email,phone").eq("user_id", ownerId).order("name"),
+      supabase.from("students").select("id,name,batch_id,email,phone,photo_path").eq("user_id", ownerId).order("name"),
       supabase.from("attendance" as any).select("*").eq("user_id", ownerId).order("marked_at", { ascending: false }).limit(2000),
     ]);
     setBatches((b.data || []) as Batch[]);
@@ -125,7 +132,7 @@ const Attendance = () => {
     [students, selectedBatch]
   );
 
-  const markPresent = async (studentId: string, method: "biometric_sim" | "manual") => {
+  const markPresent = async (studentId: string, method: "manual") => {
     if (!ownerId || !selectedBatch) return;
     const row = {
       user_id: ownerId,
@@ -155,31 +162,46 @@ const Attendance = () => {
     loadData();
   };
 
-  const openVerify = (studentId: string) => {
-    if (!selectedBatch) { toast.error("Select a batch first"); return; }
-    setSelectedStudent(studentId);
-    setVerifyOpen(true);
+  const resetPhoto = () => {
+    setPhotoStep(1); setGroupPhotos([]); setDecisions({}); setRecognizedIds([]); setUnknownFaces(0);
   };
-
-  const runVerification = async () => {
-    setVerifying(true);
+  const addPhotos = (files: FileList | null) => {
+    if (!files) return;
+    const accepted = Array.from(files).filter((f) => ["image/jpeg", "image/png"].includes(f.type) && f.size <= 5 * 1024 * 1024);
+    if (accepted.length !== files.length) toast.error("Use JPG or PNG photos under 5 MB each");
+    setGroupPhotos((prev) => [...prev, ...accepted].slice(0, 10));
+  };
+  const beginReview = async () => {
+    if (!groupPhotos.length) { toast.error("Add at least one batch photo"); return; }
+    setRecognizing(true);
     try {
-      // Simulated biometric verify. If owner has WebAuthn credential registered,
-      // use device biometric for real; otherwise fall back to simulated success.
-      let ok = true;
-      if (biometricEnabled && biometricCredentialId) {
-        ok = await verifyBiometric(biometricCredentialId);
-      } else {
-        await new Promise((r) => setTimeout(r, 900));
-      }
-      if (!ok) { toast.error("Fingerprint verification failed"); return; }
-      await markPresent(selectedStudent, "biometric_sim");
-      setVerifyOpen(false);
-    } catch (e: any) {
-      toast.error(e?.message || "Verification error");
+      const result = uniqueBatchMatches(await photoRecognitionService.recognize({
+        batchId: selectedBatch, date: photoDate, photos: groupPhotos, memberIds: studentsInBatch.map((s) => s.id),
+      }), studentsInBatch.map((s) => s.id));
+      setRecognizedIds(result.recognizedIds);
+      setUnknownFaces(result.unknownFaces);
+      setDecisions(Object.fromEntries(result.recognizedIds.map((id) => [id, "present"])));
+    } catch (err: any) {
+      setRecognizedIds([]); setUnknownFaces(0); setDecisions({});
+      toast.error(err?.message || "Recognition unavailable. Review manually.");
     } finally {
-      setVerifying(false);
+      setRecognizing(false); setPhotoStep(3);
     }
+  };
+  const submitPhotoAttendance = async () => {
+    if (!ownerId || !selectedBatch || Object.keys(decisions).length !== studentsInBatch.length) return;
+    setSubmitting(true);
+    try {
+      const { data: existing, error: checkError } = await supabase.from("attendance").select("student_id").eq("user_id", ownerId).eq("batch_id", selectedBatch).eq("attendance_date", photoDate);
+      if (checkError) throw checkError;
+      if (existing?.length) throw new Error("Attendance already exists for this batch and date. No duplicate records were created.");
+      const rows = studentsInBatch.map((s) => ({ user_id: ownerId, batch_id: selectedBatch, student_id: s.id, attendance_date: photoDate, status: decisions[s.id], method: "ai_photo", marked_by: user?.id ?? null }));
+      const { error } = await supabase.from("attendance").insert(rows);
+      if (error) throw error;
+      toast.success("Attendance submitted"); setSubmitOpen(false); resetPhoto(); await loadData();
+    } catch (err: any) {
+      toast.error(err?.code === "23505" ? "Attendance already exists for this date" : err?.message || "Could not submit attendance");
+    } finally { setSubmitting(false); }
   };
 
   // Dashboard stats for filterDate + filterBatch
@@ -189,7 +211,7 @@ const Attendance = () => {
     const presentIds = new Set(dateRecs.filter((r) => r.status === "present").map((r) => r.student_id));
     const total = roster.length;
     const present = roster.filter((s) => presentIds.has(s.id)).length;
-    const absent = Math.max(total - present, 0);
+    const absent = roster.filter((s) => dateRecs.some((r) => r.student_id === s.id && r.status === "absent")).length;
     const pct = total ? Math.round((present / total) * 100) : 0;
     return { total, present, absent, pct };
   }, [records, students, filterDate, filterBatch]);
@@ -245,14 +267,16 @@ const Attendance = () => {
     toast.success(v === 0 ? "Auto delete disabled" : `Auto delete set to ${AUTO_DELETE_OPTIONS.find((o) => o.value === v)?.label}`);
   };
 
-  const selectedStudentObj = students.find((s) => s.id === selectedStudent);
+  const batchName = batches.find((b) => b.id === selectedBatch)?.name || "selected batch";
+  const alreadySubmitted = records.some((r) => r.batch_id === selectedBatch && r.attendance_date === photoDate);
+  const unresolved = studentsInBatch.filter((s) => !decisions[s.id]).length;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl">Attendance</h1>
-          <p className="text-sm text-muted-foreground">Mark and track attendance batch-wise. Fingerprint-ready.</p>
+          <p className="text-sm text-muted-foreground">Mark and track attendance batch-wise.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {queueCount > 0 && <Badge variant="secondary">{queueCount} queued (offline)</Badge>}
@@ -262,11 +286,6 @@ const Attendance = () => {
           {isOwner && (
             <Button variant="outline" size="sm" onClick={() => setDeleteSettingsOpen(true)}>
               <Settings2 className="h-4 w-4 mr-2" /> Delete Settings
-            </Button>
-          )}
-          {isOwner && (
-            <Button asChild variant="outline" size="sm">
-              <Link to="/settings/biometric"><Cog className="h-4 w-4 mr-2" /> Biometric Device</Link>
             </Button>
           )}
         </div>
@@ -282,28 +301,55 @@ const Attendance = () => {
 
         {/* MARK ---------------------------------------------------------- */}
         <TabsContent value="mark" className="space-y-4">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Attendance method">
+            <Button variant={mode === "manual" ? "default" : "outline"} onClick={() => setMode("manual")}>Manual Attendance</Button>
+            <Button variant={mode === "photo" ? "default" : "outline"} onClick={() => setMode("photo")}><Camera className="mr-2 h-4 w-4" />AI Photo Attendance</Button>
+          </div>
+          {mode === "photo" && <p className="text-sm text-muted-foreground">Take attendance using batch photos and AI face recognition.</p>}
           <Card>
             <CardHeader><CardTitle>Select Batch</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+               <Select value={selectedBatch} onValueChange={(v) => { setSelectedBatch(v); resetPhoto(); }}>
                 <SelectTrigger className="max-w-md"><SelectValue placeholder="Choose a batch" /></SelectTrigger>
                 <SelectContent>
                   {batches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {mode === "photo" && <div className="max-w-xs space-y-1"><Label htmlFor="photo-date">Date</Label><Input id="photo-date" type="date" value={photoDate} onChange={(e) => { setPhotoDate(e.target.value); resetPhoto(); }} /></div>}
               {selectedBatch && (
                 <p className="text-xs text-muted-foreground">
-                  {studentsInBatch.length} student(s) in this batch
+                  {studentsInBatch.length} member(s) in this batch{mode === "photo" && ` · ${studentsInBatch.filter((s) => s.photo_path).length} with photos`}
                 </p>
               )}
+              {mode === "photo" && selectedBatch && photoStep === 1 && <Button disabled={!studentsInBatch.length || !photoDate || alreadySubmitted} onClick={() => setPhotoStep(2)}>Continue</Button>}
+              {mode === "photo" && alreadySubmitted && <p role="alert" className="text-sm text-destructive">Attendance already submitted for this batch and date.</p>}
             </CardContent>
           </Card>
 
-          {selectedBatch && (
+          {mode === "photo" && selectedBatch && photoStep >= 2 && <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">{["Select Batch", "Capture Photos", "Review Attendance", "Confirm & Submit"].map((s, i) => <span key={s} className={photoStep >= Math.min(i + 1, 3) ? "text-foreground" : ""}>{i > 0 && "  →  "}{s}</span>)}</p>
+            {photoStep === 2 && <Card><CardHeader><CardTitle>Capture Batch Photos</CardTitle></CardHeader><CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Button asChild variant="outline"><label className="cursor-pointer"><Camera className="mr-2 h-4 w-4" />Open Camera<input className="sr-only" type="file" accept="image/jpeg,image/png" capture="environment" onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} /></label></Button>
+                <Button asChild variant="outline"><label className="cursor-pointer"><ImagePlus className="mr-2 h-4 w-4" />Upload Photos<input className="sr-only" type="file" accept="image/jpeg,image/png" multiple onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} /></label></Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{groupPhotos.map((file, i) => <PhotoThumbnail key={`${file.name}-${i}`} file={file} onRemove={() => setGroupPhotos((p) => p.filter((_, n) => n !== i))} />)}</div>
+              <div className="flex gap-2"><Button variant="outline" onClick={() => setPhotoStep(1)}>Back</Button><Button onClick={beginReview} disabled={!groupPhotos.length || recognizing || alreadySubmitted}>{recognizing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Recognize Faces</Button></div>
+            </CardContent></Card>}
+            {photoStep === 3 && <Card><CardHeader><CardTitle>Review Attendance · {batchName} · {fmtDate(photoDate)}</CardTitle></CardHeader><CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">{recognizedIds.length} recognized · {studentsInBatch.length - recognizedIds.length} not detected. Not detected does not mean absent.</p>
+              <div className="space-y-2">{studentsInBatch.map((s) => <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2"><div><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{recognizedIds.includes(s.id) ? "Recognized" : "Not detected"}{!s.photo_path && " · No reference photo"}</p></div><div className="flex gap-1"><Button size="sm" variant={decisions[s.id] === "present" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "present" }))}>Present</Button><Button size="sm" variant={decisions[s.id] === "absent" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "absent" }))}>Absent</Button></div></div>)}</div>
+              {unknownFaces > 0 && <p className="text-sm text-muted-foreground">{unknownFaces} unknown face(s) could not be matched with members in this batch. Ignore or review the photos; no member is added.</p>}
+              <div className="border-t border-border pt-3 text-sm">Total {studentsInBatch.length} · Present {Object.values(decisions).filter((v) => v === "present").length} · Absent {Object.values(decisions).filter((v) => v === "absent").length} · Needs review {unresolved}</div>
+              <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setPhotoStep(2)}>Back to photos</Button><Button disabled={unresolved > 0 || !studentsInBatch.length || alreadySubmitted} onClick={() => setSubmitOpen(true)}>Submit Attendance</Button></div>
+            </CardContent></Card>}
+          </div>}
+
+          {mode === "manual" && selectedBatch && (
             <Card>
               <CardHeader className="flex-row items-center justify-between space-y-0">
                 <CardTitle>Members</CardTitle>
-                {isOwner && (
+                  {(
                   <Button variant="outline" size="sm" onClick={() => setManualOpen(true)}>
                     Manual Mark
                   </Button>
@@ -325,8 +371,8 @@ const Attendance = () => {
                           {marked ? (
                             <Badge variant="secondary" className="gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Present</Badge>
                           ) : (
-                            <Button size="sm" onClick={() => openVerify(s.id)}>
-                              <Fingerprint className="h-4 w-4 mr-1" /> Verify
+                             <Button size="sm" onClick={() => { setSelectedStudent(s.id); setManualOpen(true); }}>
+                               Mark Present
                             </Button>
                           )}
                         </div>
@@ -444,7 +490,7 @@ const Attendance = () => {
                         <td className="py-2 pr-3">
                           <Badge variant={r.status === "present" ? "secondary" : "outline"}>{r.status}</Badge>
                         </td>
-                        <td className="py-2 pr-3 text-xs text-muted-foreground">{r.method}</td>
+                        <td className="py-2 pr-3 text-xs text-muted-foreground">{r.method === "ai_photo" ? "AI Photo" : r.method === "manual" ? "Manual" : r.method}</td>
                         <td className="py-2 pr-3 text-xs">{fmtDateTime(r.marked_at)}</td>
                         {isOwner && (
                           <td className="py-2 pr-3 text-right">
@@ -466,38 +512,12 @@ const Attendance = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Verify fingerprint dialog */}
-      <Dialog open={verifyOpen} onOpenChange={setVerifyOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Verify fingerprint</DialogTitle>
-            <DialogDescription>
-              {selectedStudentObj?.name ?? "Member"} — place finger on the connected device.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center py-6 gap-3">
-            <div className={`h-24 w-24 rounded-full flex items-center justify-center border-2 ${verifying ? "border-primary animate-pulse" : "border-border"}`}>
-              {verifying ? <Loader2 className="h-10 w-10 animate-spin text-primary" /> : <Fingerprint className="h-12 w-12 text-primary" />}
-            </div>
-            <p className="text-xs text-muted-foreground text-center">
-              {biometricEnabled ? "Uses your device biometric." : "Simulated verification (no physical device connected)."}
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setVerifyOpen(false)} disabled={verifying}>Cancel</Button>
-            <Button onClick={runVerification} disabled={verifying}>
-              {verifying ? "Verifying…" : "Verify & Mark Present"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Manual mark dialog (owner only) */}
+      {/* Manual mark dialog */}
       <Dialog open={manualOpen} onOpenChange={setManualOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Manual attendance</DialogTitle>
-            <DialogDescription>Owner override — mark a student present without fingerprint.</DialogDescription>
+            <DialogDescription>Select a member to mark present.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Label>Member</Label>
@@ -516,6 +536,10 @@ const Attendance = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={submitOpen} onOpenChange={setSubmitOpen}>
+        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Submit attendance for {batchName}?</AlertDialogTitle><AlertDialogDescription>{fmtDate(photoDate)} · {Object.values(decisions).filter((v) => v === "present").length} present · {Object.values(decisions).filter((v) => v === "absent").length} absent. Only confirmed decisions will be saved.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel><Button disabled={submitting} onClick={submitPhotoAttendance}>{submitting ? "Submitting…" : "Confirm & Submit"}</Button></AlertDialogFooter></AlertDialogContent>
+      </AlertDialog>
 
       {/* Manual delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
@@ -579,3 +603,9 @@ const StatCard = ({ label, value, accent }: { label: string; value: string | num
 );
 
 export default Attendance;
+
+const PhotoThumbnail = ({ file, onRemove }: { file: File; onRemove: () => void }) => {
+  const [url, setUrl] = useState("");
+  useEffect(() => { const next = URL.createObjectURL(file); setUrl(next); return () => URL.revokeObjectURL(next); }, [file]);
+  return <div className="relative"><img src={url} alt={file.name} className="aspect-square w-full rounded-md border border-border object-cover" /><Button aria-label={`Remove ${file.name}`} title="Remove photo" type="button" variant="secondary" size="icon" className="absolute right-1 top-1 h-8 w-8" onClick={onRemove}><X className="h-4 w-4" /></Button></div>;
+};
