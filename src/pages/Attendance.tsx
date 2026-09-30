@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Camera, ImagePlus, CheckCircle2, Search, Download, Printer, Loader2, Trash2, Settings2, X } from "lucide-react";
 import { toast } from "sonner";
 import { photoRecognitionService, uniqueBatchMatches } from "@/lib/photoAttendance";
+import PhotoCameraDialog from "@/components/PhotoCameraDialog";
 import { fmtDate, fmtDateTime } from "@/lib/date";
 
 const AUTO_DELETE_KEY = "attendance_auto_delete_days_v1";
@@ -65,6 +66,7 @@ const Attendance = () => {
   const [photoDate, setPhotoDate] = useState(today());
   const [photoDateText, setPhotoDateText] = useState(fmtDate(today()));
   const [groupPhotos, setGroupPhotos] = useState<File[]>([]);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [recognizing, setRecognizing] = useState(false);
   const [recognizedIds, setRecognizedIds] = useState<string[]>([]);
   const [unknownFaces, setUnknownFaces] = useState(0);
@@ -167,10 +169,11 @@ const Attendance = () => {
   const resetPhoto = () => {
     setPhotoStep(1); setGroupPhotos([]); setDecisions({}); setRecognizedIds([]); setUnknownFaces(0); setRecognitionSucceeded(false);
   };
-  const addPhotos = (files: FileList | null) => {
+  const addPhotos = (files: File[] | FileList | null) => {
     if (!files) return;
-    const accepted = Array.from(files).filter((f) => ["image/jpeg", "image/png"].includes(f.type) && f.size <= 5 * 1024 * 1024);
-    if (accepted.length !== files.length) toast.error("Use JPG or PNG photos under 5 MB each");
+    const accepted = Array.from(files).filter((f) => ["image/jpeg", "image/png", "image/webp"].includes(f.type) && f.size <= 5 * 1024 * 1024);
+    if (accepted.length !== files.length) toast.error("Use JPG, PNG or WEBP photos under 5 MB each");
+    if (groupPhotos.length + accepted.length > 10) toast.error("You can add up to 10 photos");
     setGroupPhotos((prev) => [...prev, ...accepted].slice(0, 10));
   };
   const beginReview = async () => {
@@ -334,8 +337,8 @@ const Attendance = () => {
             <p className="text-sm text-muted-foreground">{["Select Batch", "Capture Photos", "Review Attendance", "Confirm & Submit"].map((s, i) => <span key={s} className={photoStep >= Math.min(i + 1, 3) ? "text-foreground" : ""}>{i > 0 && "  →  "}{s}</span>)}</p>
             {photoStep === 2 && <Card><CardHeader><CardTitle>Capture Batch Photos</CardTitle></CardHeader><CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
-                <Button asChild variant="outline"><label className="cursor-pointer"><Camera className="mr-2 h-4 w-4" />Open Camera<input className="sr-only" type="file" accept="image/jpeg,image/png" capture="environment" onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} /></label></Button>
-                <Button asChild variant="outline"><label className="cursor-pointer"><ImagePlus className="mr-2 h-4 w-4" />Upload Photos<input className="sr-only" type="file" accept="image/jpeg,image/png" multiple onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} /></label></Button>
+                 <Button type="button" variant="outline" onClick={() => setCameraOpen(true)}><Camera className="mr-2 h-4 w-4" />Open Camera</Button>
+                 <Button asChild variant="outline"><label className="cursor-pointer"><ImagePlus className="mr-2 h-4 w-4" />Upload Photos<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} /></label></Button>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{groupPhotos.map((file, i) => <PhotoThumbnail key={`${file.name}-${i}`} file={file} onRemove={() => setGroupPhotos((p) => p.filter((_, n) => n !== i))} />)}</div>
               <div className="flex gap-2"><Button variant="outline" onClick={() => setPhotoStep(1)}>Back</Button><Button onClick={beginReview} disabled={!groupPhotos.length || recognizing || alreadySubmitted}>{recognizing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Recognize Faces</Button></div>
@@ -515,6 +518,8 @@ const Attendance = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <PhotoCameraDialog open={cameraOpen} onOpenChange={setCameraOpen} title="Capture Batch Photo" onUsePhoto={(photo) => addPhotos([photo])} />
 
       {/* Manual mark dialog */}
       <Dialog open={manualOpen} onOpenChange={setManualOpen}>

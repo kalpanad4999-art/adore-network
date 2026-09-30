@@ -18,6 +18,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { fmtDate } from "@/lib/date";
 import CustomerDetailsTable from "@/components/CustomerDetailsTable";
+import PhotoCameraDialog from "@/components/PhotoCameraDialog";
+import { validateReferencePhoto } from "@/lib/referencePhoto";
 
 
 interface Customer {
@@ -86,6 +88,8 @@ const Customers = () => {
   const [memberPhoto, setMemberPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [savingMember, setSavingMember] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [checkingPhoto, setCheckingPhoto] = useState(false);
 
   useEffect(() => {
     if (!memberPhoto) return;
@@ -246,6 +250,7 @@ const Customers = () => {
 
   const submitCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (checkingPhoto || savingMember) return;
     if (!workspaceId || !activeBatchId) return;
     if (custForm.phone && !phoneRegex.test(custForm.phone.trim())) { toast.error("Enter a valid phone"); return; }
     const heightNum = custForm.height ? Number(custForm.height) : null;
@@ -280,7 +285,7 @@ const Customers = () => {
         : await supabase.from("students").insert(payload).select("id,photo_path").single();
       if (error || !data) throw error ?? new Error("Could not save member");
       if (memberPhoto) {
-        const path = `${workspaceId}/${data.id}/${crypto.randomUUID()}.${memberPhoto.type === "image/png" ? "png" : "jpg"}`;
+        const path = `${workspaceId}/${data.id}/${crypto.randomUUID()}.${memberPhoto.type === "image/png" ? "png" : memberPhoto.type === "image/webp" ? "webp" : "jpg"}`;
         const { error: uploadError } = await supabase.storage.from("member-photos").upload(path, memberPhoto, { contentType: memberPhoto.type });
         if (uploadError) throw uploadError;
         const { error: linkError } = await supabase.from("students").update({ photo_path: path }).eq("id", data.id);
@@ -299,12 +304,17 @@ const Customers = () => {
     } finally { setSavingMember(false); }
   };
 
-  const selectMemberPhoto = (file?: File) => {
+  const selectMemberPhoto = async (file?: File) => {
     if (!file) return;
-    if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 5 * 1024 * 1024) {
-      toast.error("Choose a JPG or PNG photo under 5 MB"); return;
+    setCheckingPhoto(true);
+    try {
+      await validateReferencePhoto(file);
+      setMemberPhoto(file);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not check this photo");
+    } finally {
+      setCheckingPhoto(false);
     }
-    setMemberPhoto(file);
   };
 
   const confirmDeleteCustomer = async () => {
@@ -498,13 +508,13 @@ const Customers = () => {
           <form onSubmit={submitCustomer} className="space-y-4">
             <div className="space-y-2"><Label>Name</Label><Input value={custForm.name} onChange={(e) => setCustForm({ ...custForm, name: e.target.value })} maxLength={100} required /></div>
             <div className="space-y-2">
-              <Label>Member Photo</Label>
+              <Label>AI Face Recognition Photo</Label>
               {photoPreview && <img src={photoPreview} alt="Member photo preview" className="h-24 w-24 rounded-md border border-border object-cover" />}
               <div className="flex flex-wrap gap-2">
-                <Button asChild type="button" variant="outline" size="sm"><label className="cursor-pointer"><Camera className="mr-2 h-4 w-4" />Take Photo<input className="sr-only" type="file" accept="image/jpeg,image/png" capture="user" onChange={(e) => selectMemberPhoto(e.target.files?.[0])} /></label></Button>
-                <Button asChild type="button" variant="outline" size="sm"><label className="cursor-pointer"><Upload className="mr-2 h-4 w-4" />Upload Photo<input className="sr-only" type="file" accept="image/jpeg,image/png" onChange={(e) => selectMemberPhoto(e.target.files?.[0])} /></label></Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setCameraOpen(true)}><Camera className="mr-2 h-4 w-4" />Take Photo</Button>
+                <Button asChild variant="outline" size="sm"><label className="cursor-pointer"><Upload className="mr-2 h-4 w-4" />Upload Photo<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { selectMemberPhoto(e.target.files?.[0]); e.target.value = ""; }} /></label></Button>
               </div>
-              <p className="text-xs text-muted-foreground">{memberPhoto || (editingCustId && customers.find((c) => c.id === editingCustId)?.photo_path) ? "✓ Face Photo Registered" : "No photo registered"}</p>
+              <p className="text-xs text-muted-foreground">{checkingPhoto ? "Checking face…" : memberPhoto ? "✓ Face Photo Added — save member to keep it" : editingCustId && customers.find((c) => c.id === editingCustId)?.photo_path ? "✓ Face Photo Added" : "⚠ Face Photo Not Added"}</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Email</Label><Input type="email" value={custForm.email} onChange={(e) => setCustForm({ ...custForm, email: e.target.value })} maxLength={255} /></div>
@@ -527,10 +537,12 @@ const Customers = () => {
                 />
               </div>
             ))}
-            <Button type="submit" disabled={savingMember} className="w-full">{savingMember ? "Saving…" : editingCustId ? "Update" : "Add"} Customer</Button>
+            <Button type="submit" disabled={savingMember || checkingPhoto} className="w-full">{savingMember ? "Saving…" : editingCustId ? "Update" : "Add"} Customer</Button>
           </form>
         </DialogContent>
       </Dialog>
+
+      <PhotoCameraDialog open={cameraOpen} onOpenChange={setCameraOpen} title="Take Member Photo" facingMode="user" onUsePhoto={selectMemberPhoto} />
 
       {/* QR dialog */}
       <Dialog open={!!qrBatch} onOpenChange={(v) => { if (!v) setQrBatch(null); }}>
