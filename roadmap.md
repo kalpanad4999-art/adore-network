@@ -8,3 +8,4 @@
 - [x] Check member reference photos locally for one sufficiently large face before accepting them.
 - [x] Correct private member-photo upload/read/remove policies to check the storage object's path against the existing member and Owner/assigned Staff permissions; keep face-enrollment records service-only.
 - [ ] Verify Owner photo upload → enrollment → signed photo retrieval (blocked: Owner test session cannot be minted by this workspace role; AWS recognition is not connected). The current signed-in Staff account has attendance access but not member-editing access, so it must not upload reference photos.
+- [ ] Verify one real member photo → private provider face enrollment → group-camera recognition → reviewed attendance (blocked: AWS recognition credentials are not configured; no saved reference photos or face enrollments exist). Diagnostic steps now report errors in browser/server logs without exposing private images or credentials.

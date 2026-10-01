@@ -21,17 +21,36 @@ export interface PhotoRecognitionService {
 }
 
 async function photoRequest(form: FormData) {
-  const { data: session } = await supabase.auth.getSession();
+  const action = form.get("action");
+  console.info("[face-recognition] Starting", { action });
+  const { data: session, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) { console.error("[face-recognition] Session lookup failed", sessionError); throw sessionError; }
   if (!session.session?.access_token) throw new Error("Sign in to use face recognition");
   const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/photo-recognition`;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${session.session.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-    body: form,
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "Face recognition unavailable. Review photos and mark members manually.");
-  return data;
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.session.access_token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+      body: form,
+    });
+    const text = await response.text();
+    let data: { error?: string; code?: string; available?: boolean; enrolled?: boolean; matches?: { memberId: string; similarity: number }[]; unknownFaces?: number };
+    try { data = JSON.parse(text); }
+    catch (parseError) {
+      console.error("[face-recognition] Invalid service response", { action, status: response.status, parseError, body: text.slice(0, 500) });
+      throw new Error(`Face recognition returned an invalid response (HTTP ${response.status})`);
+    }
+    if (!response.ok || data.available === false) {
+      console.error("[face-recognition] Service unavailable", { action, status: response.status, code: data.code, error: data.error });
+    } else {
+      console.info("[face-recognition] Service completed", { action, enrolled: data.enrolled, matchCount: data.matches?.length, unknownFaces: data.unknownFaces });
+    }
+    if (!response.ok) throw new Error(`[${data.code || response.status}] ${data.error || "Face recognition unavailable"}`);
+    return data;
+  } catch (error) {
+    console.error("[face-recognition] Request failed", { action, error });
+    throw error;
+  }
 }
 
 /** Rekognition accepts JPEG/PNG; normalize WebP on device without identifying anyone. */
@@ -53,7 +72,7 @@ export async function enrollMemberFace(memberId: string, batchId: string, photoP
   form.set("action", "enroll"); form.set("memberId", memberId); form.set("batchId", batchId); form.set("photoPath", photoPath);
   const result = await photoRequest(form);
   if (result.available === false || result.enrolled !== true) {
-    throw new Error(result.error || "Face recognition is not connected. The member photo was not enrolled.");
+    throw new Error(`[${result.code || "ENROLLMENT_FAILED"}] ${result.error || "The member photo was not enrolled."}`);
   }
 }
 
@@ -67,7 +86,7 @@ export const photoRecognitionService: PhotoRecognitionService = {
     if (result.available === false) {
       return {
         available: false,
-        unavailableReason: result.error || "Face recognition is not connected. Review photos and mark members manually.",
+        unavailableReason: `[${result.code || "UNAVAILABLE"}] ${result.error || "Face recognition unavailable. Review photos and mark members manually."}`,
         recognizedIds: [],
         unknownFaces: 0,
       };

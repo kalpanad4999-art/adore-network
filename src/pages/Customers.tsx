@@ -238,9 +238,11 @@ const Customers = () => {
   const editCustomer = (c: Customer) => {
     setMemberPhoto(null); setPhotoPreview(null);
     if (c.photo_path) {
-      supabase.storage.from("member-photos").createSignedUrl(c.photo_path, 300).then(({ data }) => {
+      supabase.storage.from("member-photos").createSignedUrl(c.photo_path, 300).then(({ data, error }) => {
+        if (error) console.error("[face-photo] Signed photo URL creation failed", { memberId: c.id, error });
+        else console.info("[face-photo] Signed photo URL created", { memberId: c.id });
         setPhotoPreview(data?.signedUrl ?? null);
-      });
+      }).catch((error) => console.error("[face-photo] Signed photo URL lookup failed", { memberId: c.id, error }));
     }
     setEditingCustId(c.id);
     setActiveBatchId(c.batch_id);
@@ -289,15 +291,20 @@ const Customers = () => {
         const preparedPhoto = await recognitionImage(memberPhoto);
         const path = `${workspaceId}/${data.id}/${crypto.randomUUID()}.${preparedPhoto.type === "image/png" ? "png" : "jpg"}`;
         const { error: uploadError } = await supabase.storage.from("member-photos").upload(path, preparedPhoto, { contentType: preparedPhoto.type });
-        if (uploadError) throw uploadError;
+        if (uploadError) { console.error("[face-photo] Private storage upload failed", { memberId: data.id, error: uploadError }); throw uploadError; }
+        console.info("[face-photo] Private storage upload succeeded", { memberId: data.id, bytes: preparedPhoto.size });
         const { error: linkError } = await supabase.from("students").update({ photo_path: path }).eq("id", data.id);
         if (linkError) {
+          console.error("[face-photo] Member photo link failed", { memberId: data.id, error: linkError });
           await supabase.storage.from("member-photos").remove([path]);
           throw linkError;
         }
+        console.info("[face-photo] Member photo linked; requesting private face enrollment", { memberId: data.id, batchId: activeBatchId });
         try {
           await enrollMemberFace(data.id, activeBatchId, path);
+          console.info("[face-photo] Face enrolled against member", { memberId: data.id });
         } catch (enrollError) {
+          console.error("[face-photo] Face enrollment failed; reverting new photo", { memberId: data.id, error: enrollError });
           await supabase.from("students").update({ photo_path: data.photo_path }).eq("id", data.id);
           await supabase.storage.from("member-photos").remove([path]);
           throw enrollError;
@@ -308,6 +315,7 @@ const Customers = () => {
       setCustOpen(false); setEditingCustId(null); setActiveBatchId(null); setCustCustom({}); setMemberPhoto(null); setPhotoPreview(null);
       fetchCustomers();
     } catch (err: any) {
+      console.error("[face-photo] Member save failed", err);
       toast.error(err?.message || "The member could not be saved. Please retry.");
       fetchCustomers();
     } finally { setSavingMember(false); }
@@ -320,6 +328,7 @@ const Customers = () => {
       await validateReferencePhoto(file);
       setMemberPhoto(file);
     } catch (error) {
+      console.error("[face-photo] Selected photo rejected", error);
       toast.error(error instanceof Error ? error.message : "Could not check this photo");
     } finally {
       setCheckingPhoto(false);
