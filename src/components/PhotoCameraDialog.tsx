@@ -19,12 +19,15 @@ export default function PhotoCameraDialog({ open, onOpenChange, onUsePhoto, titl
     setError("");
     const start = async () => {
       try {
+        console.info("[face-camera] Checking camera access", { secureContext: window.isSecureContext, facingMode });
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("Camera unavailable. Use Upload Photo instead.");
         const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } } });
         if (!active) { stream.getTracks().forEach((track) => track.stop()); return; }
         streamRef.current = stream;
         if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+        console.info("[face-camera] Camera stream ready", { videoTracks: stream.getVideoTracks().length });
       } catch (err) {
+        console.error("[face-camera] getUserMedia or video playback failed", err);
         if (active) setError(err instanceof Error && err.name === "NotAllowedError" ? "Camera permission denied. Allow camera access or upload a photo instead." : "Camera unavailable. Upload a photo instead.");
       }
     };
@@ -47,6 +50,7 @@ export default function PhotoCameraDialog({ open, onOpenChange, onUsePhoto, titl
     canvas.getContext("2d")?.drawImage(video, 0, 0);
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
     if (!blob) { setError("Could not capture this photo. Please try again."); return; }
+    console.info("[face-camera] Photo captured", { width: canvas.width, height: canvas.height, bytes: blob.size });
     setCaptured(new File([blob], `camera-${Date.now()}.jpg`, { type: "image/jpeg" }));
   };
 

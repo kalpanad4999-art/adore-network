@@ -185,6 +185,7 @@ const Attendance = () => {
         batchId: selectedBatch, date: photoDate, photos: groupPhotos, memberIds: studentsInBatch.map((s) => s.id),
       }), studentsInBatch.map((s) => s.id));
       if (result.available === false) {
+        console.error("[face-recognition] Batch recognition unavailable", { batchId: selectedBatch, reason: result.unavailableReason });
         setRecognizedIds([]); setMatchConfidence({}); setUnknownFaces(0); setDecisions({});
         setRecognitionSucceeded(false);
         toast.info(result.unavailableReason || "Recognition unavailable. Review attendance manually.");
@@ -196,6 +197,7 @@ const Attendance = () => {
       setUnknownFaces(result.unknownFaces);
       setDecisions(Object.fromEntries(result.recognizedIds.map((id) => [id, "present"])));
     } catch (err: any) {
+      console.error("[face-recognition] Batch recognition failed", { batchId: selectedBatch, error: err });
       setRecognizedIds([]); setMatchConfidence({}); setUnknownFaces(0); setDecisions({});
       setRecognitionSucceeded(false);
       toast.error(err?.message || "Recognition unavailable. Review manually.");
