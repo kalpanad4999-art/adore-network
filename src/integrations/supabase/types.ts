@@ -675,27 +675,30 @@ export type Database = {
         Row: {
           batch_id: string
           created_at: string
+          descriptor: number[] | null
           owner_id: string
           photo_path: string
-          provider_face_id: string
+          provider_face_id: string | null
           student_id: string
           updated_at: string
         }
         Insert: {
           batch_id: string
           created_at?: string
+          descriptor?: number[] | null
           owner_id: string
           photo_path: string
-          provider_face_id: string
+          provider_face_id?: string | null
           student_id: string
           updated_at?: string
         }
         Update: {
           batch_id?: string
           created_at?: string
+          descriptor?: number[] | null
           owner_id?: string
           photo_path?: string
-          provider_face_id?: string
+          provider_face_id?: string | null
           student_id?: string
           updated_at?: string
         }
