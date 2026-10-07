@@ -29,13 +29,12 @@ let modelsPromise: Promise<void> | null = null;
 export function loadFaceModels(): Promise<void> {
   modelsPromise ??= (async () => {
     console.info("[face-recognition] Loading models from", MODEL_URL);
-    await faceapi.tf.ready();
     await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
     console.info("[face-recognition] Detector loaded");
     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
     console.info("[face-recognition] Landmarks loaded");
     await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-    console.info("[face-recognition] Recognition model loaded; backend", faceapi.tf.getBackend());
+    console.info("[face-recognition] Recognition model loaded");
   })().catch((error) => {
     console.error("[face-recognition] Model loading failed", error);
     modelsPromise = null;
