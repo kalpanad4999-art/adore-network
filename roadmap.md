@@ -1,7 +1,8 @@
 # Attendance update
 ## Application-wide refactoring request
 - [x] Begin read-only review of all feature modules and existing test coverage.
-- [ ] Present staged refactoring plan and obtain approval before application-code changes (waiting for user approval).
+- [x] Consolidate feature, access/settings, infrastructure, and test-baseline findings into the staged plan.
+- [ ] Obtain approval for Phase 1 (Members and developer documentation) before application-code changes.
 - Implementation starts with Members after approval; Python implementation and backend/data migration are excluded.
 
 - [x] Inspect existing member, batch, attendance, permissions, and storage flows.
