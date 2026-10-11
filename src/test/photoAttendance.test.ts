@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+// These tests exercise only batch filtering, not model inference or Cloud access.
+vi.mock("@vladmandic/face-api", () => ({}));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: {} }));
 import { uniqueBatchMatches } from "@/lib/photoAttendance";
 
 describe("photo attendance", () => {
