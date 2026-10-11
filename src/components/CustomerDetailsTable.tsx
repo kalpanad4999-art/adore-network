@@ -7,20 +7,8 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export interface CustomerRow {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  notes: string | null;
-  height_cm: number | null;
-  weight_kg: number | null;
-  batch_id: string | null;
-  assigned_staff_id: string | null;
-  custom_data: Record<string, string> | null;
-}
-interface CustomField { id: string; name: string; required: boolean; enabled: boolean }
+import type { Customer, CustomField } from "@/features/members/types";
+export type CustomerRow = Customer;
 interface BatchLite { id: string; name: string; required_fields: string[]; custom_fields: CustomField[] }
 
 interface Props {

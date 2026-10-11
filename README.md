@@ -1,73 +1,26 @@
-# Welcome to your Lovable project
+# TRINETRA YOGA
 
-## Project info
+Yoga studio management application: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, and Lovable Cloud authentication, PostgreSQL, private storage, realtime and backend functions.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Development
+Use Bun and a current Node.js LTS. Obtain an approved checkout and environment configuration from the maintainer; never commit private credentials.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+bun install
+bun run dev
+bun run test
+bun run lint
 ```
 
-**Edit a file directly in GitHub**
+The managed preview already runs its server and automatic builds; do not start another server or manually run builds there. A standalone checkout can use `bun run build`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Documentation
+- [Architecture](docs/ARCHITECTURE.md)
+- [Feature development](docs/DEVELOPMENT.md)
+- [Backend contracts](docs/BACKEND-CONTRACTS.md)
+- [Phase 1 report](docs/PHASE-1-REPORT.md)
+- `AGENTS.md` contains architecture rules; `roadmap.md` tracks remaining work.
 
-**Use GitHub Codespaces**
+Members is the first feature separated into services, hooks, rules and types. Other modules retain their existing structure. No Python backend, UI redesign, data migration, framework upgrades or additional dependencies were introduced.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Never manually edit generated integrations/types, preview auth storage, managed config or environment files. Keep private keys and database credentials out of React. Preserve existing public OAuth callbacks and Vercel rewrites. Before release, test login and direct-link refresh on the intended hosting origin.

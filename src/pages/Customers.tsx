@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { useMembers } from "@/features/members/hooks/useMembers";
+import { memberService } from "@/features/members/services/memberService";
+import { saveMemberWithPhoto, deleteMember } from "@/features/members/services/memberWorkflow";
+import { memberPayload } from "@/features/members/rules/memberValidation";
+import type { Batch, Customer, CustomField, MemberPayload } from "@/features/members/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudio } from "@/contexts/StudioContext";
 import { Button } from "@/components/ui/button";
@@ -11,9 +15,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Pencil, Trash2, Layers, UserPlus, QrCode, Copy, ArrowRightLeft, X, Camera, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, Layers, UserPlus, QrCode, Copy, X, Camera, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { fmtDate } from "@/lib/date";
@@ -22,36 +25,6 @@ import PhotoCameraDialog from "@/components/PhotoCameraDialog";
 import { validateReferencePhoto } from "@/lib/referencePhoto";
 import { enrollMemberFace, recognitionImage } from "@/lib/photoAttendance";
 
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  notes: string | null;
-  height_cm: number | null;
-  weight_kg: number | null;
-  batch_id: string | null;
-  assigned_staff_id: string | null;
-  custom_data: Record<string, string> | null;
-  photo_path?: string | null;
-}
-
-interface StaffOption { id: string; name: string }
-
-interface CustomField { id: string; name: string; required: boolean; enabled: boolean; }
-
-interface Batch {
-  id: string;
-  name: string;
-  description: string | null;
-  start_date: string | null;
-  fee: number;
-  public_token: string;
-  required_fields: string[];
-  custom_fields: CustomField[];
-}
 
 const FIELD_OPTIONS: { key: string; label: string }[] = [
   { key: "name", label: "Name" },
@@ -63,15 +36,11 @@ const FIELD_OPTIONS: { key: string; label: string }[] = [
   { key: "weight", label: "Weight (kg)" },
 ];
 
-const phoneRegex = /^[+\d][\d\s\-()]{6,19}$/;
-
 const Customers = () => {
   const { user } = useAuth();
   const { isOwner, ownerId } = useStudio();
   const workspaceId = ownerId ?? user?.id ?? null;
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
+  const { customers, batches, staffOptions, customersByBatch, fetchCustomers, fetchBatches } = useMembers(workspaceId, isOwner);
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -102,56 +71,6 @@ const Customers = () => {
   // QR dialog
   const [qrBatch, setQrBatch] = useState<Batch | null>(null);
 
-  const fetchCustomers = async () => {
-    if (!workspaceId) return;
-    const { data } = await supabase.from("students").select("id,name,email,phone,address,notes,height_cm,weight_kg,batch_id,assigned_staff_id,custom_data,photo_path").eq("user_id", workspaceId).order("name");
-    const rows = (data || []).map((c: any) => ({ ...c, custom_data: (c.custom_data && typeof c.custom_data === "object") ? c.custom_data : {} })) as Customer[];
-    setCustomers(rows);
-  };
-  const fetchBatches = async () => {
-    if (!workspaceId) return;
-    const { data } = await supabase.from("batches").select("*").eq("user_id", workspaceId).order("created_at", { ascending: false });
-    const rows = (data || []).map((b: any) => ({ ...b, custom_fields: Array.isArray(b.custom_fields) ? b.custom_fields : [] })) as Batch[];
-    setBatches(rows);
-  };
-  // Staff accounts of this workspace — used for Member → Staff assignment (owner only).
-  const fetchStaff = async () => {
-    if (!workspaceId || !isOwner) { setStaffOptions([]); return; }
-    const { data: roles } = await supabase
-      .from("user_roles").select("user_id").eq("owner_id", workspaceId).eq("role", "staff");
-    const ids = (roles ?? []).map((r: any) => r.user_id);
-    if (!ids.length) { setStaffOptions([]); return; }
-    const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
-    setStaffOptions(ids.map((id: string) => {
-      const p: any = (profs ?? []).find((x: any) => x.id === id) ?? {};
-      return { id, name: p.full_name || p.email || "Staff member" };
-    }));
-  };
-
-  useEffect(() => { fetchCustomers(); fetchBatches(); fetchStaff(); }, [workspaceId, isOwner]);
-
-  // Realtime sync across all authorized users on the same workspace.
-  useEffect(() => {
-    if (!workspaceId) return;
-    const ch = supabase
-      .channel(`customers-sync-${workspaceId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `user_id=eq.${workspaceId}` }, () => fetchCustomers())
-      .on("postgres_changes", { event: "*", schema: "public", table: "batches", filter: `user_id=eq.${workspaceId}` }, () => fetchBatches())
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [workspaceId]);
-
-
-  const customersByBatch = useMemo(() => {
-    const m = new Map<string, Customer[]>();
-    customers.forEach((c) => {
-      if (!c.batch_id) return;
-      if (!m.has(c.batch_id)) m.set(c.batch_id, []);
-      m.get(c.batch_id)!.push(c);
-    });
-    return m;
-  }, [customers]);
-
   // ---------- Batch CRUD ----------
   const submitBatch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,11 +90,9 @@ const Customers = () => {
       start_date: batchForm.start_date || null,
       fee: batchForm.fee ? Number(batchForm.fee) : 0,
       required_fields,
-      custom_fields: cleaned_custom as any,
+      custom_fields: cleaned_custom,
     };
-    const { error } = editingBatchId
-      ? await supabase.from("batches").update(payload).eq("id", editingBatchId)
-      : await supabase.from("batches").insert(payload);
+    const { error } = await memberService.saveBatch(payload, editingBatchId);
     if (error) { toast.error(error.message); return; }
     toast.success(editingBatchId ? "Batch updated" : "Batch added");
     resetBatchForm(); fetchBatches();
@@ -193,7 +110,7 @@ const Customers = () => {
 
   const deleteBatch = async (id: string) => {
     if (!confirm("Delete this batch? Members will be unassigned.")) return;
-    await supabase.from("batches").delete().eq("id", id);
+    await memberService.deleteBatch(id);
     toast.success("Batch removed"); fetchBatches(); fetchCustomers();
   };
 
@@ -238,11 +155,8 @@ const Customers = () => {
   const editCustomer = (c: Customer) => {
     setMemberPhoto(null); setPhotoPreview(null);
     if (c.photo_path) {
-      supabase.storage.from("member-photos").createSignedUrl(c.photo_path, 300).then(({ data, error }) => {
-        if (error) console.error("[face-photo] Signed photo URL creation failed", { memberId: c.id, error });
-        else console.info("[face-photo] Signed photo URL created", { memberId: c.id });
-        setPhotoPreview(data?.signedUrl ?? null);
-      }).catch((error) => console.error("[face-photo] Signed photo URL lookup failed", { memberId: c.id, error }));
+      memberService.photoUrl(c.id, c.photo_path).then(setPhotoPreview)
+        .catch((error) => console.error("[face-photo] Signed photo URL lookup failed", { memberId: c.id, error }));
     }
     setEditingCustId(c.id);
     setActiveBatchId(c.batch_id);
@@ -255,68 +169,22 @@ const Customers = () => {
     e.preventDefault();
     if (checkingPhoto || savingMember) return;
     if (!workspaceId || !activeBatchId) return;
-    if (custForm.phone && !phoneRegex.test(custForm.phone.trim())) { toast.error("Enter a valid phone"); return; }
-    const heightNum = custForm.height ? Number(custForm.height) : null;
-    const weightNum = custForm.weight ? Number(custForm.weight) : null;
-    if (heightNum !== null && (Number.isNaN(heightNum) || heightNum < 30 || heightNum > 272)) { toast.error("Enter a valid height in cm"); return; }
-    if (weightNum !== null && (Number.isNaN(weightNum) || weightNum < 2 || weightNum > 500)) { toast.error("Enter a valid weight in kg"); return; }
-    const activeBatch = batches.find((b) => b.id === activeBatchId);
-    const activeCustomFields = (activeBatch?.custom_fields || []).filter((f) => f.enabled !== false);
-    const customDataClean: Record<string, string> = {};
-    for (const f of activeCustomFields) {
-      const v = (custCustom[f.id] || "").trim();
-      if (f.required && !v) { toast.error(`${f.name} is required`); return; }
-      if (v) customDataClean[f.id] = v.slice(0, 500);
+    let payload: MemberPayload;
+    try {
+      payload = memberPayload(custForm, custCustom, batches.find((b) => b.id === activeBatchId)?.custom_fields || [], workspaceId, activeBatchId);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not validate member");
+      return;
     }
-    const payload = {
-      user_id: workspaceId,
-
-      batch_id: activeBatchId,
-      name: custForm.name.trim(),
-      email: custForm.email.trim() || null,
-      phone: custForm.phone.trim() || null,
-      address: custForm.address.trim() || null,
-      notes: custForm.notes.trim() || null,
-      height_cm: heightNum,
-      weight_kg: weightNum,
-      custom_data: customDataClean as any,
-    };
     setSavingMember(true);
     try {
-      const { data, error } = editingCustId
-        ? await supabase.from("students").update(payload).eq("id", editingCustId).select("id,photo_path").single()
-        : await supabase.from("students").insert(payload).select("id,photo_path").single();
-      if (error || !data) throw error ?? new Error("Could not save member");
-      if (memberPhoto) {
-        const preparedPhoto = await recognitionImage(memberPhoto);
-        const path = `${workspaceId}/${data.id}/${crypto.randomUUID()}.${preparedPhoto.type === "image/png" ? "png" : "jpg"}`;
-        const { error: uploadError } = await supabase.storage.from("member-photos").upload(path, preparedPhoto, { contentType: preparedPhoto.type });
-        if (uploadError) { console.error("[face-photo] Private storage upload failed", { memberId: data.id, error: uploadError }); throw uploadError; }
-        console.info("[face-photo] Private storage upload succeeded", { memberId: data.id, bytes: preparedPhoto.size });
-        const { error: linkError } = await supabase.from("students").update({ photo_path: path }).eq("id", data.id);
-        if (linkError) {
-          console.error("[face-photo] Member photo link failed", { memberId: data.id, error: linkError });
-          await supabase.storage.from("member-photos").remove([path]);
-          throw linkError;
-        }
-        console.info("[face-photo] Member photo linked; requesting private face enrollment", { memberId: data.id, batchId: activeBatchId });
-        try {
-          await enrollMemberFace(data.id, activeBatchId, path);
-          console.info("[face-photo] Face enrolled against member", { memberId: data.id });
-        } catch (enrollError) {
-          console.error("[face-photo] Face enrollment failed; reverting new photo", { memberId: data.id, error: enrollError });
-          await supabase.from("students").update({ photo_path: data.photo_path }).eq("id", data.id);
-          await supabase.storage.from("member-photos").remove([path]);
-          throw enrollError;
-        }
-        if (data.photo_path) await supabase.storage.from("member-photos").remove([data.photo_path]);
-      }
+      await saveMemberWithPhoto(payload, editingCustId, memberPhoto, { prepare: recognitionImage, enroll: enrollMemberFace });
       toast.success(editingCustId ? "Member updated" : "Member added");
       setCustOpen(false); setEditingCustId(null); setActiveBatchId(null); setCustCustom({}); setMemberPhoto(null); setPhotoPreview(null);
       fetchCustomers();
-    } catch (err: any) {
+    } catch (err) {
       console.error("[face-photo] Member save failed", err);
-      toast.error(err?.message || "The member could not be saved. Please retry.");
+      toast.error((err && typeof err === "object" && "message" in err ? String(err.message) : "") || "The member could not be saved. Please retry.");
       fetchCustomers();
     } finally { setSavingMember(false); }
   };
@@ -339,30 +207,26 @@ const Customers = () => {
     if (!deleteTarget || !user) return;
     setDeleting(true);
     try {
-      // Cascade delete related records first (no FK cascade in schema).
-      const { error: payErr } = await supabase.from("student_payments").delete().eq("student_id", deleteTarget.id);
-      if (payErr) throw payErr;
-      const { error: custErr } = await supabase.from("students").delete().eq("id", deleteTarget.id);
-      if (custErr) throw custErr;
+      await deleteMember(deleteTarget.id);
       toast.success("Member deleted successfully.");
       setDeleteTarget(null);
       fetchCustomers();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to delete customer");
+    } catch (err) {
+      toast.error((err && typeof err === "object" && "message" in err ? String(err.message) : "") || "Failed to delete customer");
     } finally {
       setDeleting(false);
     }
   };
 
   const assignStaff = async (customerId: string, staffId: string | null) => {
-    const { error } = await supabase.from("students").update({ assigned_staff_id: staffId } as any).eq("id", customerId);
+    const { error } = await memberService.assignStaff(customerId, staffId);
     if (error) { toast.error(error.message); return; }
     toast.success(staffId ? "Member assigned" : "Member unassigned");
     fetchCustomers();
   };
 
   const moveCustomer = async (customerId: string, targetBatchId: string) => {
-    const { error } = await supabase.from("students").update({ batch_id: targetBatchId }).eq("id", customerId);
+    const { error } = await memberService.move(customerId, targetBatchId);
     if (error) { toast.error(error.message); return; }
     toast.success("Member moved");
     fetchCustomers();
