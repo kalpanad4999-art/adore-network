@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { authErrorMessage } from "@/lib/authErrors";
 
 const SAFE_PATH = /^\/(?!\/)[A-Za-z0-9\-._~!$&'()*+,;=:@%/?#[\]]*$/;
 
@@ -59,9 +60,13 @@ const AuthCallback = () => {
       const code = url.searchParams.get("code");
       if (code) {
         try {
-          await supabase.auth.exchangeCodeForSession(window.location.href);
-        } catch {
-          /* fall through to session check */
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+        } catch (error: unknown) {
+          console.error("OAuth callback failed", error);
+          setMessage(authErrorMessage(error));
+          setTimeout(() => finish("/auth"), 2500);
+          return;
         }
       }
 

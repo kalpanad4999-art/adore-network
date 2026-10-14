@@ -1,4 +1,10 @@
 # Attendance update
+## Authentication reliability
+- [x] Identify the source of the login connectivity error without changing users, roles, or policies.
+- [x] Verify the configured authentication URL and public key belong to the same project.
+- [x] Improve email, phone, Google callback, password-reset, and session-restoration error reporting.
+- [ ] Verify successful email, phone, Google, and password-reset flows after the hosted backend is resumed.
+
 ## Application-wide refactoring request
 - [x] Begin read-only review of all feature modules and existing test coverage.
 - [x] Consolidate feature, access/settings, infrastructure, and test-baseline findings into the staged plan.

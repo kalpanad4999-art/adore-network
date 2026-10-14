@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { authErrorMessage } from "@/lib/authErrors";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -27,8 +28,9 @@ const ResetPassword = () => {
       if (error) throw error;
       toast.success("Password updated successfully!");
       navigate("/");
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      console.error("Password update failed", error);
+      toast.error(authErrorMessage(error));
     } finally {
       setLoading(false);
     }
