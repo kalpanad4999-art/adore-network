@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { authErrorMessage, readFunctionError } from "@/lib/authErrors";
 
 const emailSchema = z.string().trim().email("Please enter a valid email address").max(255);
 const phoneSchema = z
@@ -24,24 +25,6 @@ const nameSchema = z.string().trim().min(2, "Please enter your full name").max(8
 const WEAK_PW_MSG = "Password is too weak. Please use at least 4 characters.";
 
 const isEmail = (v: string) => /@/.test(v);
-
-const friendlyAuthError = (err: any): string => {
-  const msg = (err?.message || "").toLowerCase();
-  const code = (err?.code || err?.name || "").toLowerCase();
-  if (!navigator.onLine) return "You appear to be offline. Check your connection and try again.";
-  if (code.includes("email_not_confirmed") || msg.includes("email not confirmed"))
-    return "Your email isn't confirmed yet. Check your inbox for the confirmation link, or resend it below.";
-  if (msg.includes("invalid login") || msg.includes("invalid credentials"))
-    return "Incorrect credentials. Please try again.";
-  if (msg.includes("user already registered") || msg.includes("already registered"))
-    return "An account with this email already exists. Try signing in instead.";
-  if (code.includes("over_email_send_rate_limit") || msg.includes("rate limit"))
-    return "Too many attempts. Please wait a few seconds and try again.";
-  if (msg.includes("network") || msg.includes("failed to fetch"))
-    return "Network error. Please check your connection and retry.";
-  if (msg.includes("password") && msg.includes("weak")) return WEAK_PW_MSG;
-  return err?.message || "Something went wrong. Please try again.";
-};
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -75,14 +58,14 @@ const Auth = () => {
     });
     const payload: any = data ?? {};
     if (error || payload?.error || !payload?.access_token) {
-      toast.error(payload?.error || "Incorrect credentials. Please try again.");
+      toast.error(payload?.error || await readFunctionError(error));
       return;
     }
     const { error: sessionError } = await supabase.auth.setSession({
       access_token: payload.access_token,
       refresh_token: payload.refresh_token,
     });
-    if (sessionError) { toast.error(friendlyAuthError(sessionError)); return; }
+    if (sessionError) { toast.error(authErrorMessage(sessionError)); return; }
     toast.success("Welcome back!");
     navigate("/", { replace: true });
   };
@@ -154,8 +137,9 @@ const Auth = () => {
           setIdentifier(emailResult.data);
         }
       }
-    } catch (error: any) {
-      toast.error(friendlyAuthError(error));
+    } catch (error: unknown) {
+      console.error("Authentication request failed", error);
+      toast.error(authErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -175,13 +159,14 @@ const Auth = () => {
         redirect_uri: `${window.location.origin}/auth/callback`,
       });
       if (result.error) {
-        toast.error(friendlyAuthError(result.error));
+        toast.error(authErrorMessage(result.error));
         return;
       }
       if (result.redirected) return;
       navigate("/", { replace: true });
-    } catch (e: any) {
-      toast.error(friendlyAuthError(e));
+    } catch (error: unknown) {
+      console.error("Google sign-in failed", error);
+      toast.error(authErrorMessage(error));
     } finally {
       setGoogleLoading(false);
     }
@@ -200,8 +185,9 @@ const Auth = () => {
       });
       if (error) throw error;
       toast.success("Confirmation email resent. Please check your inbox.");
-    } catch (error: any) {
-      toast.error(friendlyAuthError(error));
+    } catch (error: unknown) {
+      console.error("Confirmation email request failed", error);
+      toast.error(authErrorMessage(error));
     }
   };
 
@@ -221,8 +207,9 @@ const Auth = () => {
       });
       if (error) throw error;
       toast.success("Password reset email sent!");
-    } catch (error: any) {
-      toast.error(friendlyAuthError(error));
+    } catch (error: unknown) {
+      console.error("Password reset request failed", error);
+      toast.error(authErrorMessage(error));
     }
   };
 

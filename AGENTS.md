@@ -9,3 +9,4 @@
 - Keep current page entry points, shared UI, global contexts, auth callbacks and public registration RPCs until their own approved phase; this limits regression risk.
 - Do not expose query builders from feature services or manually edit generated integrations/configuration; named operations make future API replacement explicit.
 - Test extracted rules/workflows independently of model inference and report live checks separately; mocks do not verify recognition, storage or deployed permissions.
+- Map authentication and function failures through `src/lib/authErrors.ts`; this keeps email, phone, OAuth, and recovery errors accurate and consistent.
