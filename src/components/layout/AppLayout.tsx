@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { useWallpaper } from "@/hooks/useWallpaper";
 
 import { ModuleKey } from "@/contexts/StudioContext";
+import { RenewalDataContext, useRenewalData } from "@/features/renewals/useRenewalData";
+import RenewalNotifications from "@/features/renewals/RenewalNotifications";
 
 const navItems: { to: string; label: string; icon: any; module: ModuleKey | null }[] = [
   { to: "/", label: "Members", icon: Users, module: "customers" },
@@ -48,6 +50,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const visibleNav = navItems.filter((n) => isOwner || n.module === null || permissions[n.module]);
   const wp = useWallpaper();
+  const renewalData = useRenewalData();
 
   const wallpaperActive = wp.mode !== "none";
   const rootStyle: React.CSSProperties =
@@ -58,6 +61,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
       : {};
 
   return (
+    <RenewalDataContext.Provider value={renewalData}>
     <div className={`flex min-h-screen ${wallpaperActive ? "" : "bg-background"}`} style={rootStyle}>
 
       {/* Desktop Sidebar */}
@@ -136,8 +140,9 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-h-screen">
-        <header className="md:hidden flex items-center border-b border-border px-4 py-3 bg-card">
-          <button onClick={() => setSidebarOpen(true)}><Menu className="h-5 w-5" /></button>
+        <header className="flex items-center justify-end border-b border-border px-4 py-3 bg-card">
+          <Button className="mr-auto md:hidden" variant="ghost" size="icon" aria-label="Open menu" onClick={() => setSidebarOpen(true)}><Menu className="h-5 w-5" /></Button>
+          <RenewalNotifications />
         </header>
 
         <div className="flex-1 overflow-auto">
@@ -166,6 +171,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
       </main>
       {ownerId && <SupportChatWidget ownerId={ownerId} />}
     </div>
+    </RenewalDataContext.Provider>
   );
 };
 

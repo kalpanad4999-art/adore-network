@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useRenewalContext } from "@/features/renewals/useRenewalData";
+import { Bucket, Renewal } from "@/features/renewals/renewalRules";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { useStudio } from "@/contexts/StudioContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,52 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Send, RefreshCw, CalendarClock, AlertTriangle, CheckCircle2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { fmtDate } from "@/lib/date";
-
-interface Customer { id: string; name: string; phone: string | null; batch_id: string | null; }
-interface Batch { id: string; name: string; }
-
-interface Payment {
-  id: string;
-  student_id: string;
-  amount: number;
-  paid_on: string;
-  duration_months: number | null;
-  valid_until: string | null;
-  reminder_sent_at: string | null;
-}
-
-type Bucket = "active" | "due_7" | "due_3" | "due_today" | "expired";
-
-interface Renewal {
-  customer: Customer;
-  latest: Payment | null;
-  previous: Payment | null;
-  renewalDate: string | null;
-  daysRemaining: number | null;
-  bucket: Bucket | null; // null = no membership data
-  reminderState: "not_sent" | "sent" | "renewed";
-}
-
-const STUDIO_NAME = "Trinetra Yoga";
-
-const today = () => {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-};
-
-// Parse YYYY-MM-DD as a local date (avoids timezone shifts).
-const parseISODate = (iso: string): Date | null => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return isNaN(d.getTime()) ? null : d;
-};
-
-const daysBetween = (iso: string): number | null => {
-  const target = parseISODate(iso);
-  if (!target) return null;
-  return Math.round((target.getTime() - today().getTime()) / 86400000);
-};
 
 const bucketLabel: Record<Bucket, string> = {
   active: "Active",
@@ -90,110 +45,22 @@ const buildMessage = (name: string, renewalDate: string) =>
 const sanitizePhone = (phone: string | null) => (phone || "").replace(/[^0-9]/g, "");
 
 const Renewals = () => {
-  const { user } = useAuth();
-  const { ownerId } = useStudio();
-  const workspaceId = ownerId ?? user?.id ?? null;
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const { renewals, batches, loading, error, fetchAll } = useRenewalContext();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  const fetchAll = useCallback(async () => {
-    if (!workspaceId) return;
-    setLoading(true);
-    const [{ data: cust }, { data: pays }, { data: bat }] = await Promise.all([
-      supabase.from("students").select("id,name,phone,batch_id").eq("user_id", workspaceId).order("name"),
-      supabase.from("student_payments").select("*").eq("user_id", workspaceId).order("paid_on", { ascending: false }),
-      supabase.from("batches").select("id,name").eq("user_id", workspaceId).order("name"),
-    ]);
-    setCustomers((cust as Customer[]) || []);
-    setPayments(((pays as any[]) || []) as Payment[]);
-    setBatches((bat as Batch[]) || []);
-    setLoading(false);
-  }, [workspaceId]);
-
-  useEffect(() => { fetchAll(); }, [fetchAll]);
-
-  // Realtime: recalc when payments, students, or batches change
+  const [params] = useSearchParams();
+  const selectedMember = params.get("member");
+  const selectedCard = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!workspaceId) return;
-    const ch = supabase
-      .channel(`renewals-sync-${workspaceId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "student_payments", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "batches", filter: `user_id=eq.${workspaceId}` }, () => fetchAll())
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [workspaceId, fetchAll]);
-
-
-  // Daily refresh at 12:00 AM
+    if (selectedMember) { setFilter("all"); setSearch(""); }
+  }, [selectedMember]);
   useEffect(() => {
-    const schedule = () => {
-      const now = new Date();
-      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
-      return next.getTime() - now.getTime();
-    };
-    const t = setTimeout(function tick() {
-      fetchAll();
-      (tick as any)._t = setTimeout(tick, schedule());
-    }, schedule());
-    return () => clearTimeout(t);
-  }, [fetchAll]);
-
-  const batchMap = useMemo(() => {
-    const m = new Map<string, string>();
-    batches.forEach((b) => m.set(b.id, b.name));
-    return m;
-  }, [batches]);
-
-  const renewals: Renewal[] = useMemo(() => {
-
-    const byCustomer = new Map<string, Payment[]>();
-    payments.forEach((p) => {
-      if (!byCustomer.has(p.student_id)) byCustomer.set(p.student_id, []);
-      byCustomer.get(p.student_id)!.push(p);
-    });
-
-    let invalidDates = 0;
-    const list = customers.map<Renewal>((c) => {
-      const ps = (byCustomer.get(c.id) || []).slice().sort((a, b) => (b.paid_on > a.paid_on ? 1 : -1));
-      const latest = ps[0] || null;
-      const previous = ps[1] || null;
-      const renewalDate = latest?.valid_until || null;
-      let daysRemaining: number | null = null;
-      let bucket: Bucket | null = null;
-
-      if (renewalDate) {
-        daysRemaining = daysBetween(renewalDate);
-        if (daysRemaining === null) {
-          invalidDates++;
-        } else if (daysRemaining < 0) bucket = "expired";
-        else if (daysRemaining === 0) bucket = "due_today";
-        else if (daysRemaining >= 1 && daysRemaining <= 3) bucket = "due_3";
-        else if (daysRemaining >= 4 && daysRemaining <= 7) bucket = "due_7";
-        else bucket = "active";
-      }
-
-      let reminderState: "not_sent" | "sent" | "renewed" = "not_sent";
-      if (latest && previous && previous.valid_until) {
-        if (latest.paid_on >= previous.valid_until.slice(0, 10) && bucket === "active") {
-          reminderState = "renewed";
-        }
-      }
-      if (latest?.reminder_sent_at && reminderState === "not_sent") reminderState = "sent";
-
-      return { customer: c, latest, previous, renewalDate, daysRemaining, bucket, reminderState };
-    });
-
-    if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
-      console.debug("[Renewals] records:", list.length, "invalidDates:", invalidDates);
+    if (!loading && selectedMember) {
+      selectedCard.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      selectedCard.current?.focus({ preventScroll: true });
     }
-    return list;
-  }, [customers, payments]);
+  }, [loading, selectedMember]);
+  const batchMap = useMemo(() => new Map(batches.map(b => [b.id, b.name])), [batches]);
 
   const counts = useMemo(() => {
     const c = { due_7: 0, due_3: 0, due_today: 0, expired: 0 };
@@ -302,14 +169,16 @@ const Renewals = () => {
         </div>
       </div>
 
-      {loading ? (
+      {error ? (
+        <p role="alert" className="text-destructive">Renewals could not be loaded. Please refresh to retry.</p>
+      ) : loading ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">Loading…</CardContent></Card>
       ) : filtered.length === 0 ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">No customers in this view.</CardContent></Card>
       ) : (
         <div className="grid gap-3">
           {filtered.map((r) => (
-            <Card key={r.customer.id}>
+            <Card key={r.customer.id} ref={selectedMember === r.customer.id ? selectedCard : undefined} tabIndex={selectedMember === r.customer.id ? -1 : undefined} className={selectedMember === r.customer.id ? "ring-2 ring-primary" : undefined}>
               <CardContent className="p-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -363,7 +232,7 @@ const Renewals = () => {
                         </span>
                       ) : (
                         <a
-                          href={waUrl!}
+                          href={waUrl ?? undefined}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={() => markReminderSent(r)}
