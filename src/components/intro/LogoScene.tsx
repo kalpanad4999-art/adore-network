@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls, Sparkles, useTexture } from "@react-three/drei";
-import { CanvasTexture, Group, SRGBColorSpace, PCFShadowMap } from "three";
+import { CanvasTexture, Group, SRGBColorSpace } from "three";
 import relief from "@/assets/trinetra-relief.png.asset.json";
 
 type Palette = { blue: string; gold: string; red: string; light: string; shadow: string };
@@ -9,7 +9,7 @@ type Palette = { blue: string; gold: string; red: string; light: string; shadow:
 function ResponsiveCamera() {
   const { camera, size } = useThree();
   useEffect(() => {
-    camera.position.set(0.15, 0.08, Math.max(9.8, 3.6 / (size.width / size.height)));
+    camera.position.set(0.15, 0.08, Math.max(9.8, 4.1 / (size.width / size.height)));
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }, [camera, size.width, size.height]);
@@ -80,7 +80,7 @@ function Backdrop({ palette }: { palette: Palette }) {
   }, [palette]);
   useEffect(() => () => texture.dispose(), [texture]);
   return (
-    <mesh position={[0, 0, -0.65]} receiveShadow>
+    <mesh position={[0, 0, -1.5]} receiveShadow>
       <planeGeometry args={[30, 30]} />
       <meshStandardMaterial map={texture} roughness={0.8} metalness={0.12} />
     </mesh>
@@ -95,7 +95,7 @@ export default function LogoScene({ onReady, onFailure }: { onReady: () => void;
     return { blue: color("--intro-blue"), gold: color("--intro-gold"), red: color("--intro-red"), light: color("--intro-light"), shadow: color("--intro-shadow") };
   }, []);
   return (
-    <Canvas shadows={PCFShadowMap} dpr={[1, 1.5]} camera={{ position: [0.15, 0.08, 9.8], fov: 42 }}
+    <Canvas shadows="percentage" dpr={[1, 1.5]} camera={{ position: [0.15, 0.08, 9.8], fov: 42 }}
       gl={{ antialias: true, alpha: false, powerPreference: "low-power" }}
       onCreated={({ gl }) => gl.domElement.addEventListener("webglcontextlost", onFailure, { once: true })}>
       <color attach="background" args={[palette.blue]} />
