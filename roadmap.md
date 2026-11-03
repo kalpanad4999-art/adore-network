@@ -1,4 +1,9 @@
 # Attendance update
+## Renewal notifications
+- [x] Reuse existing renewal queries and expiry rules for a permission-aware popup and pending badge.
+- [x] Persist dismissed renewal identifiers locally; refresh on opening, focus, midnight and existing live updates.
+- [x] Verify 51 rule/access tests and signed-in desktop/mobile badge, details link, highlight and persisted dismissal; build OK and no runtime errors.
+- Limitations: dismissal is per browser/user/workspace, not cross-device; staff-only live data access remains governed by existing policies and was not independently verified. Existing Renewal page horizontal overflow is outside the notification scope; notification panels fit mobile.
 ## Interactive logo intro
 - [x] Add isolated image-based 3D intro overlay; preserve authentication, routes and data (no active old intro found).
 - [x] Verify desktop/mobile rendering, drag/wheel input, skip, reduced motion and automatic transition; 43 intro/access tests pass. Local asset serving required routing the exact texture in browser checks.

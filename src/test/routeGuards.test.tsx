@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ModuleKey, ModulePermissions } from "@/contexts/StudioContext";
 
 const MODULES: ModuleKey[] = [
@@ -51,7 +52,10 @@ vi.mock("@/integrations/supabase/client", () => ({
     from: () => ({
       select: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }),
     }),
-    channel: () => ({ on: () => ({ subscribe: () => ({}) }), subscribe: () => ({}) }),
+    channel: () => {
+      const channel = { on: () => channel, subscribe: () => channel };
+      return channel;
+    },
     removeChannel: vi.fn(),
     functions: { invoke: vi.fn() },
   },
@@ -77,11 +81,13 @@ const renderGuard = (module: ModuleKey) =>
 
 const renderLayout = () =>
   render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
     <MemoryRouter>
       <AppLayout>
         <div>content</div>
       </AppLayout>
-    </MemoryRouter>,
+    </MemoryRouter>
+    </QueryClientProvider>
   );
 
 beforeEach(() => setRole(true, all()));
@@ -115,6 +121,16 @@ describe("route guards", () => {
 });
 
 describe("navigation visibility", () => {
+  it("does not show renewal notifications to staff without renewal permission", () => {
+    setRole(false, none());
+    renderLayout();
+    expect(screen.queryByRole("button", { name: /Renewal notifications,/ })).not.toBeInTheDocument();
+  });
+  it("shows renewal notifications to staff with renewal permission", () => {
+    setRole(false, { ...none(), renewals: true });
+    renderLayout();
+    expect(screen.getByRole("button", { name: /Renewal notifications,/ })).toBeInTheDocument();
+  });
   it("owner sees every module in the nav", () => {
     setRole(true, none());
     renderLayout();
