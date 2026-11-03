@@ -1,10 +1,20 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls, Sparkles, useTexture } from "@react-three/drei";
-import { CanvasTexture, Group, SRGBColorSpace } from "three";
+import { CanvasTexture, Group, SRGBColorSpace, PCFShadowMap } from "three";
 import relief from "@/assets/trinetra-relief.png.asset.json";
 
 type Palette = { blue: string; gold: string; red: string; light: string; shadow: string };
+
+function ResponsiveCamera() {
+  const { camera, size } = useThree();
+  useEffect(() => {
+    camera.position.set(0.15, 0.08, Math.max(9.8, 3.6 / (size.width / size.height)));
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+  }, [camera, size.width, size.height]);
+  return null;
+}
 
 function Relief({ palette, onReady }: { palette: Palette; onReady: () => void }) {
   const texture = useTexture(relief.url);
@@ -80,14 +90,16 @@ function Backdrop({ palette }: { palette: Palette }) {
 export default function LogoScene({ onReady, onFailure }: { onReady: () => void; onFailure: () => void }) {
   const palette = useMemo(() => {
     const styles = getComputedStyle(document.documentElement);
-    const color = (name: string) => `hsl(${styles.getPropertyValue(name).trim()})`;
+    // Three's CSS parser requires comma-separated HSL, unlike modern browser CSS.
+    const color = (name: string) => `hsl(${styles.getPropertyValue(name).trim().split(/\s+/).join(",")})`;
     return { blue: color("--intro-blue"), gold: color("--intro-gold"), red: color("--intro-red"), light: color("--intro-light"), shadow: color("--intro-shadow") };
   }, []);
   return (
-    <Canvas shadows dpr={[1, 1.5]} camera={{ position: [0.15, 0.08, 9.8], fov: 42 }}
+    <Canvas shadows={PCFShadowMap} dpr={[1, 1.5]} camera={{ position: [0.15, 0.08, 9.8], fov: 42 }}
       gl={{ antialias: true, alpha: false, powerPreference: "low-power" }}
       onCreated={({ gl }) => gl.domElement.addEventListener("webglcontextlost", onFailure, { once: true })}>
       <color attach="background" args={[palette.blue]} />
+      <ResponsiveCamera />
       <ambientLight intensity={0.85} />
       <directionalLight position={[-3, 4, 6]} intensity={3} color={palette.light} castShadow shadow-mapSize={[512, 512]} shadow-bias={-0.001} />
       <pointLight position={[3, -1, 3]} intensity={12} color={palette.gold} />
