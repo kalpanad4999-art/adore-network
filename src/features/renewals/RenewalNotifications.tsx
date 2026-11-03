@@ -20,10 +20,11 @@ function NotificationCard({ renewal, onDismiss, onOpen }: { renewal: Renewal; on
     <div className="flex items-start gap-3">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"><MessageCircle className="h-5 w-5" /></span>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-primary">{renewal.bucket === "expired" ? "Renewal overdue" : "Renewal due today"}</p>
+        <p className="text-xs font-medium text-primary">{renewal.bucket === "expired" ? "Expired renewal" : "Renewal due today"}</p>
         <p className="mt-1 break-words font-semibold">{renewal.customer.name}</p>
         <p className="mt-1 break-words text-sm text-muted-foreground">{renewal.customer.phone || "No mobile number registered"}</p>
-        <p className="mt-1 text-sm">Renews {renewal.renewalDate ? fmtDate(renewal.renewalDate) : "—"}</p>
+        <p className="mt-1 text-sm">{renewal.bucket === "expired" ? "Expired on" : "Expires"} {renewal.renewalDate ? fmtDate(renewal.renewalDate) : "—"}</p>
+        {renewal.bucket === "expired" && <Badge variant="destructive" className="mt-1">Expired</Badge>}
         {typeof renewal.latest?.due_amount === "number" && <p className="mt-1 text-sm">Pending ₹{renewal.latest.due_amount.toLocaleString("en-IN")}</p>}
       </div>
       <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label={`Dismiss renewal for ${renewal.customer.name}`} title="Dismiss notification" onClick={onDismiss}><X /></Button>
