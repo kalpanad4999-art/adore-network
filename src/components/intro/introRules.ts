@@ -1,4 +1,4 @@
-export const INTRO_DURATION_MS = 4500;
+export const INTRO_DURATION_MS = 4000;
 export const INTRO_FADE_MS = 450;
 
 export function introDuration(reducedMotion: boolean) {

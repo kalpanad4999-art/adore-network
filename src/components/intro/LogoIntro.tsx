@@ -26,7 +26,7 @@ export default function LogoIntro() {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const onChange = () => { if (motion.matches) setVisible(false); };
     motion.addEventListener("change", onChange);
-    const timer = window.setTimeout(finish, introDuration(motion.matches));
+    const timer = window.setTimeout(finish, Math.max(0, introDuration(motion.matches) - INTRO_FADE_MS));
     return () => { window.clearTimeout(timer); motion.removeEventListener("change", onChange); };
   }, [visible, finish]);
   useEffect(() => {

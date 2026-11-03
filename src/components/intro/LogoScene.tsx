@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls, Sparkles, useTexture } from "@react-three/drei";
-import { CanvasTexture, Group, SRGBColorSpace } from "three";
+import { CanvasTexture, Group, PerspectiveCamera, SRGBColorSpace } from "three";
 import relief from "@/assets/trinetra-relief.png.asset.json";
 
 type Palette = { blue: string; gold: string; red: string; light: string; shadow: string };
@@ -9,7 +9,11 @@ type Palette = { blue: string; gold: string; red: string; light: string; shadow:
 function ResponsiveCamera() {
   const { camera, size } = useThree();
   useEffect(() => {
-    camera.position.set(0.15, 0.08, Math.max(9.8, 4.1 / (size.width / size.height)));
+    if (!(camera instanceof PerspectiveCamera)) return;
+    // Fit the entire ring with a stable margin on both portrait and landscape screens.
+    const halfFov = (camera.fov * Math.PI) / 360;
+    const distance = 3.1 / (Math.tan(halfFov) * Math.min(1, size.width / size.height));
+    camera.position.set(0, 0, distance);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }, [camera, size.width, size.height]);
@@ -95,7 +99,7 @@ export default function LogoScene({ onReady, onFailure }: { onReady: () => void;
     return { blue: color("--intro-blue"), gold: color("--intro-gold"), red: color("--intro-red"), light: color("--intro-light"), shadow: color("--intro-shadow") };
   }, []);
   return (
-    <Canvas shadows="percentage" dpr={[1, 1.5]} camera={{ position: [0.15, 0.08, 9.8], fov: 42 }}
+    <Canvas shadows="percentage" dpr={[1, 1.5]} camera={{ position: [0, 0, 9.8], fov: 42 }}
       gl={{ antialias: true, alpha: false, powerPreference: "low-power" }}
       onCreated={({ gl }) => gl.domElement.addEventListener("webglcontextlost", onFailure, { once: true })}>
       <color attach="background" args={[palette.blue]} />
@@ -110,7 +114,7 @@ export default function LogoScene({ onReady, onFailure }: { onReady: () => void;
       </Environment>
       <Suspense fallback={null}><Relief palette={palette} onReady={onReady} /></Suspense>
       <Sparkles count={40} scale={[8, 7, 2]} position={[0, 0, 1]} size={2.5} speed={0.35} opacity={0.65} color={palette.gold} />
-      <OrbitControls makeDefault enablePan={false} enableDamping dampingFactor={0.075} minDistance={6.8} maxDistance={13}
+      <OrbitControls makeDefault enablePan={false} enableDamping dampingFactor={0.075} minDistance={6.8} maxDistance={30}
         minPolarAngle={Math.PI * 0.35} maxPolarAngle={Math.PI * 0.65} minAzimuthAngle={-0.7} maxAzimuthAngle={0.7}
         autoRotate autoRotateSpeed={0.6} rotateSpeed={0.65} zoomSpeed={0.55} />
     </Canvas>
