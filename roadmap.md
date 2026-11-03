@@ -1,4 +1,8 @@
 # Attendance update
+## Renewal notifications
+- [ ] Reuse existing renewal queries and expiry rules for a permission-aware popup and pending badge.
+- [ ] Persist dismissed renewal identifiers locally; refresh on opening, focus, midnight and existing live updates.
+- [ ] Verify rules and signed-in desktop/mobile notification flow without database changes.
 ## Interactive logo intro
 - [x] Add isolated image-based 3D intro overlay; preserve authentication, routes and data (no active old intro found).
 - [x] Verify desktop/mobile rendering, drag/wheel input, skip, reduced motion and automatic transition; 43 intro/access tests pass. Local asset serving required routing the exact texture in browser checks.
