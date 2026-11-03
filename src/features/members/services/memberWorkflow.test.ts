@@ -11,7 +11,7 @@ function fixtures(oldPath: string | null = null) {
   const operation = (name: string) => vi.fn(async () => { calls.push(name); });
   const service = {
     save: vi.fn(async () => { calls.push("save"); return { id: "member", photo_path: oldPath }; }),
-    uploadPhoto: operation("upload"), linkPhoto: operation("link"), restorePhoto: operation("restore"),
+    uploadPhoto: vi.fn(async (_path: string, _photo: File) => { calls.push("upload"); }), linkPhoto: operation("link"), restorePhoto: operation("restore"),
     removePhoto: operation("remove"), deletePayments: operation("payments"), deleteRecord: operation("delete"),
   };
   const recognition = { prepare: vi.fn(async (file: File) => { calls.push("prepare"); return file; }), enroll: operation("enroll") };
