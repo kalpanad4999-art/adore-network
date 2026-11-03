@@ -10,3 +10,4 @@
 - Do not expose query builders from feature services or manually edit generated integrations/configuration; named operations make future API replacement explicit.
 - Test extracted rules/workflows independently of model inference and report live checks separately; mocks do not verify recognition, storage or deployed permissions.
 - Map authentication and function failures through `src/lib/authErrors.ts`; this keeps email, phone, OAuth, and recovery errors accurate and consistent.
+- Keep the intro in `src/components/intro` as a timed visual overlay with a lazy-loaded R3F scene, image-texture relief and scoped CSS palette; mount the existing app underneath and bypass recovery/public links so branding never delays authentication or changes routes.
