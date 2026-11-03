@@ -86,7 +86,7 @@ const renderLayout = () =>
       <AppLayout>
         <div>content</div>
       </AppLayout>
-    </MemoryRouter>,
+    </MemoryRouter>
     </QueryClientProvider>
   );
 
