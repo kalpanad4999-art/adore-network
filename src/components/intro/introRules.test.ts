@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { introDuration, shouldShowIntro } from "./introRules";
+import { INTRO_FADE_MS, introDuration, shouldShowIntro } from "./introRules";
 
 describe("opening intro", () => {
-  it("plays for 4.5 seconds", () => {
-    expect(introDuration(false)).toBe(4500);
+  it("completes including the fade after 4 seconds", () => {
+    expect(introDuration(false)).toBe(4000);
+    const fadeStartsAt = introDuration(false) - INTRO_FADE_MS;
+    expect(fadeStartsAt).toBe(3550);
+    expect(fadeStartsAt + INTRO_FADE_MS).toBe(4000);
   });
   it("skips automatic movement for reduced motion", () => {
     expect(introDuration(true)).toBe(0);
