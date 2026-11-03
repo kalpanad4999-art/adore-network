@@ -1,4 +1,10 @@
 # Attendance update
+## Consolidated schema reference
+- [x] Audit all 70 available migrations without modifying or executing them.
+- [x] Prepare schema.sql and document missing definitions, default drift, and managed-service dependencies.
+- [x] Validate SQL syntax, final source definitions, metadata coverage, and unchanged migration checksums.
+- [ ] Certify full live-catalog equivalence (blocked: SQL execution prohibited; metadata omits complete constraints, indexes, ACLs, and routine definitions).
+
 ## Authentication reliability
 - [x] Identify the source of the login connectivity error without changing users, roles, or policies.
 - [x] Verify the configured authentication URL and public key belong to the same project.
