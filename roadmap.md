@@ -1,7 +1,8 @@
 # Attendance update
 ## Interactive logo intro
-- [ ] Replace opening presentation with an isolated image-based 3D relief; preserve authentication, routes and data.
-- [ ] Verify rendering, drag/wheel interaction, mobile framing, reduced motion and automatic transition.
+- [x] Add isolated image-based 3D intro overlay; preserve authentication, routes and data (no active old intro found).
+- [x] Verify desktop/mobile rendering, drag/wheel input, skip, reduced motion and automatic transition; 43 intro/access tests pass. Local asset serving required routing the exact texture in browser checks.
+- Device-only checks: real mobile pinch/swipe and GPU performance cannot be measured in the sandbox; reopen the preview on a phone to check them.
 ## Consolidated schema reference
 - [x] Audit all 70 available migrations without modifying or executing them.
 - [x] Prepare schema.sql and document missing definitions, default drift, and managed-service dependencies.
