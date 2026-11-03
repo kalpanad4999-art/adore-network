@@ -27,7 +27,8 @@ export default function LogoIntro() {
     const onChange = () => { if (motion.matches) setVisible(false); };
     motion.addEventListener("change", onChange);
     const timer = window.setTimeout(finish, Math.max(0, introDuration(motion.matches) - INTRO_FADE_MS));
-    return () => { window.clearTimeout(timer); motion.removeEventListener("change", onChange); };
+    const deadline = window.setTimeout(() => setVisible(false), introDuration(motion.matches));
+    return () => { window.clearTimeout(timer); window.clearTimeout(deadline); motion.removeEventListener("change", onChange); };
   }, [visible, finish]);
   useEffect(() => {
     if (!leaving) return;
