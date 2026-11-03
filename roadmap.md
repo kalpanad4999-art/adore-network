@@ -1,4 +1,7 @@
 # Attendance update
+## Interactive logo intro
+- [ ] Replace opening presentation with an isolated image-based 3D relief; preserve authentication, routes and data.
+- [ ] Verify rendering, drag/wheel interaction, mobile framing, reduced motion and automatic transition.
 ## Consolidated schema reference
 - [x] Audit all 70 available migrations without modifying or executing them.
 - [x] Prepare schema.sql and document missing definitions, default drift, and managed-service dependencies.
