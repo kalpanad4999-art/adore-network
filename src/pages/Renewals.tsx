@@ -135,7 +135,7 @@ const Renewals = () => {
           <p className="text-muted-foreground mt-1">Membership expiry tracking & reminders</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchAll}><RefreshCw className="h-4 w-4 mr-2" />Refresh</Button>
+          <Button variant="outline" onClick={() => { void fetchAll(); }}><RefreshCw className="h-4 w-4 mr-2" />Refresh</Button>
           <Button onClick={sendBulk}><Send className="h-4 w-4 mr-2" />Send Bulk Reminders</Button>
         </div>
       </div>
