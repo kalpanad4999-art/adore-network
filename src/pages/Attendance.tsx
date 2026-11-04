@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { photoRecognitionService, uniqueBatchMatches } from "@/lib/photoAttendance";
 import PhotoCameraDialog from "@/components/PhotoCameraDialog";
 import { fmtDate, fmtDateTime } from "@/lib/date";
+import AttendanceRecordingShare from "@/components/AttendanceRecordingShare";
 
 const AUTO_DELETE_KEY = "attendance_auto_delete_days_v1";
 type AutoDeleteDays = 0 | 30 | 60 | 90 | 180 | 365;
@@ -54,7 +55,7 @@ const writeQueue = (rows: any[]) => localStorage.setItem(OFFLINE_KEY, JSON.strin
 
 const Attendance = () => {
   const { user } = useAuth();
-  const { ownerId, isOwner } = useStudio();
+  const { ownerId, isOwner, studioName } = useStudio();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [records, setRecords] = useState<AttendanceRow[]>([]);
@@ -399,6 +400,9 @@ const Attendance = () => {
               </CardContent>
             </Card>
           )}
+          {ownerId && selectedBatch && records.some((r) => r.batch_id === selectedBatch && r.attendance_date === (mode === "photo" ? photoDate : today())) && (
+            <AttendanceRecordingShare key={`${selectedBatch}-${mode === "photo" ? photoDate : today()}`} ownerId={ownerId} batchId={selectedBatch} batchName={batchName} date={mode === "photo" ? photoDate : today()} members={students} studioName={studioName} absentCount={records.filter((r) => r.batch_id === selectedBatch && r.attendance_date === (mode === "photo" ? photoDate : today()) && r.status === "absent" && studentsInBatch.some((s) => s.id === r.student_id)).length} />
+          )}
         </TabsContent>
 
         {/* DASHBOARD ----------------------------------------------------- */}
@@ -428,6 +432,9 @@ const Attendance = () => {
             <StatCard label="Absent" value={stats.absent} accent="text-destructive" />
             <StatCard label="Attendance %" value={`${stats.pct}%`} accent="text-primary" />
           </div>
+          {ownerId && filterBatch !== "all" && records.some((r) => r.batch_id === filterBatch && r.attendance_date === filterDate) && (
+            <AttendanceRecordingShare key={`${filterBatch}-${filterDate}`} ownerId={ownerId} batchId={filterBatch} batchName={batches.find((b) => b.id === filterBatch)?.name ?? "Batch"} date={filterDate} members={students} studioName={studioName} absentCount={stats.absent} />
+          )}
 
           <Card>
             <CardHeader><CardTitle>Last 30 days (Present per day)</CardTitle></CardHeader>

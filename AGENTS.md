@@ -12,3 +12,4 @@
 - Map authentication and function failures through `src/lib/authErrors.ts`; this keeps email, phone, OAuth, and recovery errors accurate and consistent.
 - Keep the intro in `src/components/intro` as a timed visual overlay with a lazy-loaded R3F scene, image-texture relief and scoped CSS palette; mount the existing app underneath and bypass recovery/public links so branding never delays authentication or changes routes.
 - Share renewal queries, expiry rules and live refresh through the layout's renewal data context; keep notification dismissal identifiers scoped to workspace and user in browser storage so notifications never mutate payment reminder history.
+- Keep Attendance recording sharing read-only and scoped to the selected workspace/batch/date; reuse public recording page links and one-click-per-recipient WhatsApp fallback so sharing cannot alter attendance or bypass recording visibility.
