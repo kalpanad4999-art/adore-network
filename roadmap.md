@@ -1,4 +1,7 @@
 # Attendance update
+## Attendance recording sharing
+- [ ] Add absent/all-batch recording selection and WhatsApp opening confirmation using existing data only.
+- [ ] Test recipient/link rules and verify signed-in sharing without sending real messages.
 ## Renewal notifications
 - [x] Reuse existing renewal queries and expiry rules for a permission-aware popup and pending badge.
 - [x] Persist dismissed renewal identifiers locally; refresh on opening, focus, midnight and existing live updates.
