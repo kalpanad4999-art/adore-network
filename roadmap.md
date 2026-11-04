@@ -1,7 +1,8 @@
 # Attendance update
 ## Attendance recording sharing
-- [ ] Add absent/all-batch recording selection and WhatsApp opening confirmation using existing data only.
-- [ ] Test recipient/link rules and verify signed-in sharing without sending real messages.
+- [x] Add absent/all-batch recording selection and WhatsApp opening confirmation using existing data only.
+- [x] Pass six rule tests; verify signed-in saved attendance (18 absent, 20 current batch members), empty Classes state and mobile dialog layout.
+- Limitation: Classes currently has zero recordings. Preview/link and opening confirmation passed with a browser-only recording fixture; no recording was created or WhatsApp message sent. Real recording delivery and Staff-specific access remain unverified.
 ## Renewal notifications
 - [x] Reuse existing renewal queries and expiry rules for a permission-aware popup and pending badge.
 - [x] Persist dismissed renewal identifiers locally; refresh on opening, focus, midnight and existing live updates.
