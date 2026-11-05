@@ -10,6 +10,6 @@
 - Do not expose query builders from feature services or manually edit generated integrations/configuration; named operations make future API replacement explicit.
 - Test extracted rules/workflows independently of model inference and report live checks separately; mocks do not verify recognition, storage or deployed permissions.
 - Map authentication and function failures through `src/lib/authErrors.ts`; this keeps email, phone, OAuth, and recovery errors accurate and consistent.
-- Keep the intro in `src/components/intro` as a timed visual overlay with a lazy-loaded R3F scene, image-texture relief and scoped CSS palette; mount the existing app underneath and bypass recovery/public links so branding never delays authentication or changes routes.
+- The logo intro animation was fully removed on 2026-11-05 (user request: it was not working); no intro overlay code or 3D scene deps remain. Do not reintroduce an intro animation without a new explicit request; the app mounts the existing app tree directly with branding limited to the logo/header.
 - Share renewal queries, expiry rules and live refresh through the layout's renewal data context; keep notification dismissal identifiers scoped to workspace and user in browser storage so notifications never mutate payment reminder history.
 - Keep Attendance recording sharing read-only and scoped to the selected workspace/batch/date; reuse public recording page links and one-click-per-recipient WhatsApp fallback so sharing cannot alter attendance or bypass recording visibility.
