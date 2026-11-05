@@ -33,8 +33,6 @@ import NotFound from "./pages/NotFound";
 import PaymentsGuard from "./components/PaymentsGuard";
 import PermissionGuard from "./components/PermissionGuard";
 import UpdateBanner from "./components/UpdateBanner";
-import LogoIntro from "./components/intro/LogoIntro";
-
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
