@@ -14,7 +14,7 @@
 ## Interactive logo intro
 - [x] Add isolated image-based 3D intro overlay; preserve authentication, routes and data (no active old intro found).
 - [x] Verify desktop/mobile rendering, drag/wheel input, skip, reduced motion and automatic transition; 43 intro/access tests pass. Local asset serving required routing the exact texture in browser checks.
-- Device-only checks: real mobile pinch/swipe and GPU performance cannot be measured in the sandbox; reopen the preview on a phone to check them.
+- [x] Removed 2026-11-05 at user request (intro not working): LogoIntro/LogoScene/SceneBoundary, intro CSS, rules/tests and the three/@react-three deps deleted; app opens directly to the dashboard. 99 tests pass.
 ## Consolidated schema reference
 - [x] Audit all 70 available migrations without modifying or executing them.
 - [x] Prepare schema.sql and document missing definitions, default drift, and managed-service dependencies.
