@@ -1,4 +1,9 @@
 # Attendance update
+## 3-Day Absence Alerts
+- [x] Inspect attendance, members, batches and existing database: batch class-day schedules and sent-alert tracking are not currently stored.
+- [ ] Confirm how scheduled class days should be supplied before calculating streaks.
+- [ ] Add dashboard alerts, registration/expiry-aware streak rules, reviewed WhatsApp opening and confirmed-sent deduplication with minimal storage changes.
+- [ ] Test rules and verify with existing attendance; report any live-data or permission limits.
 ## Payment submission safety
 - [x] Guard concurrent Record Payment submissions and show a disabled loading state without changing renewal rules or database structure.
 - [x] Regression tests cover rapid duplicate submissions, returned/thrown failure recovery and separate intentional payments; existing renewal tests pass.
