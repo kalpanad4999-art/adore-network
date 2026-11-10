@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight, MoreVertical, Download } from "lucide-react";
+import { Plus, Trash2, IndianRupee, ChevronDown, ChevronRight, MoreVertical, Download, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
@@ -102,6 +102,8 @@ const Payments = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
+  const paymentSubmittingRef = useRef(false);
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [range, setRange] = useState<RangeKey>("month");
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
@@ -427,7 +429,7 @@ const Payments = () => {
 
   const addPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!workspaceId) return;
+    if (paymentSubmittingRef.current || !workspaceId) return;
     const originalAmount = parseFloat(form.amount);
     if (!formBatchId) { toast.error("Select a batch first"); return; }
     if (!form.student_id) { toast.error("Pick a member"); return; }
@@ -435,88 +437,98 @@ const Payments = () => {
     if (!effectiveValue) { toast.error("Enter a valid duration"); return; }
     if (!renewalDate) { toast.error("Could not calculate renewal date"); return; }
 
-    const payable = Math.max(0, originalAmount - discountAmount);
+    // Acquire synchronously: state alone cannot block two events before React renders.
+    paymentSubmittingRef.current = true;
+    setPaymentSubmitting(true);
+    try {
+      const payable = Math.max(0, originalAmount - discountAmount);
 
-    const months_equiv =
-      form.durationUnit === "months" ? effectiveValue :
-      form.durationUnit === "years" ? effectiveValue * 12 :
-      Math.max(1, Math.round(effectiveValue / 30));
+      const months_equiv =
+        form.durationUnit === "months" ? effectiveValue :
+        form.durationUnit === "years" ? effectiveValue * 12 :
+        Math.max(1, Math.round(effectiveValue / 30));
 
-    const { data: inserted, error } = await supabase.from("student_payments").insert({
-      student_id: form.student_id,
-      user_id: workspaceId,
-
-      amount: paidNow,
-      due_amount: dueAmount,
-      payment_status: paymentStatus,
-
-      paid_on: form.paid_on,
-      method: form.method,
-      duration_value: effectiveValue,
-      duration_unit: form.durationUnit,
-      duration_months: months_equiv,
-      valid_until: renewalDate,
-      reminder_sent_at: null,
-      applied_offer_id: selectedOffer?.id ?? null,
-      applied_offer_name: selectedOffer?.name ?? null,
-      applied_offer_type: selectedOffer?.offer_type ?? null,
-      applied_coupon_code: appliedCoupon?.code ?? null,
-      discount_amount: discountAmount,
-    } as any).select("id").single();
-    if (error) { toast.error(error.message); return; }
-    await logAudit(ownerId, "payment.created", { amount: payable, discount: discountAmount, offer: selectedOffer?.name, coupon: appliedCoupon?.code, duration_value: effectiveValue, duration_unit: form.durationUnit, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
-
-    // Redemption audit + increment usage counters
-    if (selectedOffer && inserted?.id) {
-      await (supabase as any).from("offer_redemptions").insert({
-        user_id: workspaceId,
-        offer_id: selectedOffer.id,
-        coupon_id: appliedCoupon?.id ?? null,
+      const { data: inserted, error } = await supabase.from("student_payments").insert({
         student_id: form.student_id,
-        payment_id: inserted.id,
+        user_id: workspaceId,
+
+        amount: paidNow,
+        due_amount: dueAmount,
+        payment_status: paymentStatus,
+
+        paid_on: form.paid_on,
+        method: form.method,
+        duration_value: effectiveValue,
+        duration_unit: form.durationUnit,
+        duration_months: months_equiv,
+        valid_until: renewalDate,
+        reminder_sent_at: null,
+        applied_offer_id: selectedOffer?.id ?? null,
+        applied_offer_name: selectedOffer?.name ?? null,
+        applied_offer_type: selectedOffer?.offer_type ?? null,
+        applied_coupon_code: appliedCoupon?.code ?? null,
         discount_amount: discountAmount,
-      });
-      await (supabase as any).from("offers").update({ usage_count: (selectedOffer.usage_count || 0) + 1 }).eq("id", selectedOffer.id);
-      if (appliedCoupon) {
-        await (supabase as any).from("coupons").update({ usage_count: (appliedCoupon.usage_count || 0) + 1 }).eq("id", appliedCoupon.id);
+      } as any).select("id").single();
+      if (error) { toast.error(error.message); return; }
+      await logAudit(ownerId, "payment.created", { amount: payable, discount: discountAmount, offer: selectedOffer?.name, coupon: appliedCoupon?.code, duration_value: effectiveValue, duration_unit: form.durationUnit, valid_until: renewalDate }, { type: "student_payment", id: form.student_id });
+
+      // Redemption audit + increment usage counters
+      if (selectedOffer && inserted?.id) {
+        await (supabase as any).from("offer_redemptions").insert({
+          user_id: workspaceId,
+          offer_id: selectedOffer.id,
+          coupon_id: appliedCoupon?.id ?? null,
+          student_id: form.student_id,
+          payment_id: inserted.id,
+          discount_amount: discountAmount,
+        });
+        await (supabase as any).from("offers").update({ usage_count: (selectedOffer.usage_count || 0) + 1 }).eq("id", selectedOffer.id);
+        if (appliedCoupon) {
+          await (supabase as any).from("coupons").update({ usage_count: (appliedCoupon.usage_count || 0) + 1 }).eq("id", appliedCoupon.id);
+        }
       }
+
+      toast.success("Payment recorded · renewal scheduled");
+
+      // Prepare receipt for the just-recorded payment
+      const cust = customers.find((c) => c.id === form.student_id);
+      const batchName = cust?.batch_id ? (batchMap.get(cust.batch_id) || "No Batch Assigned") : "No Batch Assigned";
+      const receiptNo = `TY-${new Date(form.paid_on).toISOString().slice(0,10).replace(/-/g,"")}-${(inserted?.id || "").slice(0,6).toUpperCase()}`;
+      setReceiptData({
+        receiptNumber: receiptNo,
+        dateIssued: form.paid_on,
+        customerName: cust?.name || "—",
+        customerContact: cust?.phone || undefined,
+        batchName,
+        planDescription: `${batchName} Membership · ${effectiveValue} ${form.durationUnit}`,
+        paymentMethod: form.method,
+        amount: paidNow,
+        originalAmount,
+        discountAmount: discountAmount || undefined,
+        dueAmount: dueAmount || undefined,
+        paymentStatus,
+
+        offerName: selectedOffer?.name,
+        offerCongrats: selectedOffer ? CONGRATS[selectedOffer.offer_type] : undefined,
+        couponCode: appliedCoupon?.code,
+        durationValue: effectiveValue,
+        durationUnit: form.durationUnit,
+        renewalDate,
+        studioName: studioName || "Trinetra Yoga",
+        studioAddress: studioAddress || undefined,
+      });
+      setReceiptOpen(true);
+
+      setForm({ ...form, amount: "", due: "", durationValue: "1" });
+      clearOffer();
+      setAddOpen(false);
+      fetchAll();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save payment. Please try again.");
+    } finally {
+      paymentSubmittingRef.current = false;
+      setPaymentSubmitting(false);
     }
-
-    toast.success("Payment recorded · renewal scheduled");
-
-    // Prepare receipt for the just-recorded payment
-    const cust = customers.find((c) => c.id === form.student_id);
-    const batchName = cust?.batch_id ? (batchMap.get(cust.batch_id) || "No Batch Assigned") : "No Batch Assigned";
-    const receiptNo = `TY-${new Date(form.paid_on).toISOString().slice(0,10).replace(/-/g,"")}-${(inserted?.id || "").slice(0,6).toUpperCase()}`;
-    setReceiptData({
-      receiptNumber: receiptNo,
-      dateIssued: form.paid_on,
-      customerName: cust?.name || "—",
-      customerContact: cust?.phone || undefined,
-      batchName,
-      planDescription: `${batchName} Membership · ${effectiveValue} ${form.durationUnit}`,
-      paymentMethod: form.method,
-      amount: paidNow,
-      originalAmount,
-      discountAmount: discountAmount || undefined,
-      dueAmount: dueAmount || undefined,
-      paymentStatus,
-
-      offerName: selectedOffer?.name,
-      offerCongrats: selectedOffer ? CONGRATS[selectedOffer.offer_type] : undefined,
-      couponCode: appliedCoupon?.code,
-      durationValue: effectiveValue,
-      durationUnit: form.durationUnit,
-      renewalDate,
-      studioName: studioName || "Trinetra Yoga",
-      studioAddress: studioAddress || undefined,
-    });
-    setReceiptOpen(true);
-
-    setForm({ ...form, amount: "", due: "", durationValue: "1" });
-    clearOffer();
-    setAddOpen(false);
-    fetchAll();
   };
 
   const deletePayment = async (id: string) => {
@@ -679,7 +691,7 @@ const Payments = () => {
           }}
         >
           <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Record Payment</Button>
+            <Button disabled={paymentSubmitting}><Plus className="h-4 w-4 mr-2" />Record Payment</Button>
           </DialogTrigger>
           <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -841,7 +853,10 @@ const Payments = () => {
 
               </div>
 
-              <Button type="submit" className="w-full">Save Payment</Button>
+              <Button type="submit" className="w-full" disabled={paymentSubmitting} aria-busy={paymentSubmitting}>
+                {paymentSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin motion-reduce:animate-none" />}
+                {paymentSubmitting ? "Saving Payment…" : "Save Payment"}
+              </Button>
             </form>
           </DialogContent>
         </Dialog>
