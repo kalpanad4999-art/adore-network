@@ -46,10 +46,6 @@ const deferInsert = () => {
 beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); deferInsert(); mocks.audit.mockResolvedValue(undefined); });
 afterEach(cleanup);
 
-async function openForm() {
-  fireEvent.click(screen.getByRole("button", { name: "Record Payment" }));
-  await waitFor(() => expect(screen.getByRole("option", { name: "Member" })).toBeInTheDocument());
-}
 async function chooseMember() {
   const dialog = screen.getByRole("dialog");
   const selects = dialog.querySelectorAll("select");
@@ -57,11 +53,6 @@ async function chooseMember() {
   fireEvent.change(selects[1], { target: { value: "member" } });
   return dialog.querySelector("form") as HTMLFormElement;
 }
-async function startPayment() {
-  await openForm();
-  return chooseMember();
-}
-
 describe("payment submission safety", () => {
   it("creates one payment/renewal entry for two immediate submit events", async () => {
     render(<Payments />);
