@@ -1,7 +1,8 @@
 # Attendance update
 ## Payment submission safety
-- [ ] Guard concurrent Record Payment submissions and show a disabled loading state without changing renewal rules or database structure.
-- [ ] Run regression tests for rapid duplicate submissions, failure recovery and separate intentional payments; verify the payment screen.
+- [x] Guard concurrent Record Payment submissions and show a disabled loading state without changing renewal rules or database structure.
+- [x] Regression tests cover rapid duplicate submissions, returned/thrown failure recovery and separate intentional payments; existing renewal tests pass.
+- Live payment saving and loading-state checks remain unverified: the requesting user's signed-in account has no Payments permission. No permissions or financial records were changed.
 ## Attendance recording sharing
 - [x] Add absent/all-batch recording selection and WhatsApp opening confirmation using existing data only.
 - [x] Pass six rule tests; verify signed-in saved attendance (18 absent, 20 current batch members), empty Classes state and mobile dialog layout.
