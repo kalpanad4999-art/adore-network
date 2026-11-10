@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794281493912,
+      "tag": "0000_attendance_absence_followups",
+      "breakpoints": true
+    }
+  ]
+}
