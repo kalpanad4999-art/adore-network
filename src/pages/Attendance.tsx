@@ -17,6 +17,7 @@ import { photoRecognitionService, uniqueBatchMatches } from "@/lib/photoAttendan
 import PhotoCameraDialog from "@/components/PhotoCameraDialog";
 import { fmtDate, fmtDateTime } from "@/lib/date";
 import AttendanceRecordingShare from "@/components/AttendanceRecordingShare";
+import AbsenceAlerts from "@/features/attendance/AbsenceAlerts";
 
 const AUTO_DELETE_KEY = "attendance_auto_delete_days_v1";
 type AutoDeleteDays = 0 | 30 | 60 | 90 | 180 | 365;
@@ -435,6 +436,8 @@ const Attendance = () => {
           {ownerId && filterBatch !== "all" && records.some((r) => r.batch_id === filterBatch && r.attendance_date === filterDate) && (
             <AttendanceRecordingShare key={`${filterBatch}-${filterDate}`} ownerId={ownerId} batchId={filterBatch} batchName={batches.find((b) => b.id === filterBatch)?.name ?? "Batch"} date={filterDate} members={students} studioName={studioName} absentCount={stats.absent} />
           )}
+
+          {ownerId && <AbsenceAlerts ownerId={ownerId} batches={batches} batchFilter={filterBatch} attendanceVersion={records} />}
 
           <Card>
             <CardHeader><CardTitle>Last 30 days (Present per day)</CardTitle></CardHeader>

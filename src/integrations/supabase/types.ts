@@ -77,6 +77,77 @@ export type Database = {
           },
         ]
       }
+      attendance_absence_followups: {
+        Row: {
+          batch_id: string
+          owner_id: string
+          sent_at: string
+          sent_by: string
+          streak_start: string
+          student_id: string
+        }
+        Insert: {
+          batch_id: string
+          owner_id: string
+          sent_at?: string
+          sent_by?: string
+          streak_start: string
+          student_id: string
+        }
+        Update: {
+          batch_id?: string
+          owner_id?: string
+          sent_at?: string
+          sent_by?: string
+          streak_start?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_absence_followups_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_absence_followups_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_batch_schedules: {
+        Row: {
+          batch_id: string
+          effective_from: string
+          owner_id: string
+          weekdays: number[]
+        }
+        Insert: {
+          batch_id: string
+          effective_from?: string
+          owner_id: string
+          weekdays?: number[]
+        }
+        Update: {
+          batch_id?: string
+          effective_from?: string
+          owner_id?: string
+          weekdays?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_batch_schedules_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: true
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batches: {
         Row: {
           created_at: string
@@ -1318,6 +1389,17 @@ export type Database = {
         Returns: {
           owner_id: string
           status: string
+        }[]
+      }
+      attendance_absence_members: {
+        Args: { _owner: string }
+        Returns: {
+          batch_id: string
+          id: string
+          name: string
+          phone: string
+          registered_on: string
+          valid_until: string
         }[]
       }
       can_access_student: {
