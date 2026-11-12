@@ -76,6 +76,10 @@ const Attendance = () => {
   const [recognitionSucceeded, setRecognitionSucceeded] = useState(false);
   const [decisions, setDecisions] = useState<Record<string, "present" | "absent">>({});
   const [submitOpen, setSubmitOpen] = useState(false);
+  // Members of other batches recognized in this batch's photos; value = staff confirmed "present".
+  const [guestMatches, setGuestMatches] = useState<Record<string, { similarity: number; confirmed: boolean }>>({});
+  const [manualGuestId, setManualGuestId] = useState("");
+  const [guestConfirmId, setGuestConfirmId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [filterDate, setFilterDate] = useState(today());
   const [filterBatch, setFilterBatch] = useState<string>("all");
@@ -139,11 +143,11 @@ const Attendance = () => {
     [students, selectedBatch]
   );
 
-  const markPresent = async (studentId: string, method: "manual") => {
+  const markPresent = async (studentId: string, method: "manual", homeBatchId?: string) => {
     if (!ownerId || !selectedBatch) return;
     const row = {
       user_id: ownerId,
-      batch_id: selectedBatch,
+      batch_id: homeBatchId ?? selectedBatch,
       student_id: studentId,
       attendance_date: today(),
       marked_at: new Date().toISOString(),
@@ -170,7 +174,7 @@ const Attendance = () => {
   };
 
   const resetPhoto = () => {
-    setPhotoStep(1); setGroupPhotos([]); setDecisions({}); setRecognizedIds([]); setMatchConfidence({}); setUnknownFaces(0); setRecognitionSucceeded(false);
+    setPhotoStep(1); setGroupPhotos([]); setDecisions({}); setRecognizedIds([]); setMatchConfidence({}); setUnknownFaces(0); setRecognitionSucceeded(false); setGuestMatches({});
   };
   const addPhotos = (files: File[] | FileList | null) => {
     if (!files) return;
@@ -183,9 +187,12 @@ const Attendance = () => {
     if (!groupPhotos.length) { toast.error("Add at least one batch photo"); return; }
     setRecognizing(true);
     try {
-      const result = uniqueBatchMatches(await photoRecognitionService.recognize({
-        batchId: selectedBatch, date: photoDate, photos: groupPhotos, memberIds: studentsInBatch.map((s) => s.id),
-      }), studentsInBatch.map((s) => s.id));
+      // Match against every member with a batch so other-batch attendees can be flagged for confirmation.
+      const allIds = students.filter((s) => s.batch_id).map((s) => s.id);
+      const raw = await photoRecognitionService.recognize({ batchId: selectedBatch, date: photoDate, photos: groupPhotos, memberIds: allIds });
+      const batchIds = new Set(studentsInBatch.map((s) => s.id));
+      setGuestMatches(Object.fromEntries((raw.matches ?? []).filter((m) => !batchIds.has(m.memberId)).map((m) => [m.memberId, { similarity: m.similarity, confirmed: false }])));
+      const result = uniqueBatchMatches(raw, studentsInBatch.map((s) => s.id));
       if (result.available === false) {
         console.error("[face-recognition] Batch recognition unavailable", { batchId: selectedBatch, reason: result.unavailableReason });
         setRecognizedIds([]); setMatchConfidence({}); setUnknownFaces(0); setDecisions({});
@@ -217,6 +224,12 @@ const Attendance = () => {
       const rows = studentsInBatch.map((s) => ({ user_id: ownerId, batch_id: selectedBatch, student_id: s.id, attendance_date: photoDate, status: decisions[s.id], method: recognitionSucceeded ? "ai_photo" : "manual", marked_by: user?.id ?? null }));
       const { error } = await supabase.from("attendance").insert(rows);
       if (error) throw error;
+      const guestRows = Object.entries(guestMatches).filter(([, g]) => g.confirmed).map(([id]) => students.find((s) => s.id === id)).filter((s): s is Student => !!s?.batch_id)
+        .map((s) => ({ user_id: ownerId, batch_id: s.batch_id!, student_id: s.id, attendance_date: photoDate, status: "present" as const, method: "ai_photo", marked_by: user?.id ?? null }));
+      if (guestRows.length) {
+        const { error: guestError } = await supabase.from("attendance").upsert(guestRows, { onConflict: "student_id,attendance_date", ignoreDuplicates: true });
+        if (guestError) toast.error(`Batch saved, but other-batch members could not be saved: ${guestError.message}`);
+      }
       toast.success("Attendance submitted"); setSubmitOpen(false); resetPhoto(); await loadData();
     } catch (err: any) {
       toast.error(err?.code === "23505" ? "Attendance already exists for this date" : err?.message || "Could not submit attendance");
@@ -357,6 +370,10 @@ const Attendance = () => {
             {photoStep === 3 && <Card><CardHeader><CardTitle>Review Attendance · {batchName} · {fmtDate(photoDate)}</CardTitle></CardHeader><CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">{recognitionSucceeded ? `${recognizedIds.length} recognized · ${studentsInBatch.length - recognizedIds.length} not detected. Not detected does not mean absent.` : "Recognition unavailable · No members were identified. Review the photos and decide each member’s status manually."}</p>
                <div className="space-y-2">{studentsInBatch.map((s) => <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2"><div><p className="font-medium">{s.name}</p><p className="text-xs text-muted-foreground">{recognizedIds.includes(s.id) ? `Recognized · ${matchConfidence[s.id] ?? 0}% similarity` : recognitionSucceeded ? "Not detected · Could be outside the photo, obscured, poorly lit, turned away, too small, unrecognized, or absent" : "Needs review"}{!s.photo_path && " · No reference photo"}</p></div><div className="flex gap-1"><Button size="sm" variant={decisions[s.id] === "present" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "present" }))}>Present</Button><Button size="sm" variant={decisions[s.id] === "absent" ? "default" : "outline"} onClick={() => setDecisions((d) => ({ ...d, [s.id]: "absent" }))}>Absent</Button></div></div>)}</div>
+              {Object.keys(guestMatches).length > 0 && <div role="alert" className="space-y-2 rounded-lg border border-primary/40 bg-primary/5 p-3">
+                <p className="text-sm font-medium">Members from other batches found</p>
+                {Object.entries(guestMatches).map(([id, g]) => { const s = students.find((x) => x.id === id); const home = batches.find((b) => b.id === s?.batch_id)?.name ?? "another batch"; return <div key={id} className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm">Mark <span className="font-medium">{s?.name ?? "Member"}</span> of <span className="font-medium">{home}</span> present? <span className="text-xs text-muted-foreground">({g.similarity}% similarity)</span></p><div className="flex gap-1"><Button size="sm" variant={g.confirmed ? "default" : "outline"} onClick={() => setGuestMatches((m) => ({ ...m, [id]: { ...g, confirmed: true } }))}>Yes, present</Button><Button size="sm" variant="ghost" onClick={() => setGuestMatches((m) => { const n = { ...m }; delete n[id]; return n; })}>Ignore</Button></div></div>; })}
+              </div>}
               {unknownFaces > 0 && <div className="text-sm text-muted-foreground">{Array.from({ length: unknownFaces }, (_, i) => <p key={i}>? Face {i + 1} · Unknown <Button size="sm" variant="ghost" onClick={() => setUnknownFaces((n) => n - 1)}>Ignore</Button><Button size="sm" variant="ghost" onClick={() => setPhotoStep(2)}>Review photos</Button></p>)}</div>}
               <div className="border-t border-border pt-3 text-sm">Total {studentsInBatch.length} · Present {Object.values(decisions).filter((v) => v === "present").length} · Absent {Object.values(decisions).filter((v) => v === "absent").length} · Needs review {unresolved}</div>
               <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setPhotoStep(2)}>Back to photos</Button><Button disabled={unresolved > 0 || !studentsInBatch.length || alreadySubmitted} onClick={() => setSubmitOpen(true)}>Submit Attendance</Button></div>
@@ -374,6 +391,13 @@ const Attendance = () => {
                 )}
               </CardHeader>
               <CardContent>
+                {students.some((s) => s.batch_id && s.batch_id !== selectedBatch) && <div className="mb-4 flex flex-wrap items-end gap-2 rounded-lg border border-border p-3">
+                  <div className="min-w-48 flex-1 space-y-1"><Label>Member from another batch attended?</Label>
+                    <Select value={manualGuestId} onValueChange={setManualGuestId}><SelectTrigger><SelectValue placeholder="Choose member" /></SelectTrigger><SelectContent>
+                      {students.filter((s) => s.batch_id && s.batch_id !== selectedBatch).map((s) => <SelectItem key={s.id} value={s.id}>{s.name} · {batches.find((b) => b.id === s.batch_id)?.name ?? "Other batch"}</SelectItem>)}
+                    </SelectContent></Select></div>
+                  <Button variant="outline" disabled={!manualGuestId} onClick={() => setGuestConfirmId(manualGuestId)}>Mark Present</Button>
+                </div>}
                 {studentsInBatch.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No students in this batch.</p>
                 ) : (
@@ -566,7 +590,12 @@ const Attendance = () => {
       </Dialog>
 
       <AlertDialog open={submitOpen} onOpenChange={setSubmitOpen}>
-        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Submit attendance for {batchName}?</AlertDialogTitle><AlertDialogDescription>{fmtDate(photoDate)} · {Object.values(decisions).filter((v) => v === "present").length} present · {Object.values(decisions).filter((v) => v === "absent").length} absent. Only confirmed decisions will be saved.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel><Button disabled={submitting} onClick={submitPhotoAttendance}>{submitting ? "Submitting…" : "Confirm & Submit"}</Button></AlertDialogFooter></AlertDialogContent>
+        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Submit attendance for {batchName}?</AlertDialogTitle><AlertDialogDescription>{fmtDate(photoDate)} · {Object.values(decisions).filter((v) => v === "present").length} present · {Object.values(decisions).filter((v) => v === "absent").length} absent{Object.values(guestMatches).some((g) => g.confirmed) ? ` · ${Object.values(guestMatches).filter((g) => g.confirmed).length} from other batches (saved to their own batch)` : ""}. Only confirmed decisions will be saved.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel><Button disabled={submitting} onClick={submitPhotoAttendance}>{submitting ? "Submitting…" : "Confirm & Submit"}</Button></AlertDialogFooter></AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!guestConfirmId} onOpenChange={(o) => !o && setGuestConfirmId("")}>
+        <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Member from another batch</AlertDialogTitle><AlertDialogDescription>{(() => { const s = students.find((x) => x.id === guestConfirmId); return `Mark ${s?.name ?? "this member"} of ${batches.find((b) => b.id === s?.batch_id)?.name ?? "another batch"} present for today? It will be saved under their own batch.`; })()}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={async () => { const s = students.find((x) => x.id === guestConfirmId); if (s?.batch_id) await markPresent(s.id, "manual", s.batch_id); setGuestConfirmId(""); setManualGuestId(""); }}>Mark Present</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
 
       {/* Manual delete confirmation */}
